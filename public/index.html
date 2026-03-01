@@ -14,6 +14,10 @@
   <!-- ═══ LOBBY SCREEN ═══ -->
   <div id="lobby-screen" class="screen active">
     <div class="lobby-inner">
+      <div class="lobby-top-row">
+        <button class="help-btn" id="help-btn-lobby">?</button>
+      </div>
+
       <h1 class="game-title">✨ Trash ✨</h1>
       <p class="subtitle">The Card Game</p>
 
@@ -27,7 +31,10 @@
 
       <div id="room-code-display" class="hidden">
         <p class="label">Share this code:</p>
-        <div class="room-code" id="room-code-text"></div>
+        <div class="room-code-row">
+          <div class="room-code" id="room-code-text"></div>
+          <button class="btn btn-secondary btn-share" id="share-btn">Share</button>
+        </div>
         <p class="waiting-msg">Waiting for opponent...</p>
       </div>
 
@@ -44,6 +51,7 @@
         <span class="toggle-label">Variant</span>
         <select id="variant-select" class="variant-select">
           <option value="default">Default</option>
+          <option value="eleven">Eleven</option>
         </select>
       </label>
 
@@ -99,6 +107,11 @@
         <button class="btn btn-draw" id="draw-deck-btn">Draw from Deck</button>
         <button class="btn btn-draw btn-discard-draw" id="draw-discard-btn" disabled>Take Discard</button>
       </div>
+
+      <div class="center-tools">
+        <button id="music-toggle" class="music-toggle hidden">🔊</button>
+        <button class="help-btn" id="help-btn-game">?</button>
+      </div>
     </div>
 
     <!-- My area -->
@@ -115,6 +128,12 @@
       <div class="board" id="my-board"></div>
     </div>
 
+    <!-- View-only banner (shown when browsing board from end screen) -->
+    <div id="view-only-banner" class="view-only-banner hidden">
+      <span>Viewing final board</span>
+      <button class="btn btn-secondary" id="back-results-btn">← Results</button>
+    </div>
+
   </div>
 
   <!-- ═══ END SCREEN ═══ -->
@@ -123,10 +142,89 @@
       <div id="result-emoji" class="result-emoji"></div>
       <h2 id="result-text" class="result-text"></h2>
       <p id="result-sub" class="result-sub"></p>
+
+      <div class="reaction-bar end-reaction-bar">
+        <button class="reaction-btn" data-emoji="👍">👍</button>
+        <button class="reaction-btn" data-emoji="😂">😂</button>
+        <button class="reaction-btn" data-emoji="😮">😮</button>
+        <button class="reaction-btn" data-emoji="🔥">🔥</button>
+        <button class="reaction-btn" data-emoji="💀">💀</button>
+        <button class="reaction-btn" data-emoji="😬">😬</button>
+      </div>
+
       <div class="end-buttons">
         <button class="btn btn-primary" id="play-again-btn">Play Again</button>
+        <button class="btn btn-secondary" id="see-cards-btn">See Cards</button>
         <button class="btn btn-secondary" id="back-lobby-btn">Main Menu</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ═══ HELP MODAL ═══ -->
+  <div id="help-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <h2 class="modal-title">How to Play</h2>
+
+      <div class="modal-tabs">
+        <button class="modal-tab active" data-tab="default">Default</button>
+        <button class="modal-tab" data-tab="eleven">Eleven</button>
+      </div>
+
+      <div id="help-default" class="modal-section active">
+        <div class="modal-rule">
+          <strong>Goal</strong>
+          Fill all 10 slots on your board before your opponent.
+        </div>
+        <div class="modal-rule">
+          <strong>Setup</strong>
+          Each player gets 10 face-down cards in 2 rows of 5 (slots A–10).
+        </div>
+        <div class="modal-rule">
+          <strong>Your Turn</strong>
+          Draw from the deck or take the top discard card (only if you can use it).
+        </div>
+        <div class="modal-rule">
+          <strong>Number Cards (A–10)</strong>
+          Place it in the matching slot. The face-down card that was there becomes your next card — keep going until you can't place!
+        </div>
+        <div class="modal-rule">
+          <strong>Jack — Wildcard</strong>
+          Place in any empty slot you choose.
+        </div>
+        <div class="modal-rule">
+          <strong>King — Corner Wildcard</strong>
+          Place in an empty corner slot only (A, 5, 6, or 10).
+        </div>
+        <div class="modal-rule">
+          <strong>Queen — Dead Card</strong>
+          Discard it and end your turn immediately.
+        </div>
+        <div class="modal-rule">
+          <strong>Chain Ends When…</strong>
+          The flipped card has no valid slot → discard it, turn over.
+        </div>
+      </div>
+
+      <div id="help-eleven" class="modal-section">
+        <div class="modal-rule">
+          <strong>All Default rules apply, plus:</strong>
+          Play with 11 slots instead of 10.
+        </div>
+        <div class="modal-rule">
+          <strong>The ★ Slot</strong>
+          An extra 11th slot that can only be filled by an Ace. Wildcards cannot go here.
+        </div>
+        <div class="modal-rule">
+          <strong>Wildcard Overlay</strong>
+          If a wildcard sits in a slot, you can play the natural card on top of it. The displaced wildcard becomes your next chain card and gets re-evaluated as a wildcard.
+        </div>
+        <div class="modal-rule">
+          <strong>Win Condition</strong>
+          First player to fill all 11 slots wins.
+        </div>
+      </div>
+
+      <button class="btn btn-secondary modal-close" id="help-close">Got it</button>
     </div>
   </div>
 

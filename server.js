@@ -51,13 +51,15 @@ function makeBoard(cards) {
     slotIndex: i,
     card: { ...card, faceUp: false },
     filled: false,
+    wildcardFilled: false,
   }));
 }
 
-function dealGame() {
+function dealGame(variant) {
   const deck = shuffle(createDeck());
-  const board0 = makeBoard(deck.splice(0, 10));
-  const board1 = makeBoard(deck.splice(0, 10));
+  const slots = variant === "eleven" ? 11 : 10;
+  const board0 = makeBoard(deck.splice(0, slots));
+  const board1 = makeBoard(deck.splice(0, slots));
   return { deck, board0, board1 };
 }
 
@@ -65,11 +67,22 @@ function dealGame() {
 // GAME LOGIC
 // ═══════════════════════════════════════════════
 
-// Returns slot index (0-9) if card can go there, else null
-function getValidSlot(card, board) {
+// Returns slot index if card can go there, else null.
+// Handles wildcard-overlay (natural card can displace a wildcard in a slot)
+// and Eleven variant's extra Ace slot at index 10.
+function getValidSlot(card, board, variant) {
   if (card.rank < 1 || card.rank > 10) return null;
   const idx = card.rank - 1;
-  return board[idx].filled ? null : idx;
+  const slot = board[idx];
+  if (!slot) return null;
+  if (!slot.filled)         return idx;   // empty → place here
+  if (slot.wildcardFilled)  return idx;   // wildcard there → displace it
+  // Eleven variant: Ace has a second home at slot 10
+  if (variant === "eleven" && card.rank === 1 && board[10]) {
+    const s10 = board[10];
+    if (!s10.filled || s10.wildcardFilled) return 10;
+  }
+  return null;
 }
 
 // Returns array of valid slot indices for a wildcard
@@ -80,12 +93,14 @@ function getValidSlotsForWildcard(card, board) {
   return candidates.filter(i => !board[i].filled);
 }
 
-// Place a card face-up in a slot; return the face-down card that was there
-function applyCardToSlot(board, slotIndex, card) {
+// Place a card face-up in a slot; return the card that was there (chain card).
+// isWildcard=true marks the slot so a natural card can still displace it later.
+function applyCardToSlot(board, slotIndex, card, isWildcard = false) {
   const prev = board[slotIndex].card;
   board[slotIndex].card = { ...card, faceUp: true };
   board[slotIndex].filled = true;
-  return prev; // the chain card (was face-down)
+  board[slotIndex].wildcardFilled = isWildcard;
+  return prev;
 }
 
 function checkWin(board) {
@@ -125,7 +140,7 @@ function generateRoomId() {
 // ═══════════════════════════════════════════════
 
 function startGame(state, roomId) {
-  const { deck, board0, board1 } = dealGame();
+  const { deck, board0, board1 } = dealGame(state.variant);
   state.deck = deck;
   state.discardPile = [];
   state.players[0].board = board0;
@@ -152,6 +167,7 @@ function startGame(state, roomId) {
         currentPlayerIndex: state.currentPlayerIndex,
         players: state.players.map(p => ({ name: p.name, isAI: p.isAI })),
         deckCount: state.deck.length,
+        variant: state.variant,
       });
     }
   });
@@ -214,9 +230,9 @@ async function evaluateCard(state, roomId, playerIndex, card, isChain) {
   }
 
   // ── Number card (Ace=1 through 10) ──
-  const slotIndex = getValidSlot(card, board);
+  const slotIndex = getValidSlot(card, board, state.variant);
   if (slotIndex === null) {
-    // Already filled — discard, end turn
+    // No valid slot — discard, end turn
     state.discardPile.push({ ...card, faceUp: true });
     io.to(roomId).emit("discarded", {
       card,
@@ -228,13 +244,14 @@ async function evaluateCard(state, roomId, playerIndex, card, isChain) {
     return;
   }
 
-  // Place card, get the face-down card underneath
-  const chainCard = applyCardToSlot(board, slotIndex, card);
+  // Place card (natural), get the card that was in the slot (chain card)
+  const chainCard = applyCardToSlot(board, slotIndex, card, false);
 
   io.to(roomId).emit("boardUpdated", {
     playerIndex,
     slotIndex,
     card: { ...card, faceUp: true },
+    wildcardFilled: false,
     deckCount: state.deck.length,
   });
 
@@ -261,12 +278,13 @@ async function evaluateCard(state, roomId, playerIndex, card, isChain) {
 async function placeWildcardForPlayer(state, roomId, playerIndex, card, slotIndex) {
   const board = state.players[playerIndex].board;
 
-  const chainCard = applyCardToSlot(board, slotIndex, card);
+  const chainCard = applyCardToSlot(board, slotIndex, card, true);
 
   io.to(roomId).emit("boardUpdated", {
     playerIndex,
     slotIndex,
     card: { ...card, faceUp: true },
+    wildcardFilled: true,
     deckCount: state.deck.length,
   });
 
@@ -348,7 +366,7 @@ function triggerAI(state, roomId) {
       : null;
 
     let card;
-    if (topDiscard && canUseCard(topDiscard, aiBoard)) {
+    if (topDiscard && canUseCard(topDiscard, aiBoard, state.variant)) {
       card = state.discardPile.pop();
     } else {
       ensureDeck(state, roomId);
@@ -364,11 +382,11 @@ function triggerAI(state, roomId) {
 }
 
 // Quick check: can a card be used at all on a board?
-function canUseCard(card, board) {
-  if (card.rank === 12) return false; // Queen always discarded
-  if (card.rank === 11) return board.some(s => !s.filled); // Jack: any open slot
-  if (card.rank === 13) return [0, 4, 5, 9].some(i => !board[i].filled); // King: corner
-  return card.rank >= 1 && card.rank <= 10 && !board[card.rank - 1].filled;
+function canUseCard(card, board, variant) {
+  if (card.rank === 12) return false;
+  if (card.rank === 11) return board.slice(0, 10).some(s => !s.filled);    // Jack: slot 0-9 only
+  if (card.rank === 13) return [0, 4, 5, 9].some(i => !board[i]?.filled); // King: corners
+  return getValidSlot(card, board, variant) !== null;
 }
 
 // ═══════════════════════════════════════════════
@@ -379,16 +397,18 @@ io.on("connection", socket => {
   console.log(`Connected: ${socket.id}`);
 
   // ── Create Room ──
-  socket.on("createRoom", ({ playerName }) => {
+  socket.on("createRoom", ({ playerName, variant }) => {
     const roomId = generateRoomId();
     const state = {
       roomId,
       phase: "lobby",
+      variant: variant || "default",
       players: [{
         id: socket.id,
         name: playerName || "Player 1",
         isAI: false,
         board: [],
+        wantsRematch: false,
       }],
       deck: [],
       discardPile: [],
@@ -422,6 +442,7 @@ io.on("connection", socket => {
       name: playerName || "Player 2",
       isAI: false,
       board: [],
+      wantsRematch: false,
     });
     socket.join(roomId);
     socket.emit("joinedRoom", { roomId });
@@ -431,14 +452,15 @@ io.on("connection", socket => {
   });
 
   // ── Play vs AI ──
-  socket.on("playVsAI", ({ playerName }) => {
+  socket.on("playVsAI", ({ playerName, variant }) => {
     const roomId = generateRoomId();
     const state = {
       roomId,
       phase: "lobby",
+      variant: variant || "default",
       players: [
-        { id: socket.id, name: playerName || "Player", isAI: false, board: [] },
-        { id: "ai", name: "AI", isAI: true, board: [] },
+        { id: socket.id, name: playerName || "Player", isAI: false, board: [], wantsRematch: false },
+        { id: "ai", name: "AI", isAI: true, board: [], wantsRematch: false },
       ],
       deck: [],
       discardPile: [],
@@ -449,6 +471,22 @@ io.on("connection", socket => {
     rooms.set(roomId, state);
     socket.join(roomId);
     startGame(state, roomId);
+  });
+
+  // ── Rematch ──
+  socket.on("requestRematch", ({ roomId }) => {
+    const state = rooms.get(roomId);
+    if (!state || state.phase !== "ended") return;
+    const pi = state.players.findIndex(p => p.id === socket.id);
+    if (pi === -1) return;
+    state.players[pi].wantsRematch = true;
+    io.to(roomId).emit("rematchRequested", { playerIndex: pi });
+    // If AI opponent, or both players want rematch → start new game
+    const allWant = state.players.every(p => p.isAI || p.wantsRematch);
+    if (allWant) {
+      state.players.forEach(p => { p.wantsRematch = false; });
+      startGame(state, roomId);
+    }
   });
 
   // ── Draw Card ──
