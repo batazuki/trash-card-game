@@ -175,6 +175,21 @@ html, body {
   color: var(--text);
   user-select: none;
 }
+.variant-select {
+  background: rgba(255,255,255,0.75);
+  border: 1.5px solid #fcd5e8;
+  border-radius: 10px;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 5px 10px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  box-shadow: 0 2px 6px rgba(236,72,153,0.08);
+}
 .toggle-wrap { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
 .toggle-wrap input { opacity: 0; width: 0; height: 0; }
 .toggle-slider {
@@ -534,12 +549,19 @@ html, body {
 .reaction-btn:active  { transform: scale(0.82); }
 .reaction-btn:hover   { background: rgba(255,255,255,0.9); }
 
-/* Floating reaction emoji */
+/* Floating reaction emoji — portrait (floats upward) */
 @keyframes reaction-float {
   0%   { transform: translateY(0) scale(0.7); opacity: 0; }
   12%  { transform: translateY(-12px) scale(1.15); opacity: 1; }
   80%  { opacity: 1; }
   100% { transform: translateY(-110px) scale(1.1); opacity: 0; }
+}
+/* Floating reaction emoji — landscape (floats toward center) */
+@keyframes reaction-float-h {
+  0%   { transform: translateX(0) scale(0.7); opacity: 0; }
+  12%  { transform: translateX(0) scale(1.15); opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: translateX(0) translateY(-60px) scale(1.1); opacity: 0; }
 }
 .reaction-float {
   position: fixed;
@@ -549,6 +571,7 @@ html, body {
   animation: reaction-float 1.8s ease-out forwards;
   font-family: sans-serif;
 }
+body.is-landscape .reaction-float { animation-name: reaction-float-h; }
 
 /* ═══ TURN NOTIFICATION ═══ */
 /* Glow pulse on my board area when it becomes my turn */

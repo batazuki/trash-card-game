@@ -138,8 +138,9 @@ function renderDiscardPile(topCard) {
   if (label) label.textContent = "Discard";
 
   // Enable/disable "Take Discard" button
+  const myBoard = local.boards[local.myPlayerIndex] || [];
   const takeBtn = $("draw-discard-btn");
-  takeBtn.disabled = !topCard || !local.isMyTurn || local.turnPhase !== "draw";
+  takeBtn.disabled = !local.isMyTurn || local.turnPhase !== "draw" || !canUseDiscard(topCard, myBoard);
 }
 
 function updateDeckCount(count) {
@@ -166,9 +167,20 @@ function updateTurnIndicator(msg) {
 }
 
 // ═══ DRAW BUTTONS ═══
+// Mirror of server canUseCard — checks whether the top discard is actually playable
+function canUseDiscard(card, board) {
+  if (!card) return false;
+  if (card.rank === 12) return false;                                          // Queen: useless
+  if (card.rank === 11) return board.some(s => !s.filled);                    // Jack: any open slot
+  if (card.rank === 13) return [0,4,5,9].some(i => !board[i].filled);        // King: corner open
+  return card.rank >= 1 && card.rank <= 10 && !board[card.rank - 1].filled;  // number: slot open
+}
+
 function setDrawButtonsEnabled(enabled) {
   $("draw-deck-btn").disabled = !enabled;
-  $("draw-discard-btn").disabled = !enabled || !local.topDiscard;
+  const myBoard = local.boards[local.myPlayerIndex] || [];
+  const discardUsable = canUseDiscard(local.topDiscard, myBoard);
+  $("draw-discard-btn").disabled = !enabled || !discardUsable;
 }
 
 // ═══ CHAIN DISPLAY ═══
@@ -229,9 +241,18 @@ function showReaction(emoji, isMe) {
   const el = document.createElement("div");
   el.className = "reaction-float";
   el.textContent = emoji;
-  el.style.left = `${20 + Math.random() * 55}vw`;
-  if (isMe) { el.style.bottom = "28vh"; el.style.top = "auto"; }
-  else       { el.style.top = "25vh";   el.style.bottom = "auto"; }
+  const isLandscape = document.body.classList.contains("is-landscape");
+  if (isLandscape) {
+    // In landscape, my area is on the right and opponent is on the left
+    el.style.top = `${25 + Math.random() * 35}vh`;
+    el.style.bottom = "auto";
+    if (isMe) { el.style.right = "4vw"; el.style.left = "auto"; }
+    else       { el.style.left = "4vw"; el.style.right = "auto"; }
+  } else {
+    el.style.left = `${20 + Math.random() * 55}vw`;
+    if (isMe) { el.style.bottom = "28vh"; el.style.top = "auto"; }
+    else       { el.style.top = "25vh";   el.style.bottom = "auto"; }
+  }
   document.body.appendChild(el);
   el.addEventListener("animationend", () => el.remove());
 }
@@ -463,6 +484,12 @@ socket.on("chainCard", ({ playerIndex, card }) => {
 });
 
 socket.on("chooseWildcardSlot", ({ card, validSlots }) => {
+  // Only one option — auto-place without bothering the player
+  if (validSlots.length === 1) {
+    showChainCard(card);
+    setTimeout(() => socket.emit("placeWildcard", { roomId: local.roomId, slotIndex: validSlots[0] }), 300);
+    return;
+  }
   local.pendingWildcard = card;
   local.validSlots = validSlots;
   local.turnPhase = "place-wildcard";
