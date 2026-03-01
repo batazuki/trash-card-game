@@ -84,13 +84,8 @@
           <div id="discard-pile" class="pile-card discard-empty">
             <span class="pile-empty-label">Empty</span>
           </div>
-          <div class="pile-label">Discard</div>
+          <div class="pile-label" id="discard-pile-label">Discard</div>
         </div>
-      </div>
-
-      <div id="chain-display" class="chain-display hidden">
-        <span class="chain-label">Chain:</span>
-        <div id="chain-card"></div>
       </div>
 
       <div class="draw-buttons">
@@ -102,6 +97,14 @@
     <!-- My area -->
     <div class="player-area my-area">
       <div class="player-label" id="my-label">You</div>
+      <div id="reaction-bar" class="reaction-bar">
+        <button class="reaction-btn" data-emoji="👍">👍</button>
+        <button class="reaction-btn" data-emoji="😂">😂</button>
+        <button class="reaction-btn" data-emoji="😮">😮</button>
+        <button class="reaction-btn" data-emoji="🔥">🔥</button>
+        <button class="reaction-btn" data-emoji="💀">💀</button>
+        <button class="reaction-btn" data-emoji="😬">😬</button>
+      </div>
       <div class="board" id="my-board"></div>
     </div>
 

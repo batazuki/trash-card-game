@@ -495,6 +495,15 @@ io.on("connection", socket => {
     placeWildcardForPlayer(state, roomId, playerIndex, card, slotIndex);
   });
 
+  // ── Reaction Emoji ──
+  socket.on("sendReaction", ({ roomId, emoji }) => {
+    const state = rooms.get(roomId);
+    if (!state || state.phase !== "playing") return;
+    const playerIndex = state.players.findIndex(p => p.id === socket.id);
+    if (playerIndex === -1) return;
+    io.to(roomId).emit("reaction", { playerIndex, emoji });
+  });
+
   // ── Disconnect ──
   socket.on("disconnect", () => {
     console.log(`Disconnected: ${socket.id}`);

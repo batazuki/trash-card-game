@@ -133,6 +133,10 @@ function renderDiscardPile(topCard) {
     el.innerHTML = `<span class="pile-empty-label">Empty</span>`;
   }
 
+  // Reset label back to "Discard" (showChainCard may have changed it)
+  const label = $("discard-pile-label");
+  if (label) label.textContent = "Discard";
+
   // Enable/disable "Take Discard" button
   const takeBtn = $("draw-discard-btn");
   takeBtn.disabled = !topCard || !local.isMyTurn || local.turnPhase !== "draw";
@@ -168,17 +172,80 @@ function setDrawButtonsEnabled(enabled) {
 }
 
 // ═══ CHAIN DISPLAY ═══
+// Shows the active chain card in the discard pile area (no extra space needed).
 function showChainCard(card) {
-  const display = $("chain-display");
-  const container = $("chain-card");
-  container.innerHTML = "";
+  const label = $("discard-pile-label");
   if (card) {
-    display.classList.remove("hidden");
-    container.appendChild(makeCard(card));
+    const el = $("discard-pile");
+    el.innerHTML = "";
+    el.className = "pile-card";
+    el.appendChild(makeCard(card));
+    if (label) label.textContent = "Chain";
   } else {
-    display.classList.add("hidden");
+    renderDiscardPile(local.topDiscard);
   }
 }
+
+// ═══ TURN SOUND ═══
+function playTurnSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const t = ctx.currentTime;
+    [523.25, 659.25].forEach((freq, i) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      const s = t + i * 0.13;
+      gain.gain.setValueAtTime(0, s);
+      gain.gain.linearRampToValueAtTime(0.22, s + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, s + 0.45);
+      osc.start(s);
+      osc.stop(s + 0.5);
+    });
+  } catch(e) {}
+}
+
+// ═══ TURN NOTIFICATION ═══
+function notifyMyTurn() {
+  playTurnSound();
+  navigator.vibrate?.(160);
+  document.title = "⚡ Your Turn! — Trash";
+  // Board glow
+  const myArea = document.querySelector(".my-area");
+  myArea.classList.remove("turn-flash");
+  void myArea.offsetWidth; // force reflow to restart animation
+  myArea.classList.add("turn-flash");
+  myArea.addEventListener("animationend", () => myArea.classList.remove("turn-flash"), { once: true });
+  // Background flash
+  document.body.classList.add("your-turn-flash");
+  setTimeout(() => document.body.classList.remove("your-turn-flash"), 1200);
+}
+
+// ═══ REACTIONS ═══
+function showReaction(emoji, isMe) {
+  const el = document.createElement("div");
+  el.className = "reaction-float";
+  el.textContent = emoji;
+  el.style.left = `${20 + Math.random() * 55}vw`;
+  if (isMe) { el.style.bottom = "28vh"; el.style.top = "auto"; }
+  else       { el.style.top = "25vh";   el.style.bottom = "auto"; }
+  document.body.appendChild(el);
+  el.addEventListener("animationend", () => el.remove());
+}
+
+let lastReactionTime = 0;
+document.querySelectorAll(".reaction-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    if (!local.roomId) return;
+    const now = Date.now();
+    if (now - lastReactionTime < 1000) return; // 1s cooldown
+    lastReactionTime = now;
+    socket.emit("sendReaction", { roomId: local.roomId, emoji: btn.dataset.emoji });
+  });
+});
 
 // ═══ SLOT CLICK (WILDCARD PLACEMENT) ═══
 function onSlotClick(slotIndex) {
@@ -364,6 +431,8 @@ socket.on("gameStart", ({ roomId, myPlayerIndex, boards, currentPlayerIndex, pla
   updateTurnIndicator();
   showChainCard(null);
   showScreen("game-screen");
+  if (local.isMyTurn) notifyMyTurn();
+  else document.title = "Trash ✨";
 });
 
 socket.on("boardUpdated", ({ playerIndex, slotIndex, card, deckCount }) => {
@@ -430,6 +499,9 @@ socket.on("turnEnded", ({ nextPlayerIndex, topDiscard, deckCount }) => {
 
   // Re-render my board to clear wildcard highlights
   renderBoard(local.myPlayerIndex, local.boards[local.myPlayerIndex]);
+
+  if (local.isMyTurn) notifyMyTurn();
+  else document.title = "Trash ✨";
 });
 
 socket.on("aiThinking", () => {
@@ -454,4 +526,8 @@ socket.on("opponentDisconnected", () => {
     $("result-sub").textContent = "Opponent disconnected.";
     showScreen("end-screen");
   }, 1500);
+});
+
+socket.on("reaction", ({ playerIndex, emoji }) => {
+  showReaction(emoji, playerIndex === local.myPlayerIndex);
 });
