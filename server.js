@@ -1,0 +1,514 @@
+/* ═══════════════════════════════════════════════
+   TRASH CARD GAME — Server
+   Node.js + Express + Socket.io
+   ═══════════════════════════════════════════════ */
+
+const express = require("express");
+const http    = require("http");
+const { Server } = require("socket.io");
+const path    = require("path");
+
+const app    = express();
+const server = http.createServer(app);
+const io     = new Server(server);
+
+app.use(express.static(path.join(__dirname, "public")));
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log(`Trash card game running on port ${PORT}`));
+
+// ═══════════════════════════════════════════════
+// IN-MEMORY ROOM STORE
+// ═══════════════════════════════════════════════
+const rooms = new Map(); // roomId → GameState
+
+// ═══════════════════════════════════════════════
+// DECK UTILITIES
+// ═══════════════════════════════════════════════
+
+function createDeck() {
+  const suits = ["hearts", "diamonds", "clubs", "spades"];
+  return suits.flatMap(suit =>
+    Array.from({ length: 13 }, (_, i) => ({
+      id: `${suit[0]}${i + 1}`,
+      suit,
+      rank: i + 1,
+      faceUp: false,
+    }))
+  );
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function makeBoard(cards) {
+  return cards.map((card, i) => ({
+    slotIndex: i,
+    card: { ...card, faceUp: false },
+    filled: false,
+  }));
+}
+
+function dealGame() {
+  const deck = shuffle(createDeck());
+  const board0 = makeBoard(deck.splice(0, 10));
+  const board1 = makeBoard(deck.splice(0, 10));
+  return { deck, board0, board1 };
+}
+
+// ═══════════════════════════════════════════════
+// GAME LOGIC
+// ═══════════════════════════════════════════════
+
+// Returns slot index (0-9) if card can go there, else null
+function getValidSlot(card, board) {
+  if (card.rank < 1 || card.rank > 10) return null;
+  const idx = card.rank - 1;
+  return board[idx].filled ? null : idx;
+}
+
+// Returns array of valid slot indices for a wildcard
+// King (13): corners only = indices 0, 4, 5, 9
+// Jack (11): any unfilled slot
+function getValidSlotsForWildcard(card, board) {
+  const candidates = card.rank === 13 ? [0, 4, 5, 9] : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+  return candidates.filter(i => !board[i].filled);
+}
+
+// Place a card face-up in a slot; return the face-down card that was there
+function applyCardToSlot(board, slotIndex, card) {
+  const prev = board[slotIndex].card;
+  board[slotIndex].card = { ...card, faceUp: true };
+  board[slotIndex].filled = true;
+  return prev; // the chain card (was face-down)
+}
+
+function checkWin(board) {
+  return board.every(slot => slot.filled);
+}
+
+function advanceTurn(state) {
+  state.currentPlayerIndex = 1 - state.currentPlayerIndex;
+  state.turnPhase = "draw";
+  state.pendingWildcard = null;
+}
+
+// Ensure deck has cards; reshuffle discard if needed
+function ensureDeck(state, roomId) {
+  if (state.deck.length === 0) {
+    if (state.discardPile.length <= 1) return; // nothing to reshuffle
+    const top = state.discardPile.pop();
+    state.deck = shuffle(state.discardPile);
+    state.discardPile = top ? [top] : [];
+    state.deck.forEach(c => { c.faceUp = false; });
+    io.to(roomId).emit("deckReshuffled", { deckCount: state.deck.length });
+  }
+}
+
+// Generate a unique 4-char room code
+function generateRoomId() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  let id;
+  do {
+    id = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  } while (rooms.has(id));
+  return id;
+}
+
+// ═══════════════════════════════════════════════
+// GAME START HELPER
+// ═══════════════════════════════════════════════
+
+function startGame(state, roomId) {
+  const { deck, board0, board1 } = dealGame();
+  state.deck = deck;
+  state.discardPile = [];
+  state.players[0].board = board0;
+  state.players[1].board = board1;
+  state.currentPlayerIndex = 0;
+  state.turnPhase = "draw";
+  state.pendingWildcard = null;
+  state.phase = "playing";
+
+  // Send each player their own perspective
+  state.players.forEach((player, i) => {
+    const myPlayerIndex = i;
+    // Build boards to send: player sees their own cards face-down (unknown),
+    // and opponent's cards also face-down
+    const boards = [
+      state.players[0].board.map(s => ({ ...s, card: s.card ? { ...s.card, faceUp: false } : null })),
+      state.players[1].board.map(s => ({ ...s, card: s.card ? { ...s.card, faceUp: false } : null })),
+    ];
+    if (!player.isAI) {
+      io.to(player.id).emit("gameStart", {
+        roomId,
+        myPlayerIndex,
+        boards,
+        currentPlayerIndex: state.currentPlayerIndex,
+        players: state.players.map(p => ({ name: p.name, isAI: p.isAI })),
+        deckCount: state.deck.length,
+      });
+    }
+  });
+
+  // If player 0 is AI (shouldn't happen in normal flow), trigger AI
+  if (state.players[state.currentPlayerIndex].isAI) {
+    triggerAI(state, roomId);
+  }
+}
+
+// ═══════════════════════════════════════════════
+// CARD EVALUATION (shared by human & AI turns)
+// ═══════════════════════════════════════════════
+
+// Evaluate a card for a player. Returns whether the turn continues (chain).
+// Emits appropriate events. Calls callback(chainCard) if chain continues.
+async function evaluateCard(state, roomId, playerIndex, card, isChain) {
+  const player = state.players[playerIndex];
+  const board = player.board;
+
+  // ── Queen: always discard ──
+  if (card.rank === 12) {
+    state.discardPile.push({ ...card, faceUp: true });
+    io.to(roomId).emit("discarded", {
+      card,
+      playerIndex,
+      topDiscard: card,
+      deckCount: state.deck.length,
+    });
+    endTurn(state, roomId, playerIndex);
+    return;
+  }
+
+  // ── Wildcard: Jack or King ──
+  if (card.rank === 11 || card.rank === 13) {
+    const validSlots = getValidSlotsForWildcard(card, board);
+    if (validSlots.length === 0) {
+      // No valid slots — discard, end turn
+      state.discardPile.push({ ...card, faceUp: true });
+      io.to(roomId).emit("discarded", {
+        card,
+        playerIndex,
+        topDiscard: card,
+        deckCount: state.deck.length,
+      });
+      endTurn(state, roomId, playerIndex);
+      return;
+    }
+
+    if (player.isAI) {
+      const chosenSlot = pickAIWildcardSlot(validSlots, board);
+      await delay(500);
+      placeWildcardForPlayer(state, roomId, playerIndex, card, chosenSlot);
+    } else {
+      state.turnPhase = "place-wildcard";
+      state.pendingWildcard = card;
+      io.to(player.id).emit("chooseWildcardSlot", { card, validSlots });
+    }
+    return;
+  }
+
+  // ── Number card (Ace=1 through 10) ──
+  const slotIndex = getValidSlot(card, board);
+  if (slotIndex === null) {
+    // Already filled — discard, end turn
+    state.discardPile.push({ ...card, faceUp: true });
+    io.to(roomId).emit("discarded", {
+      card,
+      playerIndex,
+      topDiscard: card,
+      deckCount: state.deck.length,
+    });
+    endTurn(state, roomId, playerIndex);
+    return;
+  }
+
+  // Place card, get the face-down card underneath
+  const chainCard = applyCardToSlot(board, slotIndex, card);
+
+  io.to(roomId).emit("boardUpdated", {
+    playerIndex,
+    slotIndex,
+    card: { ...card, faceUp: true },
+    deckCount: state.deck.length,
+  });
+
+  // Check win
+  if (checkWin(board)) {
+    endGame(state, roomId, playerIndex);
+    return;
+  }
+
+  // Chain: evaluate the face-down card we flipped
+  state.turnPhase = "chain";
+  await delay(player.isAI ? 500 : 300);
+
+  io.to(roomId).emit("chainCard", {
+    playerIndex,
+    card: { ...chainCard, faceUp: true },
+  });
+
+  await delay(player.isAI ? 400 : 200);
+  await evaluateCard(state, roomId, playerIndex, chainCard, true);
+}
+
+// Place a wildcard for a player (both human and AI use this after slot is chosen)
+async function placeWildcardForPlayer(state, roomId, playerIndex, card, slotIndex) {
+  const board = state.players[playerIndex].board;
+
+  const chainCard = applyCardToSlot(board, slotIndex, card);
+
+  io.to(roomId).emit("boardUpdated", {
+    playerIndex,
+    slotIndex,
+    card: { ...card, faceUp: true },
+    deckCount: state.deck.length,
+  });
+
+  if (checkWin(board)) {
+    endGame(state, roomId, playerIndex);
+    return;
+  }
+
+  state.turnPhase = "chain";
+  const isAI = state.players[playerIndex].isAI;
+  await delay(isAI ? 500 : 300);
+
+  io.to(roomId).emit("chainCard", {
+    playerIndex,
+    card: { ...chainCard, faceUp: true },
+  });
+
+  await delay(isAI ? 400 : 200);
+  await evaluateCard(state, roomId, playerIndex, chainCard, true);
+}
+
+function endTurn(state, roomId, playerIndex) {
+  advanceTurn(state);
+  const topDiscard = state.discardPile.length > 0
+    ? state.discardPile[state.discardPile.length - 1]
+    : null;
+
+  io.to(roomId).emit("turnEnded", {
+    nextPlayerIndex: state.currentPlayerIndex,
+    topDiscard,
+    deckCount: state.deck.length,
+  });
+
+  // Trigger AI if needed
+  if (state.phase === "playing" && state.players[state.currentPlayerIndex].isAI) {
+    triggerAI(state, roomId);
+  }
+}
+
+function endGame(state, roomId, winnerIndex) {
+  state.phase = "ended";
+  io.to(roomId).emit("gameOver", {
+    winnerIndex,
+    winnerName: state.players[winnerIndex].name,
+  });
+}
+
+// ═══════════════════════════════════════════════
+// AI LOGIC
+// ═══════════════════════════════════════════════
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function pickAIWildcardSlot(validSlots, board) {
+  // Prefer filling slots where the face-down card is more likely to be useful.
+  // Simple heuristic: choose the slot with the lowest index that isn't a corner
+  // (saves corners for Kings). For King, validSlots are already corners only.
+  const nonCorners = validSlots.filter(i => ![0, 4, 5, 9].includes(i));
+  return nonCorners.length > 0 ? nonCorners[0] : validSlots[0];
+}
+
+function triggerAI(state, roomId) {
+  (async () => {
+    await delay(600);
+    if (state.phase !== "playing") return;
+
+    io.to(roomId).emit("aiThinking");
+    await delay(700);
+
+    if (state.phase !== "playing") return;
+
+    // AI decides: take from discard if it can use the top card, else draw from deck
+    const aiIndex = state.currentPlayerIndex;
+    const aiBoard = state.players[aiIndex].board;
+    const topDiscard = state.discardPile.length > 0
+      ? state.discardPile[state.discardPile.length - 1]
+      : null;
+
+    let card;
+    if (topDiscard && canUseCard(topDiscard, aiBoard)) {
+      card = state.discardPile.pop();
+    } else {
+      ensureDeck(state, roomId);
+      if (state.deck.length === 0) {
+        endTurn(state, roomId, aiIndex);
+        return;
+      }
+      card = state.deck.pop();
+    }
+
+    await evaluateCard(state, roomId, aiIndex, card, false);
+  })();
+}
+
+// Quick check: can a card be used at all on a board?
+function canUseCard(card, board) {
+  if (card.rank === 12) return false; // Queen always discarded
+  if (card.rank === 11) return board.some(s => !s.filled); // Jack: any open slot
+  if (card.rank === 13) return [0, 4, 5, 9].some(i => !board[i].filled); // King: corner
+  return card.rank >= 1 && card.rank <= 10 && !board[card.rank - 1].filled;
+}
+
+// ═══════════════════════════════════════════════
+// SOCKET EVENTS
+// ═══════════════════════════════════════════════
+
+io.on("connection", socket => {
+  console.log(`Connected: ${socket.id}`);
+
+  // ── Create Room ──
+  socket.on("createRoom", ({ playerName }) => {
+    const roomId = generateRoomId();
+    const state = {
+      roomId,
+      phase: "lobby",
+      players: [{
+        id: socket.id,
+        name: playerName || "Player 1",
+        isAI: false,
+        board: [],
+      }],
+      deck: [],
+      discardPile: [],
+      currentPlayerIndex: 0,
+      turnPhase: "draw",
+      pendingWildcard: null,
+    };
+    rooms.set(roomId, state);
+    socket.join(roomId);
+    socket.emit("roomCreated", { roomId });
+  });
+
+  // ── Join Room ──
+  socket.on("joinRoom", ({ roomId, playerName }) => {
+    const state = rooms.get(roomId);
+    if (!state) {
+      socket.emit("joinError", { message: "Room not found." });
+      return;
+    }
+    if (state.phase !== "lobby") {
+      socket.emit("joinError", { message: "Game already in progress." });
+      return;
+    }
+    if (state.players.length >= 2) {
+      socket.emit("joinError", { message: "Room is full." });
+      return;
+    }
+
+    state.players.push({
+      id: socket.id,
+      name: playerName || "Player 2",
+      isAI: false,
+      board: [],
+    });
+    socket.join(roomId);
+    socket.emit("joinedRoom", { roomId });
+
+    // Both players present — start game
+    startGame(state, roomId);
+  });
+
+  // ── Play vs AI ──
+  socket.on("playVsAI", ({ playerName }) => {
+    const roomId = generateRoomId();
+    const state = {
+      roomId,
+      phase: "lobby",
+      players: [
+        { id: socket.id, name: playerName || "Player", isAI: false, board: [] },
+        { id: "ai", name: "AI", isAI: true, board: [] },
+      ],
+      deck: [],
+      discardPile: [],
+      currentPlayerIndex: 0,
+      turnPhase: "draw",
+      pendingWildcard: null,
+    };
+    rooms.set(roomId, state);
+    socket.join(roomId);
+    startGame(state, roomId);
+  });
+
+  // ── Draw Card ──
+  socket.on("drawCard", ({ roomId, source }) => {
+    const state = rooms.get(roomId);
+    if (!state || state.phase !== "playing") return;
+
+    const playerIndex = state.players.findIndex(p => p.id === socket.id);
+    if (playerIndex === -1 || playerIndex !== state.currentPlayerIndex) return;
+    if (state.turnPhase !== "draw") return;
+
+    let card;
+    if (source === "discard" && state.discardPile.length > 0) {
+      card = state.discardPile.pop();
+    } else {
+      ensureDeck(state, roomId);
+      if (state.deck.length === 0) {
+        endTurn(state, roomId, playerIndex);
+        return;
+      }
+      card = state.deck.pop();
+    }
+
+    state.turnPhase = "chain";
+    evaluateCard(state, roomId, playerIndex, card, false);
+  });
+
+  // ── Place Wildcard ──
+  socket.on("placeWildcard", ({ roomId, slotIndex }) => {
+    const state = rooms.get(roomId);
+    if (!state || state.phase !== "playing") return;
+
+    const playerIndex = state.players.findIndex(p => p.id === socket.id);
+    if (playerIndex === -1 || playerIndex !== state.currentPlayerIndex) return;
+    if (state.turnPhase !== "place-wildcard" || !state.pendingWildcard) return;
+
+    const board = state.players[playerIndex].board;
+    const validSlots = getValidSlotsForWildcard(state.pendingWildcard, board);
+    if (!validSlots.includes(slotIndex)) return;
+
+    const card = state.pendingWildcard;
+    state.pendingWildcard = null;
+
+    placeWildcardForPlayer(state, roomId, playerIndex, card, slotIndex);
+  });
+
+  // ── Disconnect ──
+  socket.on("disconnect", () => {
+    console.log(`Disconnected: ${socket.id}`);
+    for (const [roomId, state] of rooms.entries()) {
+      const idx = state.players.findIndex(p => p.id === socket.id);
+      if (idx === -1) continue;
+
+      if (state.phase === "playing") {
+        io.to(roomId).emit("opponentDisconnected");
+        state.phase = "ended";
+      }
+      // Clean up room after a delay
+      setTimeout(() => rooms.delete(roomId), 30000);
+      break;
+    }
+  });
+});

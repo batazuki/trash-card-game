@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Trash ✨</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ═══ LOBBY SCREEN ═══ -->
+  <div id="lobby-screen" class="screen active">
+    <div class="lobby-inner">
+      <h1 class="game-title">✨ Trash ✨</h1>
+      <p class="subtitle">The Card Game</p>
+
+      <input id="player-name" class="text-input" type="text"
+             placeholder="Your name" maxlength="20" autocomplete="off">
+
+      <div class="lobby-buttons">
+        <button class="btn btn-primary" id="vs-ai-btn">Play vs AI</button>
+        <button class="btn btn-secondary" id="create-room-btn">Create Room</button>
+      </div>
+
+      <div id="room-code-display" class="hidden">
+        <p class="label">Share this code:</p>
+        <div class="room-code" id="room-code-text"></div>
+        <p class="waiting-msg">Waiting for opponent...</p>
+      </div>
+
+      <div class="divider">— or join —</div>
+
+      <div class="join-row">
+        <input id="join-code" class="text-input join-input" type="text"
+               placeholder="Room code" maxlength="4" autocomplete="off"
+               style="text-transform:uppercase">
+        <button class="btn btn-secondary" id="join-room-btn">Join</button>
+      </div>
+
+      <label class="toggle-row">
+        <span class="toggle-label">6–10 on top row</span>
+        <div class="toggle-wrap">
+          <input type="checkbox" id="row-order-toggle">
+          <span class="toggle-slider"></span>
+        </div>
+      </label>
+
+      <label class="toggle-row">
+        <span class="toggle-label">Landscape layout</span>
+        <div class="toggle-wrap">
+          <input type="checkbox" id="landscape-toggle">
+          <span class="toggle-slider"></span>
+        </div>
+      </label>
+
+      <p id="lobby-error" class="error hidden"></p>
+    </div>
+  </div>
+
+  <!-- ═══ GAME SCREEN ═══ -->
+  <div id="game-screen" class="screen hidden">
+
+    <!-- Opponent area -->
+    <div class="player-area opponent-area">
+      <div class="player-label" id="opponent-label">Opponent</div>
+      <div class="board" id="opponent-board"></div>
+    </div>
+
+    <!-- Center controls -->
+    <div id="game-center">
+      <div id="turn-indicator" class="turn-indicator">Your Turn</div>
+
+      <div class="pile-row">
+        <div class="pile-container">
+          <div id="deck-pile" class="card card-back pile-card">
+            <span id="deck-count" class="deck-count">52</span>
+          </div>
+          <div class="pile-label">Deck</div>
+        </div>
+        <div class="pile-container">
+          <div id="discard-pile" class="pile-card discard-empty">
+            <span class="pile-empty-label">Empty</span>
+          </div>
+          <div class="pile-label">Discard</div>
+        </div>
+      </div>
+
+      <div id="chain-display" class="chain-display hidden">
+        <span class="chain-label">Chain:</span>
+        <div id="chain-card"></div>
+      </div>
+
+      <div class="draw-buttons">
+        <button class="btn btn-draw" id="draw-deck-btn">Draw from Deck</button>
+        <button class="btn btn-draw btn-discard-draw" id="draw-discard-btn" disabled>Take Discard</button>
+      </div>
+    </div>
+
+    <!-- My area -->
+    <div class="player-area my-area">
+      <div class="player-label" id="my-label">You</div>
+      <div class="board" id="my-board"></div>
+    </div>
+
+  </div>
+
+  <!-- ═══ END SCREEN ═══ -->
+  <div id="end-screen" class="screen hidden">
+    <div class="end-inner">
+      <div id="result-emoji" class="result-emoji"></div>
+      <h2 id="result-text" class="result-text"></h2>
+      <p id="result-sub" class="result-sub"></p>
+      <div class="end-buttons">
+        <button class="btn btn-primary" id="play-again-btn">Play Again</button>
+        <button class="btn btn-secondary" id="back-lobby-btn">Main Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
