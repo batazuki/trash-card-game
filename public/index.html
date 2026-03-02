@@ -56,6 +56,14 @@
       </label>
 
       <label class="toggle-row">
+        <span class="toggle-label">Oldies (high contrast)</span>
+        <div class="toggle-wrap">
+          <input type="checkbox" id="oldies-toggle">
+          <span class="toggle-slider"></span>
+        </div>
+      </label>
+
+      <label class="toggle-row">
         <span class="toggle-label">6–10 on top row</span>
         <div class="toggle-wrap">
           <input type="checkbox" id="row-order-toggle">
@@ -67,14 +75,6 @@
         <span class="toggle-label">Landscape layout</span>
         <div class="toggle-wrap">
           <input type="checkbox" id="landscape-toggle">
-          <span class="toggle-slider"></span>
-        </div>
-      </label>
-
-      <label class="toggle-row">
-        <span class="toggle-label">Oldies (high contrast)</span>
-        <div class="toggle-wrap">
-          <input type="checkbox" id="oldies-toggle">
           <span class="toggle-slider"></span>
         </div>
       </label>
@@ -115,15 +115,16 @@
         <button class="btn btn-draw" id="draw-deck-btn">Draw from Deck</button>
         <button class="btn btn-draw btn-discard-draw" id="draw-discard-btn" disabled>Take Discard</button>
       </div>
+    </div>
 
-      <div class="gear-wrap">
-        <button id="gear-btn" class="gear-btn" aria-label="Settings">⚙</button>
-        <div id="settings-panel" class="settings-panel hidden">
-          <button id="settings-music" class="settings-item hidden">🔊 Music</button>
-          <button id="settings-oldies" class="settings-item">👓 Oldies: Off</button>
-          <button id="settings-help" class="settings-item">❓ How to Play</button>
-          <button id="settings-quit" class="settings-item settings-quit">🚪 Quit</button>
-        </div>
+    <!-- Gear / settings — fixed top-right corner of game screen -->
+    <div class="gear-wrap">
+      <button id="gear-btn" class="gear-btn" aria-label="Settings">⚙</button>
+      <div id="settings-panel" class="settings-panel hidden">
+        <button id="settings-music" class="settings-item hidden">🔊 Music</button>
+        <button id="settings-oldies" class="settings-item">👓 Oldies: Off</button>
+        <button id="settings-help" class="settings-item">❓ How to Play</button>
+        <button id="settings-quit" class="settings-item settings-quit">🚪 Quit</button>
       </div>
     </div>
 
