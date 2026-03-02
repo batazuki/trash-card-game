@@ -3,7 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Trash ✨</title>
+  <title>Tiny Tiny Games</title>
+  <meta name="description" content="Card games and more!">
+  <meta name="theme-color" content="#7c3aed">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Tiny Games">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/icon.svg">
+  <link rel="apple-touch-startup-image" href="/icons/splash.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
@@ -18,8 +27,8 @@
         <button class="help-btn" id="help-btn-lobby">?</button>
       </div>
 
-      <h1 class="game-title">✨ Trash ✨</h1>
-      <p class="subtitle">The Card Game</p>
+      <h1 class="game-title">✨ Tiny Tiny Games ✨</h1>
+      <p class="subtitle">Card games and more!</p>
 
       <input id="player-name" class="text-input" type="text"
              placeholder="Your name" maxlength="20" autocomplete="off">
@@ -234,5 +243,10 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="game.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+  </script>
 </body>
 </html>

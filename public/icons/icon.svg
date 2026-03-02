@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#4f46e5"/>
+    </linearGradient>
+    <linearGradient id="card1bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fff"/>
+      <stop offset="100%" stop-color="#f0e6ff"/>
+    </linearGradient>
+    <linearGradient id="card2bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fff"/>
+      <stop offset="100%" stop-color="#e6f0ff"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded background -->
+  <rect width="512" height="512" rx="108" fill="url(#bg)"/>
+  <!-- Subtle sparkles -->
+  <text x="80" y="120" font-size="32" opacity="0.35">✦</text>
+  <text x="400" y="100" font-size="24" opacity="0.3">✦</text>
+  <text x="420" y="430" font-size="28" opacity="0.3">✦</text>
+  <text x="60" y="440" font-size="22" opacity="0.25">✦</text>
+  <!-- Card 1 (tilted left) -->
+  <g transform="translate(256,240) rotate(-12)">
+    <rect x="-75" y="-100" width="150" height="200" rx="14" fill="url(#card1bg)" stroke="#e0d4f5" stroke-width="2"/>
+    <!-- Kawaii face on card -->
+    <circle cx="-22" cy="-10" r="10" fill="#1a1a2e"/>
+    <circle cx="22" cy="-10" r="10" fill="#1a1a2e"/>
+    <circle cx="-22" cy="-13" r="4" fill="#fff"/>
+    <circle cx="22" cy="-13" r="4" fill="#fff"/>
+    <!-- Blush -->
+    <ellipse cx="-38" cy="8" rx="12" ry="7" fill="#ffb3c6" opacity="0.5"/>
+    <ellipse cx="38" cy="8" rx="12" ry="7" fill="#ffb3c6" opacity="0.5"/>
+    <!-- Happy mouth -->
+    <path d="M-14,18 Q0,34 14,18" fill="none" stroke="#1a1a2e" stroke-width="3.5" stroke-linecap="round"/>
+    <!-- Heart suit top-left corner -->
+    <text x="-58" y="-62" font-size="28" fill="#e74c6f" font-family="serif">♥</text>
+    <!-- Rank bottom-right -->
+    <text x="32" y="82" font-size="26" fill="#7c3aed" font-weight="bold" font-family="sans-serif">7</text>
+  </g>
+  <!-- Card 2 (tilted right) -->
+  <g transform="translate(256,240) rotate(10)">
+    <rect x="-75" y="-100" width="150" height="200" rx="14" fill="url(#card2bg)" stroke="#d4e0f5" stroke-width="2"/>
+    <!-- Kawaii face -->
+    <circle cx="-22" cy="-10" r="10" fill="#1a1a2e"/>
+    <circle cx="22" cy="-10" r="10" fill="#1a1a2e"/>
+    <circle cx="-22" cy="-13" r="4" fill="#fff"/>
+    <circle cx="22" cy="-13" r="4" fill="#fff"/>
+    <!-- Blush -->
+    <ellipse cx="-38" cy="8" rx="12" ry="7" fill="#b3d4ff" opacity="0.5"/>
+    <ellipse cx="38" cy="8" rx="12" ry="7" fill="#b3d4ff" opacity="0.5"/>
+    <!-- Cat mouth :3 -->
+    <path d="M-10,16 Q-5,26 0,18" fill="none" stroke="#1a1a2e" stroke-width="3" stroke-linecap="round"/>
+    <path d="M0,18 Q5,26 10,16" fill="none" stroke="#1a1a2e" stroke-width="3" stroke-linecap="round"/>
+    <!-- Spade suit top-left -->
+    <text x="-58" y="-62" font-size="28" fill="#1a1a2e" font-family="serif">♠</text>
+    <!-- Rank bottom-right -->
+    <text x="32" y="82" font-size="26" fill="#4f46e5" font-weight="bold" font-family="sans-serif">A</text>
+  </g>
+  <!-- Title text -->
+  <text x="256" y="418" text-anchor="middle" font-family="'Nunito',sans-serif" font-weight="900" font-size="52" fill="#fff" letter-spacing="1">
+    TINY TINY
+  </text>
+  <text x="256" y="468" text-anchor="middle" font-family="'Nunito',sans-serif" font-weight="800" font-size="40" fill="#fbbf24" letter-spacing="2">
+    GAMES
+  </text>
+</svg>

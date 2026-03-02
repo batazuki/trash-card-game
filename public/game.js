@@ -256,7 +256,7 @@ function playTurnSound() {
 function notifyMyTurn() {
   playTurnSound();
   navigator.vibrate?.(160);
-  document.title = "⚡ Your Turn! — Trash";
+  document.title = "⚡ Your Turn! — Tiny Tiny Games";
   // Board glow
   const myArea = document.querySelector(".my-area");
   myArea.classList.remove("turn-flash");
@@ -703,7 +703,7 @@ socket.on("gameStart", ({ roomId, myPlayerIndex, boards, currentPlayerIndex, pla
   requestWakeLock();
   showScreen("game-screen");
   if (local.isMyTurn) notifyMyTurn();
-  else document.title = "Trash ✨";
+  else document.title = "Tiny Tiny Games";
 });
 
 socket.on("boardUpdated", ({ playerIndex, slotIndex, card, wildcardFilled, deckCount }) => {
@@ -784,7 +784,7 @@ socket.on("turnEnded", ({ nextPlayerIndex, topDiscard, deckCount }) => {
   renderBoard(local.myPlayerIndex, local.boards[local.myPlayerIndex]);
 
   if (local.isMyTurn) { notifyMyTurn(); playTurnStart(); }
-  else document.title = "Trash ✨";
+  else document.title = "Tiny Tiny Games";
 });
 
 socket.on("aiThinking", () => {
@@ -887,7 +887,7 @@ $("back-results-btn").addEventListener("click", closeViewCards);
 // Show reconnecting message when our socket drops
 socket.on("disconnect", () => {
   updateTurnIndicator("Reconnecting…");
-  document.title = "Reconnecting… — Trash";
+  document.title = "Reconnecting… — Tiny Tiny Games";
 });
 
 // On connect (and reconnect), try to rejoin an active game
@@ -941,7 +941,7 @@ socket.on("gameRejoined", ({
   }
 
   showScreen("game-screen");
-  document.title = "Trash ✨";
+  document.title = "Tiny Tiny Games";
 });
 
 // Opponent's socket dropped — give them time to reconnect
