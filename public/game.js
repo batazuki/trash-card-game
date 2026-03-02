@@ -4,6 +4,26 @@
 
 const socket = io();
 
+// ═══ SPLASH SCREEN ═══
+(function dismissSplash() {
+  const splash = document.getElementById("splash-screen");
+  if (!splash) return;
+  const minTime = 1800; // show for at least 1.8s
+  const start = Date.now();
+  function hide() {
+    const elapsed = Date.now() - start;
+    const remaining = Math.max(0, minTime - elapsed);
+    setTimeout(() => {
+      splash.classList.add("fade-out");
+      setTimeout(() => splash.classList.add("hidden"), 500);
+    }, remaining);
+  }
+  // Dismiss once socket connects (means server is ready)
+  socket.once("connect", hide);
+  // Fallback: dismiss after 4s even if socket is slow
+  setTimeout(hide, 4000);
+})();
+
 // ═══ LOCAL STATE ═══
 let local = {
   roomId: null,

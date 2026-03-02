@@ -1,12 +1,11 @@
-const CACHE_NAME = 'ttg-v1';
+const CACHE_NAME = 'ttg-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/style.css',
   '/game.js',
   '/manifest.json',
-  '/icons/icon.svg',
-  '/icons/splash.svg'
+  '/icons/icon.svg'
 ];
 
 // Install: cache all static assets

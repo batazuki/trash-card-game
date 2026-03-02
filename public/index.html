@@ -12,13 +12,31 @@
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/icons/icon.svg">
-  <link rel="apple-touch-startup-image" href="/icons/splash.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+  <!-- ═══ SPLASH SCREEN ═══ -->
+  <div id="splash-screen" class="splash-screen">
+    <div class="splash-card">
+      <div class="splash-eyes">
+        <div class="splash-eye"><span class="splash-pupil"></span></div>
+        <div class="splash-eye"><span class="splash-pupil"></span></div>
+      </div>
+      <div class="splash-blush"></div>
+      <div class="splash-mouth"></div>
+      <span class="splash-suit splash-suit-tl">♥</span>
+      <span class="splash-suit splash-suit-br">♠</span>
+    </div>
+    <div class="splash-title">
+      <span class="splash-stars">✨</span> Tiny Tiny <span class="splash-stars">✨</span>
+    </div>
+    <div class="splash-games">GAMES</div>
+    <div class="splash-tagline">Card games and more!</div>
+  </div>
 
   <!-- ═══ LOBBY SCREEN ═══ -->
   <div id="lobby-screen" class="screen active">
@@ -27,7 +45,10 @@
         <button class="help-btn" id="help-btn-lobby">?</button>
       </div>
 
-      <h1 class="game-title">✨ Tiny Tiny Games ✨</h1>
+      <h1 class="game-title">
+        <span class="title-line">✨ Tiny Tiny ✨</span>
+        <span class="title-games">Games</span>
+      </h1>
       <p class="subtitle">Card games and more!</p>
 
       <input id="player-name" class="text-input" type="text"
