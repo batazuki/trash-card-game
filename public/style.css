@@ -291,6 +291,7 @@ html, body {
   gap: 6px;
   width: 100%;
 }
+.my-area { padding-bottom: 20px; }
 
 .player-label {
   font-size: 11px;
@@ -338,17 +339,56 @@ html, body {
 }
 .card-slot.valid-slot {
   border-color: var(--valid-slot-border);
-  border-width: 2px;
+  border-width: 2.5px;
   border-style: solid;
   cursor: pointer;
-  animation: pulse-slot 0.7s ease-in-out infinite alternate;
-  background: rgba(251,191,36,0.12);
+  animation: pulse-slot 0.55s ease-in-out infinite alternate;
+  background: rgba(251,191,36,0.2);
+  overflow: visible;
 }
 .card-slot.valid-slot:active { transform: scale(0.95); }
 
+/* Spark particles at opposing corners */
+.card-slot.valid-slot::before,
+.card-slot.valid-slot::after {
+  content: "✦";
+  position: absolute;
+  color: #fef08a;
+  filter: drop-shadow(0 0 5px #fbbf24) drop-shadow(0 0 10px #f59e0b);
+  pointer-events: none;
+  line-height: 1;
+  z-index: 10;
+  animation: spark-twinkle 0.85s ease-in-out infinite alternate;
+}
+.card-slot.valid-slot::before {
+  font-size: 13px;
+  top: -9px; right: -6px;
+}
+.card-slot.valid-slot::after {
+  font-size: 9px;
+  bottom: -7px; left: -5px;
+  animation-delay: 0.42s;
+}
+
 @keyframes pulse-slot {
-  from { box-shadow: 0 0 4px var(--valid-slot-border); }
-  to   { box-shadow: 0 0 18px var(--valid-slot-border); }
+  from {
+    box-shadow:
+      0 0 6px 2px var(--valid-slot-border),
+      0 0 20px 5px rgba(251,191,36,0.45),
+      inset 0 0 8px rgba(251,191,36,0.12);
+  }
+  to {
+    box-shadow:
+      0 0 14px 5px var(--valid-slot-border),
+      0 0 44px 14px rgba(251,191,36,0.65),
+      0 0 70px 22px rgba(255,220,50,0.2),
+      inset 0 0 18px rgba(251,191,36,0.28);
+  }
+}
+
+@keyframes spark-twinkle {
+  from { opacity: 0.1; transform: scale(0.4) rotate(0deg); }
+  to   { opacity: 1;   transform: scale(1.5) rotate(45deg); }
 }
 
 .slot-hint {
@@ -655,6 +695,7 @@ body.is-landscape .player-area {
   min-width: 0;
   justify-content: center;
 }
+body.is-landscape .my-area { padding-bottom: 0; }
 
 body.is-landscape .player-label { font-size: 10px; }
 
@@ -1054,7 +1095,7 @@ body.mode-oldies {
   --black: #111111;
   --card-bg: #ffffff;
   --card-border: #333333;
-  --card-back-bg: #003087;
+  --card-back-bg: #4a90d9;
   --card-back-border: #bbbbbb;
   --slot-bg:            rgba(0,0,0,0.05);
   --slot-border:        rgba(0,0,0,0.3);

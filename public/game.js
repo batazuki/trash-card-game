@@ -487,7 +487,7 @@ function recalcCardSizes() {
   const maxCardWByHeight = Math.floor(((window.innerHeight - 200) / 4) / 1.43);
   cardW = Math.min(cardW, Math.max(38, maxCardWByHeight));
 
-  const oppCardW = Math.max(30, Math.round(cardW * (isLandscape ? 0.92 : 0.86)));
+  const oppCardW = isLandscape ? cardW : Math.max(28, Math.round(cardW * 0.80));
 
   const r = document.documentElement;
   r.style.setProperty("--card-w",     `${cardW}px`);
