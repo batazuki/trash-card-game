@@ -51,6 +51,20 @@
       </h1>
       <p class="subtitle">Card games and more!</p>
 
+      <label class="toggle-row">
+        <span class="toggle-label">Game</span>
+        <select id="game-select" class="game-select">
+          <optgroup label="Trash">
+            <option value="trash">Trash</option>
+            <option value="trash-eleven">Trash / Eleven</option>
+          </optgroup>
+          <option value="war">War</option>
+          <option value="gofish">Go Fish</option>
+          <option value="oldmaid">Old Maid</option>
+          <option value="solitaire">Solitaire</option>
+        </select>
+      </label>
+
       <input id="player-name" class="text-input" type="text"
              placeholder="Your name" maxlength="20" autocomplete="off">
 
@@ -78,14 +92,6 @@
       </div>
 
       <label class="toggle-row">
-        <span class="toggle-label">Variant</span>
-        <select id="variant-select" class="variant-select">
-          <option value="default">Default</option>
-          <option value="eleven">Eleven</option>
-        </select>
-      </label>
-
-      <label class="toggle-row">
         <span class="toggle-label">Oldies (high contrast)</span>
         <div class="toggle-wrap">
           <input type="checkbox" id="oldies-toggle">
@@ -100,38 +106,62 @@
   <!-- ═══ GAME SCREEN ═══ -->
   <div id="game-screen" class="screen hidden">
 
-    <!-- Opponent area -->
-    <div class="player-area opponent-area">
-      <div class="player-label" id="opponent-label">Opponent</div>
-      <div class="board" id="opponent-board"></div>
-    </div>
+    <!-- Trash UI (hidden for non-trash games) -->
+    <div id="trash-ui">
+      <div class="player-area opponent-area">
+        <div class="player-label" id="opponent-label">Opponent</div>
+        <div class="board" id="opponent-board"></div>
+      </div>
 
-    <!-- Center controls -->
-    <div id="game-center">
-      <div id="turn-indicator" class="turn-indicator">Your Turn</div>
+      <div id="game-center">
+        <div id="turn-indicator" class="turn-indicator">Your Turn</div>
 
-      <div class="pile-row">
-        <div class="pile-container">
-          <div id="deck-pile" class="card card-back pile-card">
-            <span id="deck-count" class="deck-count">52</span>
+        <div class="pile-row">
+          <div class="pile-container">
+            <div id="deck-pile" class="card card-back pile-card">
+              <span id="deck-count" class="deck-count">52</span>
+            </div>
+            <div class="pile-label">Deck</div>
           </div>
-          <div class="pile-label">Deck</div>
+          <div class="pile-container">
+            <div id="discard-pile" class="pile-card discard-empty">
+              <span class="pile-empty-label">Empty</span>
+            </div>
+            <div class="pile-label" id="discard-pile-label">Discard</div>
+          </div>
         </div>
-        <div class="pile-container">
-          <div id="discard-pile" class="pile-card discard-empty">
-            <span class="pile-empty-label">Empty</span>
-          </div>
-          <div class="pile-label" id="discard-pile-label">Discard</div>
+
+        <div class="draw-buttons">
+          <button class="btn btn-draw" id="draw-deck-btn">Draw from Deck</button>
+          <button class="btn btn-draw btn-discard-draw" id="draw-discard-btn" disabled>Take Discard</button>
         </div>
       </div>
 
-      <div class="draw-buttons">
-        <button class="btn btn-draw" id="draw-deck-btn">Draw from Deck</button>
-        <button class="btn btn-draw btn-discard-draw" id="draw-discard-btn" disabled>Take Discard</button>
+      <div class="player-area my-area">
+        <div class="player-label" id="my-label">You</div>
+        <div id="reaction-bar" class="reaction-bar">
+          <button class="reaction-btn" data-emoji="👍">👍</button>
+          <button class="reaction-btn" data-emoji="😂">😂</button>
+          <button class="reaction-btn" data-emoji="😮">😮</button>
+          <button class="reaction-btn" data-emoji="🔥">🔥</button>
+          <button class="reaction-btn" data-emoji="💀">💀</button>
+          <button class="reaction-btn" data-emoji="😬">😬</button>
+          <button class="reaction-btn" data-emoji="🦍">🦍</button>
+          <button class="reaction-btn" data-emoji="6️⃣7️⃣">6️⃣7️⃣</button>
+        </div>
+        <div class="board" id="my-board"></div>
+      </div>
+
+      <div id="view-only-banner" class="view-only-banner hidden">
+        <span>Viewing final board</span>
+        <button class="btn btn-secondary" id="back-results-btn">← Results</button>
       </div>
     </div>
 
-    <!-- Gear / settings — fixed top-right corner of game screen -->
+    <!-- Container for non-trash games (War, Go Fish, Old Maid, Solitaire) -->
+    <div id="game-container" class="hidden"></div>
+
+    <!-- Gear / settings — always visible -->
     <div class="gear-wrap">
       <button id="gear-btn" class="gear-btn" aria-label="Settings">⚙</button>
       <div id="settings-panel" class="settings-panel hidden">
@@ -144,28 +174,6 @@
       </div>
     </div>
 
-    <!-- My area -->
-    <div class="player-area my-area">
-      <div class="player-label" id="my-label">You</div>
-      <div id="reaction-bar" class="reaction-bar">
-        <button class="reaction-btn" data-emoji="👍">👍</button>
-        <button class="reaction-btn" data-emoji="😂">😂</button>
-        <button class="reaction-btn" data-emoji="😮">😮</button>
-        <button class="reaction-btn" data-emoji="🔥">🔥</button>
-        <button class="reaction-btn" data-emoji="💀">💀</button>
-        <button class="reaction-btn" data-emoji="😬">😬</button>
-        <button class="reaction-btn" data-emoji="🦍">🦍</button>
-        <button class="reaction-btn" data-emoji="6️⃣7️⃣">6️⃣7️⃣</button>
-      </div>
-      <div class="board" id="my-board"></div>
-    </div>
-
-    <!-- View-only banner (shown when browsing board from end screen) -->
-    <div id="view-only-banner" class="view-only-banner hidden">
-      <span>Viewing final board</span>
-      <button class="btn btn-secondary" id="back-results-btn">← Results</button>
-    </div>
-
   </div>
 
   <!-- ═══ END SCREEN ═══ -->
@@ -174,6 +182,7 @@
       <div id="result-emoji" class="result-emoji"></div>
       <h2 id="result-text" class="result-text"></h2>
       <p id="result-sub" class="result-sub"></p>
+      <div id="score-display" class="score-display hidden"></div>
 
       <div class="reaction-bar end-reaction-bar">
         <button class="reaction-btn" data-emoji="👍">👍</button>
@@ -200,8 +209,12 @@
       <h2 class="modal-title">How to Play</h2>
 
       <div class="modal-tabs">
-        <button class="modal-tab active" data-tab="default">Default</button>
+        <button class="modal-tab active" data-tab="default">Trash</button>
         <button class="modal-tab" data-tab="eleven">Eleven</button>
+        <button class="modal-tab" data-tab="war">War</button>
+        <button class="modal-tab" data-tab="gofish">Go Fish</button>
+        <button class="modal-tab" data-tab="oldmaid">Old Maid</button>
+        <button class="modal-tab" data-tab="solitaire">Solitaire</button>
       </div>
 
       <div id="help-default" class="modal-section active">
@@ -258,12 +271,112 @@
         </div>
       </div>
 
+      <div id="help-war" class="modal-section">
+        <div class="modal-rule">
+          <strong>Goal</strong>
+          Win all 52 cards.
+        </div>
+        <div class="modal-rule">
+          <strong>Setup</strong>
+          Deck is split evenly — 26 cards each, face-down.
+        </div>
+        <div class="modal-rule">
+          <strong>Each Round</strong>
+          Both players flip their top card. Higher rank wins both cards (Ace is highest).
+        </div>
+        <div class="modal-rule">
+          <strong>War!</strong>
+          If both cards are the same rank: each player puts 3 cards face-down, then flips 1 face-up. Higher face-up wins all cards. Ties repeat.
+        </div>
+        <div class="modal-rule">
+          <strong>Win</strong>
+          Game ends when one player has all 52 cards.
+        </div>
+      </div>
+
+      <div id="help-gofish" class="modal-section">
+        <div class="modal-rule">
+          <strong>Goal</strong>
+          Collect the most 4-of-a-kind sets.
+        </div>
+        <div class="modal-rule">
+          <strong>Setup</strong>
+          7 cards each, rest is the draw pile.
+        </div>
+        <div class="modal-rule">
+          <strong>Your Turn</strong>
+          Tap a card in your hand to ask your opponent for that rank.
+        </div>
+        <div class="modal-rule">
+          <strong>Got It!</strong>
+          If opponent has cards of that rank, they hand them all over. You go again.
+        </div>
+        <div class="modal-rule">
+          <strong>Go Fish!</strong>
+          If opponent doesn't have it, you draw from the deck. If you draw the rank you asked for, go again!
+        </div>
+        <div class="modal-rule">
+          <strong>Sets</strong>
+          When you collect 4 of a kind, the set is placed on the table.
+        </div>
+      </div>
+
+      <div id="help-oldmaid" class="modal-section">
+        <div class="modal-rule">
+          <strong>Goal</strong>
+          Don't be stuck with the unpaired Queen!
+        </div>
+        <div class="modal-rule">
+          <strong>Setup</strong>
+          One Queen is removed (51 cards). All cards dealt out. Initial pairs are automatically discarded.
+        </div>
+        <div class="modal-rule">
+          <strong>Your Turn</strong>
+          Draw a random card from your opponent's face-down hand.
+        </div>
+        <div class="modal-rule">
+          <strong>Pairs</strong>
+          If the drawn card matches a rank in your hand, both are discarded as a pair.
+        </div>
+        <div class="modal-rule">
+          <strong>Win</strong>
+          First player to empty their hand wins. The loser holds the lone Queen.
+        </div>
+      </div>
+
+      <div id="help-solitaire" class="modal-section">
+        <div class="modal-rule">
+          <strong>Goal</strong>
+          Move all 52 cards to the 4 foundation piles (A→K by suit).
+        </div>
+        <div class="modal-rule">
+          <strong>Tableau</strong>
+          7 columns of cascading cards. Build down in alternating colors (red on black, black on red).
+        </div>
+        <div class="modal-rule">
+          <strong>Foundations</strong>
+          Build up by suit from Ace to King. Double-tap a card to auto-send it.
+        </div>
+        <div class="modal-rule">
+          <strong>Stock</strong>
+          Tap the deck to flip one card to the waste pile. Tap a waste card to select it, then tap a valid destination.
+        </div>
+        <div class="modal-rule">
+          <strong>Moving Cards</strong>
+          Tap a face-up card to select it, then tap where you want it. Only Kings can go on empty columns.
+        </div>
+      </div>
+
       <button class="btn btn-secondary modal-close" id="help-close">Got it</button>
     </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="game.js"></script>
+  <script src="games/war-client.js"></script>
+  <script src="games/gofish-client.js"></script>
+  <script src="games/oldmaid-client.js"></script>
+  <script src="games/solitaire-client.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});

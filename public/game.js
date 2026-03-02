@@ -24,6 +24,11 @@ const socket = io();
   setTimeout(hide, 4000);
 })();
 
+// ═══ GAME CLIENT REGISTRY ═══
+// Game client modules register themselves on window.gameClients
+window.gameClients = window.gameClients || {};
+window._gameLocal = null; // Exposed for game client modules
+
 // ═══ LOCAL STATE ═══
 let local = {
   roomId: null,
@@ -40,7 +45,7 @@ let local = {
   topDiscard: null,
   vsAI: false,
   rowReversed: localStorage.getItem("rowReversed") === "1",
-  variant: "default",
+  gameType: "trash",
   viewingCards: false,   // true when showing game-screen from end-screen
   oldies: localStorage.getItem("oldies") === "1",
 };
@@ -98,7 +103,7 @@ function renderBoard(playerIndex, board) {
   const container = $(isMe ? "my-board" : "opponent-board");
   container.innerHTML = "";
 
-  const isEleven = local.variant === "eleven";
+  const isEleven = local.gameType === "trash-eleven";
   container.classList.toggle("eleven-board", isEleven);
 
   function buildSlotEl(i) {
@@ -213,8 +218,8 @@ function getValidSlotClient(card, board) {
   if (!slot) return null;
   if (!slot.filled) return idx;
   // Wildcard overlay: Eleven variant only
-  if (local.variant === "eleven" && slot.wildcardFilled) return idx;
-  if (local.variant === "eleven" && card.rank === 1 && board[10]) {
+  if (local.gameType === "trash-eleven" && slot.wildcardFilled) return idx;
+  if (local.gameType === "trash-eleven" && card.rank === 1 && board[10]) {
     const s10 = board[10];
     if (!s10.filled || s10.wildcardFilled) return 10;
   }
@@ -277,11 +282,13 @@ function notifyMyTurn() {
   playTurnSound();
   navigator.vibrate?.(160);
   document.title = "⚡ Your Turn! — Tiny Tiny Games";
-  // Board glow
+  // Board glow (Trash only — .my-area may not exist for other games)
   const myArea = document.querySelector(".my-area");
-  myArea.classList.remove("turn-flash");
-  void myArea.offsetWidth; // force reflow to restart animation
-  myArea.classList.add("turn-flash");
+  if (myArea) {
+    myArea.classList.remove("turn-flash");
+    void myArea.offsetWidth; // force reflow to restart animation
+    myArea.classList.add("turn-flash");
+  }
   myArea.addEventListener("animationend", () => myArea.classList.remove("turn-flash"), { once: true });
   // Background flash
   document.body.classList.add("your-turn-flash");
@@ -324,8 +331,8 @@ document.querySelectorAll(".reaction-btn").forEach(btn => {
 });
 
 // ═══ ELEVEN VARIANT THEME ═══
-function applyVariantTheme(variant) {
-  document.body.classList.toggle("variant-eleven", variant === "eleven");
+function applyGameTheme(variant) {
+  document.body.classList.toggle("game-trash-eleven", variant === "trash-eleven");
 }
 
 // ═══ SCREEN WAKE LOCK ═══
@@ -546,7 +553,7 @@ $("oldies-toggle").addEventListener("change", e => setOldiesMode(e.target.checke
 // override any CSS defaults and respond to both window size and layout mode.
 function recalcCardSizes() {
   const isLandscape = document.body.classList.contains("is-landscape");
-  const isEleven    = local.variant === "eleven";
+  const isEleven    = local.gameType === "trash-eleven";
   const cols = isEleven ? 6 : 5;
   const vw = window.innerWidth;
   const gap = isLandscape ? 4 : 6;
@@ -598,30 +605,41 @@ if (isTouchDevice) setLandscape(window.innerWidth > window.innerHeight);
 else setLandscape(localStorage.getItem("landscape") === "1");
 
 // ═══ LOBBY BUTTON HANDLERS ═══
-// Restore persisted variant in lobby select
+// Restore persisted game in lobby select
 (function() {
-  const saved = localStorage.getItem("variant") || "default";
-  $("variant-select").value = saved;
-  applyVariantTheme(saved);
+  const saved = localStorage.getItem("game") || "trash";
+  $("game-select").value = saved;
+  applyGameTheme(saved);
 })();
 
-// Live lobby theme preview when variant changes + persist
-$("variant-select").addEventListener("change", e => {
-  localStorage.setItem("variant", e.target.value);
-  applyVariantTheme(e.target.value);
+// Live lobby theme preview when game changes + persist + update UI
+$("game-select").addEventListener("change", e => {
+  localStorage.setItem("game", e.target.value);
+  applyGameTheme(e.target.value);
+  updateLobbyForGame(e.target.value);
 });
+
+function updateLobbyForGame(game) {
+  const isSolo = game === "solitaire";
+  $("vs-ai-btn").textContent = isSolo ? "Play" : "Play vs AI";
+  $("create-room-btn").style.display = isSolo ? "none" : "";
+  document.querySelector(".divider").style.display = isSolo ? "none" : "";
+  document.querySelector(".join-row").style.display = isSolo ? "none" : "";
+}
+// Apply on load
+updateLobbyForGame(localStorage.getItem("game") || "trash");
 
 $("vs-ai-btn").addEventListener("click", () => {
   const name = $("player-name").value.trim() || "Player";
   local.playerName = name;
   local.vsAI = true;
-  socket.emit("playVsAI", { playerName: name, variant: $("variant-select").value });
+  socket.emit("playVsAI", { playerName: name, game: $("game-select").value });
 });
 
 $("create-room-btn").addEventListener("click", () => {
   const name = $("player-name").value.trim() || "Player";
   local.playerName = name;
-  socket.emit("createRoom", { playerName: name, variant: $("variant-select").value });
+  socket.emit("createRoom", { playerName: name, game: $("game-select").value });
 });
 
 $("join-room-btn").addEventListener("click", () => {
@@ -663,12 +681,13 @@ $("play-again-btn").addEventListener("click", () => {
 $("back-lobby-btn").addEventListener("click", () => {
   releaseWakeLock();
   stopElevenMusic();
-  applyVariantTheme("default");
+  applyGameTheme("trash");
   local.roomId = null;
   local.vsAI = false;
-  local.variant = "default";
+  local.gameType = "trash";
   $("room-code-display").classList.add("hidden");
   $("room-code-text").textContent = "";
+  $("score-display").classList.add("hidden");
   showScreen("lobby-screen");
 });
 
@@ -688,38 +707,63 @@ socket.on("joinError", ({ message }) => {
   showError(message);
 });
 
-socket.on("gameStart", ({ roomId, myPlayerIndex, boards, currentPlayerIndex, players, deckCount, variant }) => {
+socket.on("gameStart", (data) => {
+  const { roomId, myPlayerIndex, players, game } = data;
   local.roomId = roomId;
   local.myPlayerIndex = myPlayerIndex;
-  local.boards = boards;
-  local.currentPlayerIndex = currentPlayerIndex;
-  local.isMyTurn = myPlayerIndex === currentPlayerIndex;
-  local.turnPhase = "draw";
-  local.pendingWildcard = null;
-  local.validSlots = [];
-  local.topDiscard = null;
-  local.variant = variant || "default";
-  // Apply/remove theme and music
-  applyVariantTheme(local.variant);
-  if (local.variant === "eleven") startElevenMusic();
-  else stopElevenMusic();
-  recalcCardSizes();
+  local.gameType = game || "trash";
+  local.vsAI = players.some(p => p.isAI);
 
   // Set player/opponent names
   const me = players[myPlayerIndex];
-  const opp = players[1 - myPlayerIndex];
+  const opp = players.length > 1 ? players[1 - myPlayerIndex] : null;
   local.playerName = me.name;
-  local.opponentName = opp.name;
+  local.opponentName = opp ? opp.name : "";
 
-  $("my-label").textContent = me.name;
-  $("opponent-label").textContent = opp.name + (opp.isAI ? " 🤖" : "");
+  // Expose for game client modules
+  window._gameLocal = local;
 
-  updateDeckCount(deckCount);
-  renderBothBoards();
-  renderDiscardPile(null);
-  setDrawButtonsEnabled(local.isMyTurn);
-  updateTurnIndicator();
-  showChainCard(null);
+  // Apply/remove theme and music
+  applyGameTheme(local.gameType);
+  if (local.gameType === "trash-eleven") startElevenMusic();
+  else stopElevenMusic();
+
+  // Show 6-10 Top setting only for Trash games
+  $("settings-row-order").classList.toggle("hidden", !local.gameType.startsWith("trash"));
+
+  const isTrash = local.gameType.startsWith("trash");
+  const gameClient = !isTrash && window.gameClients[local.gameType];
+
+  // Toggle Trash UI vs game-container
+  $("trash-ui").classList.toggle("hidden", !isTrash);
+  $("game-container").classList.toggle("hidden", isTrash);
+
+  if (gameClient) {
+    // Non-trash game: delegate to game client module
+    gameClient.onGameStart(data);
+  } else {
+    // Trash: use existing inline logic
+    const { boards, currentPlayerIndex, deckCount } = data;
+    local.boards = boards;
+    local.currentPlayerIndex = currentPlayerIndex;
+    local.isMyTurn = myPlayerIndex === currentPlayerIndex;
+    local.turnPhase = "draw";
+    local.pendingWildcard = null;
+    local.validSlots = [];
+    local.topDiscard = null;
+    recalcCardSizes();
+
+    $("my-label").textContent = me.name;
+    $("opponent-label").textContent = opp.name + (opp.isAI ? " 🤖" : "");
+
+    updateDeckCount(deckCount);
+    renderBothBoards();
+    renderDiscardPile(null);
+    setDrawButtonsEnabled(local.isMyTurn);
+    updateTurnIndicator();
+    showChainCard(null);
+  }
+
   requestWakeLock();
   showScreen("game-screen");
   if (local.isMyTurn) notifyMyTurn();
@@ -727,21 +771,58 @@ socket.on("gameStart", ({ roomId, myPlayerIndex, boards, currentPlayerIndex, pla
 });
 
 socket.on("boardUpdated", ({ playerIndex, slotIndex, card, wildcardFilled, deckCount }) => {
-  local.boards[playerIndex][slotIndex].card = card;
-  local.boards[playerIndex][slotIndex].filled = true;
-  local.boards[playerIndex][slotIndex].wildcardFilled = wildcardFilled || false;
+  const prevSlot = local.boards[playerIndex][slotIndex];
+  const wasHidden = prevSlot.card && !prevSlot.card.faceUp;
+
+  prevSlot.card = card;
+  prevSlot.filled = true;
+  prevSlot.wildcardFilled = wildcardFilled || false;
   if (deckCount !== undefined) updateDeckCount(deckCount);
-  renderBoard(playerIndex, local.boards[playerIndex]);
 
   playCardPlace();
-  // Animate the slot
   const isMe = playerIndex === local.myPlayerIndex;
   const boardId = isMe ? "my-board" : "opponent-board";
-  const slot = $(boardId).querySelector('[data-slot-index="' + slotIndex + '"]');
-  if (slot) {
-    const cardEl = slot.querySelector(".card");
-    if (cardEl) cardEl.classList.add("card-animate-in");
+
+  if (wasHidden) {
+    // 3D flip: find the slot, replace contents with flip container
+    const slotEl = $(boardId).querySelector('[data-slot-index="' + slotIndex + '"]');
+    if (slotEl) {
+      slotEl.innerHTML = "";
+      slotEl.classList.add("filled");
+      if (wildcardFilled) slotEl.classList.add("wildcard-filled");
+      const flipOuter = document.createElement("div");
+      flipOuter.className = "card-flip";
+      const flipInner = document.createElement("div");
+      flipInner.className = "card-flip-inner";
+      flipInner.appendChild(makeCardBack());
+      flipInner.appendChild(makeCard(card));
+      flipOuter.appendChild(flipInner);
+      slotEl.appendChild(flipOuter);
+      requestAnimationFrame(() => requestAnimationFrame(() => flipInner.classList.add("flipped")));
+    }
+  } else {
+    // Normal re-render + scale animation
+    renderBoard(playerIndex, local.boards[playerIndex]);
+    const slotEl = $(boardId).querySelector('[data-slot-index="' + slotIndex + '"]');
+    if (slotEl) {
+      const cardEl = slotEl.querySelector(".card");
+      if (cardEl) cardEl.classList.add("card-animate-in");
+    }
   }
+});
+
+socket.on("lastCard", ({ playerIndex }) => {
+  const isMe = playerIndex === local.myPlayerIndex;
+  const name = isMe ? "You" : (local.opponentName || "Opponent");
+  const area = document.querySelector(isMe ? ".my-area" : ".opponent-area");
+  if (!area) return;
+  const banner = document.createElement("div");
+  banner.className = "last-card-alert";
+  banner.textContent = `${name} — LAST CARD!`;
+  area.appendChild(banner);
+  sfxTone(880, 0.12, 0.14, 'sine');
+  sfxTone(1100, 0.15, 0.12, 'sine', 0.12);
+  setTimeout(() => banner.remove(), 2500);
 });
 
 socket.on("chainCard", ({ playerIndex, card }) => {
@@ -811,15 +892,37 @@ socket.on("aiThinking", () => {
   updateTurnIndicator(`${local.opponentName} is thinking...`);
 });
 
-socket.on("gameOver", ({ winnerIndex, winnerName }) => {
+socket.on("gameOver", ({ winnerIndex, winnerName, scores, gamesPlayed }) => {
   releaseWakeLock();
   if (winnerIndex === local.myPlayerIndex) playWinFanfare();
   const didWin = winnerIndex === local.myPlayerIndex;
   $("result-emoji").textContent = didWin ? "🎉" : "😔";
   $("result-text").textContent = didWin ? "You Win!" : `${winnerName} Wins!`;
-  $("result-sub").textContent = didWin ? "You filled all your spots first!" : "Better luck next time.";
+  // Game-specific result sub text
+  const subTexts = {
+    trash: didWin ? "You filled all your spots first!" : "Better luck next time.",
+    "trash-eleven": didWin ? "You filled all 11 slots first!" : "Better luck next time.",
+    war: didWin ? "You captured all the cards!" : "Your opponent took all the cards.",
+    gofish: didWin ? "You collected the most sets!" : "Your opponent had more sets.",
+    oldmaid: didWin ? "You emptied your hand!" : "You're stuck with the Old Maid!",
+    solitaire: "Congratulations!",
+  };
+  $("result-sub").textContent = subTexts[local.gameType] || (didWin ? "Nice job!" : "Better luck next time.");
   $("play-again-btn").disabled = false;
-  $("play-again-btn").textContent = local.vsAI ? "Play Again" : "Rematch";
+  $("play-again-btn").textContent = (local.vsAI || local.gameType === "solitaire") ? "Play Again" : "Rematch";
+  $("see-cards-btn").style.display = local.gameType.startsWith("trash") ? "" : "none";
+
+  // Score display
+  const scoreEl = $("score-display");
+  if (scores && gamesPlayed > 1) {
+    const myScore = scores[local.myPlayerIndex];
+    const oppScore = scores[1 - local.myPlayerIndex];
+    scoreEl.textContent = `You ${myScore} — ${local.opponentName || "Opponent"} ${oppScore}`;
+    scoreEl.classList.remove("hidden");
+  } else {
+    scoreEl.classList.add("hidden");
+  }
+
   setTimeout(() => showScreen("end-screen"), 800);
 });
 
@@ -918,46 +1021,58 @@ socket.on("connect", () => {
 });
 
 // Server confirmed rejoin — restore full game state
-socket.on("gameRejoined", ({
-  roomId, myPlayerIndex, boards, currentPlayerIndex, players,
-  deckCount, variant, turnPhase, topDiscard,
-  pendingWildcard, pendingValidSlots,
-}) => {
-  local.roomId              = roomId;
-  local.myPlayerIndex       = myPlayerIndex;
-  local.boards              = boards;
-  local.currentPlayerIndex  = currentPlayerIndex;
-  local.isMyTurn            = myPlayerIndex === currentPlayerIndex;
-  local.turnPhase           = turnPhase;
-  local.topDiscard          = topDiscard;
-  local.variant             = variant || "default";
-  local.pendingWildcard     = pendingWildcard || null;
-  local.validSlots          = pendingValidSlots || [];
+socket.on("gameRejoined", (data) => {
+  const { roomId, myPlayerIndex, currentPlayerIndex, players, deckCount, game } = data;
+  local.roomId = roomId;
+  local.myPlayerIndex = myPlayerIndex;
+  local.gameType = game || "trash";
+  window._gameLocal = local;
 
-  applyVariantTheme(local.variant);
-  if (local.variant === "eleven") startElevenMusic();
-  recalcCardSizes();
+  const me = players[myPlayerIndex];
+  const opp = players.length > 1 ? players[1 - myPlayerIndex] : null;
+  local.playerName = me.name;
+  local.opponentName = opp ? opp.name : "";
 
-  const me  = players[myPlayerIndex];
-  const opp = players[1 - myPlayerIndex];
-  local.playerName   = me.name;
-  local.opponentName = opp.name;
-  $("my-label").textContent       = me.name;
-  $("opponent-label").textContent = opp.name + (opp.isAI ? " 🤖" : "");
+  applyGameTheme(local.gameType);
+  if (local.gameType === "trash-eleven") startElevenMusic();
 
-  updateDeckCount(deckCount);
-  renderBothBoards();
-  renderDiscardPile(topDiscard || null);
-  setDrawButtonsEnabled(local.isMyTurn && turnPhase === "draw");
+  const isTrash = local.gameType.startsWith("trash");
+  const gameClient = !isTrash && window.gameClients[local.gameType];
 
-  if (turnPhase === "place-wildcard" && local.isMyTurn && pendingWildcard) {
-    renderBoard(myPlayerIndex, boards[myPlayerIndex]);
-    const isAceChoice = pendingWildcard.rank !== 11 && pendingWildcard.rank !== 13;
-    updateTurnIndicator(isAceChoice
-      ? "Ace in A or ★? — tap a glowing slot"
-      : `Place ${RANK_LABEL(pendingWildcard.rank)} — tap a glowing slot`);
+  $("trash-ui").classList.toggle("hidden", !isTrash);
+  $("game-container").classList.toggle("hidden", isTrash);
+
+  if (gameClient && gameClient.onReconnect) {
+    gameClient.onReconnect(data);
   } else {
-    updateTurnIndicator();
+    // Trash reconnect
+    const { boards, turnPhase, topDiscard, pendingWildcard, pendingValidSlots } = data;
+    local.boards = boards;
+    local.currentPlayerIndex = currentPlayerIndex;
+    local.isMyTurn = myPlayerIndex === currentPlayerIndex;
+    local.turnPhase = turnPhase;
+    local.topDiscard = topDiscard;
+    local.pendingWildcard = pendingWildcard || null;
+    local.validSlots = pendingValidSlots || [];
+    recalcCardSizes();
+
+    $("my-label").textContent = me.name;
+    $("opponent-label").textContent = opp.name + (opp.isAI ? " 🤖" : "");
+
+    updateDeckCount(deckCount);
+    renderBothBoards();
+    renderDiscardPile(topDiscard || null);
+    setDrawButtonsEnabled(local.isMyTurn && turnPhase === "draw");
+
+    if (turnPhase === "place-wildcard" && local.isMyTurn && pendingWildcard) {
+      renderBoard(myPlayerIndex, boards[myPlayerIndex]);
+      const isAceChoice = pendingWildcard.rank !== 11 && pendingWildcard.rank !== 13;
+      updateTurnIndicator(isAceChoice
+        ? "Ace in A or ★? — tap a glowing slot"
+        : `Place ${RANK_LABEL(pendingWildcard.rank)} — tap a glowing slot`);
+    } else {
+      updateTurnIndicator();
+    }
   }
 
   showScreen("game-screen");
