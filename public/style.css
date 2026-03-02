@@ -381,8 +381,8 @@ html, body {
 .card.black { color: var(--black); }
 
 .card-corner {
-  font-size: clamp(8px, calc(var(--card-w) * 0.2), 14px);
-  line-height: 1.15;
+  font-size: clamp(9px, calc(var(--card-w) * 0.22), 16px);
+  line-height: 1;
   font-weight: 900;
   white-space: nowrap;
 }

@@ -92,9 +92,10 @@ function getValidSlot(card, board, variant) {
 // Returns array of valid slot indices for a wildcard
 // King (13): corners only = indices 0, 4, 5, 9
 // Jack (11): any unfilled slot
-function getValidSlotsForWildcard(card, board) {
+// Eleven variant: slot 10 (★) can NEVER be filled by a wildcard — natural Ace only
+function getValidSlotsForWildcard(card, board, variant) {
   const candidates = card.rank === 13 ? [0, 4, 5, 9] : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-  return candidates.filter(i => !board[i].filled);
+  return candidates.filter(i => board[i] && !board[i].filled && !(variant === "eleven" && i === 10));
 }
 
 // Place a card face-up in a slot; return the card that was there (chain card).
@@ -241,7 +242,7 @@ async function evaluateCard(state, roomId, playerIndex, card, isChain) {
 
   // ── Wildcard: Jack or King ──
   if (card.rank === 11 || card.rank === 13) {
-    const validSlots = getValidSlotsForWildcard(card, board);
+    const validSlots = getValidSlotsForWildcard(card, board, state.variant);
     if (validSlots.length === 0) {
       // No valid slots — discard, end turn
       state.discardPile.push({ ...card, faceUp: true });
@@ -557,10 +558,13 @@ io.on("connection", socket => {
     const board = state.players[playerIndex].board;
     const card  = state.pendingWildcard;
 
+    // Hard guard: ★ slot (10) is never valid for wildcards in Eleven variant
+    if ((card.rank === 11 || card.rank === 13) && slotIndex === 10) return;
+
     // Use pre-computed valid slots (Ace choice) or compute for a wildcard
     const validSlots = state.pendingValidSlots
       ? state.pendingValidSlots
-      : getValidSlotsForWildcard(card, board);
+      : getValidSlotsForWildcard(card, board, state.variant);
     if (!validSlots.includes(slotIndex)) return;
 
     state.pendingWildcard    = null;

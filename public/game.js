@@ -57,9 +57,9 @@ function makeCard(card) {
   const rank = RANK_LABEL(card.rank);
   const sym  = SUIT_SYMBOL[card.suit];
   el.innerHTML = `
-    <span class="card-corner tl">${rank}<br>${sym}</span>
+    <span class="card-corner tl">${rank}</span>
     <span class="card-center">${sym}</span>
-    <span class="card-corner br">${rank}<br>${sym}</span>
+    <span class="card-corner br">${rank}</span>
   `;
   return el;
 }
@@ -285,13 +285,16 @@ function showReaction(emoji, isMe) {
   el.addEventListener("animationend", () => el.remove());
 }
 
-let lastReactionTime = 0;
+// Rate limit: max 5 reactions per 15 seconds (sliding window)
+const reactionTimes = [];
 document.querySelectorAll(".reaction-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     if (!local.roomId) return;
     const now = Date.now();
-    if (now - lastReactionTime < 1000) return; // 1s cooldown
-    lastReactionTime = now;
+    // Drop timestamps older than 15 seconds
+    while (reactionTimes.length && now - reactionTimes[0] > 15000) reactionTimes.shift();
+    if (reactionTimes.length >= 5) return; // limit reached
+    reactionTimes.push(now);
     socket.emit("sendReaction", { roomId: local.roomId, emoji: btn.dataset.emoji });
   });
 });
