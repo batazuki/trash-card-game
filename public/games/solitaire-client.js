@@ -15,6 +15,7 @@
     moves: 0,
     startTime: 0,
     timerInterval: null,
+    wasteFlip: false,  // true when waste card should animate a flip
   };
 
   function makeCard(card, small) {
@@ -172,12 +173,22 @@
       wasteEl.innerHTML = "";
       if (state.waste.length > 0) {
         const top = state.waste[state.waste.length - 1];
-        const cardEl = makeCard({ ...top, faceUp: true });
-        const isSelected = state.selected && state.selected.source === "waste";
-        if (isSelected) cardEl.classList.add("sol-selected");
-        cardEl.addEventListener("click", () => handleWasteClick());
-        cardEl.addEventListener("dblclick", () => autoFoundation(top, "waste"));
-        wasteEl.appendChild(cardEl);
+        const flip = window._gameShared && window._gameShared.animateFlip;
+        if (state.wasteFlip && flip) {
+          state.wasteFlip = false;
+          flip(wasteEl, { ...top, faceUp: true });
+          // Add click handlers after flip
+          wasteEl.addEventListener("click", () => handleWasteClick());
+          wasteEl.addEventListener("dblclick", () => autoFoundation(top, "waste"));
+        } else {
+          state.wasteFlip = false;
+          const cardEl = makeCard({ ...top, faceUp: true });
+          const isSelected = state.selected && state.selected.source === "waste";
+          if (isSelected) cardEl.classList.add("sol-selected");
+          cardEl.addEventListener("click", () => handleWasteClick());
+          cardEl.addEventListener("dblclick", () => autoFoundation(top, "waste"));
+          wasteEl.appendChild(cardEl);
+        }
       }
     }
 
@@ -212,6 +223,7 @@
       const card = state.stock.pop();
       card.faceUp = true;
       state.waste.push(card);
+      state.wasteFlip = true;
     }
     state.selected = null;
     incrementMoves();
@@ -346,7 +358,7 @@
       clearInterval(state.timerInterval);
       state = {
         tableau: [], foundations: [[], [], [], []], stock: [], waste: [],
-        selected: null, moves: 0, startTime: 0, timerInterval: null,
+        selected: null, moves: 0, startTime: 0, timerInterval: null, wasteFlip: false,
       };
     },
   };

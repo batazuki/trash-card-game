@@ -122,11 +122,17 @@
 
     const battleOpp = document.getElementById("war-battle-opp");
     const battleMe = document.getElementById("war-battle-me");
+    const flip = window._gameShared && window._gameShared.animateFlip;
     if (battleOpp && battleMe) {
-      battleOpp.innerHTML = "";
-      battleMe.innerHTML = "";
-      battleOpp.appendChild(makeCard(faceUp[1 - myIdx]));
-      battleMe.appendChild(makeCard(faceUp[myIdx]));
+      if (flip) {
+        flip(battleOpp, faceUp[1 - myIdx]);
+        flip(battleMe, faceUp[myIdx]);
+      } else {
+        battleOpp.innerHTML = "";
+        battleMe.innerHTML = "";
+        battleOpp.appendChild(makeCard(faceUp[1 - myIdx]));
+        battleMe.appendChild(makeCard(faceUp[myIdx]));
+      }
     }
 
     // Show war cards if any
@@ -174,11 +180,17 @@
 
     const battleOpp = document.getElementById("war-battle-opp");
     const battleMe = document.getElementById("war-battle-me");
+    const flip = window._gameShared && window._gameShared.animateFlip;
     if (battleOpp && battleMe) {
-      battleOpp.innerHTML = "";
-      battleMe.innerHTML = "";
-      battleOpp.appendChild(makeCard(faceUp[1 - myIdx]));
-      battleMe.appendChild(makeCard(faceUp[myIdx]));
+      if (flip) {
+        flip(battleOpp, faceUp[1 - myIdx]);
+        flip(battleMe, faceUp[myIdx]);
+      } else {
+        battleOpp.innerHTML = "";
+        battleMe.innerHTML = "";
+        battleOpp.appendChild(makeCard(faceUp[1 - myIdx]));
+        battleMe.appendChild(makeCard(faceUp[myIdx]));
+      }
     }
 
     const msg = document.getElementById("war-message");

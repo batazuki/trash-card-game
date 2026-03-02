@@ -1,9 +1,10 @@
-const CACHE_NAME = 'ttg-v3';
+const CACHE_NAME = 'ttg-v5';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/style.css',
   '/game.js',
+  '/games/trash-client.js',
   '/games/war-client.js',
   '/games/gofish-client.js',
   '/games/oldmaid-client.js',

@@ -23,7 +23,6 @@ module.exports = function(io, helpers) {
   }
 
   function isGameOver(state) {
-    // Game over if all 13 sets claimed, or deck empty and a hand is empty
     if (state.sets[0].length + state.sets[1].length >= 13) return true;
     if (state.deck.length === 0 && (state.hands[0].length === 0 || state.hands[1].length === 0)) return true;
     return false;
@@ -32,7 +31,7 @@ module.exports = function(io, helpers) {
   function determineWinner(state) {
     if (state.sets[0].length > state.sets[1].length) return 0;
     if (state.sets[1].length > state.sets[0].length) return 1;
-    return 0; // tie goes to player 0
+    return 0;
   }
 
   function emitHandUpdate(state, roomId, playerIndex) {
@@ -46,7 +45,6 @@ module.exports = function(io, helpers) {
         currentPlayerIndex: state.currentPlayerIndex,
       });
     }
-    // Also update opponent's view (they see card counts, not cards)
     const opp = state.players[1 - playerIndex];
     if (!opp.isAI) {
       io.to(opp.id).emit("gofish:handUpdate", {
@@ -66,21 +64,27 @@ module.exports = function(io, helpers) {
     return card;
   }
 
+  // Refill empty hand from deck (Go Fish rule: draw when hand is empty)
+  function refillIfEmpty(state, playerIndex) {
+    if (state.hands[playerIndex].length === 0 && state.deck.length > 0) {
+      drawCard(state, playerIndex);
+    }
+  }
+
   function triggerAI(state, roomId) {
     (async () => {
       await delay(1000);
       if (state.phase !== "playing") return;
       io.to(roomId).emit("aiThinking");
       await delay(800);
-      if (state.phase !== "playing") return;
+      if (state.phase !== "playing" || state.processing) return;
 
       const aiIndex = state.currentPlayerIndex;
       const aiHand = state.hands[aiIndex];
       if (aiHand.length === 0) {
-        // Draw a card if possible
         if (state.deck.length > 0) {
           drawCard(state, aiIndex);
-          const newSets = checkForSets(state.hands[aiIndex], state.sets[aiIndex]);
+          checkForSets(state.hands[aiIndex], state.sets[aiIndex]);
           emitHandUpdate(state, roomId, aiIndex);
           if (isGameOver(state)) { endGame(state, roomId, determineWinner(state)); return; }
         }
@@ -89,11 +93,8 @@ module.exports = function(io, helpers) {
         return;
       }
 
-      // AI chooses a rank to ask for
-      // Prefer ranks where AI has the most cards; use memory of opponent's asks
       const rankCounts = {};
       aiHand.forEach(c => { rankCounts[c.rank] = (rankCounts[c.rank] || 0) + 1; });
-      // Sort ranks by count (descending), then prefer remembered ranks
       const ranks = Object.keys(rankCounts).map(Number);
       const mem = state.aiMemory || [];
       ranks.sort((a, b) => {
@@ -104,106 +105,124 @@ module.exports = function(io, helpers) {
       });
       const askRank = ranks[0];
 
-      // Process the ask
       processAsk(state, roomId, aiIndex, askRank);
     })();
   }
 
   async function processAsk(state, roomId, playerIndex, askRank) {
-    const oppIndex = 1 - playerIndex;
-    const oppHand = state.hands[oppIndex];
-    const matching = oppHand.filter(c => c.rank === askRank);
-    const askerName = state.players[playerIndex].name;
-    const RANK_LABEL = r => r === 1 ? "A" : r === 11 ? "J" : r === 12 ? "Q" : r === 13 ? "K" : String(r);
+    // Guard against concurrent calls
+    if (state.processing) return;
+    state.processing = true;
 
-    // Track in AI memory
-    if (!state.aiMemory) state.aiMemory = [];
-    if (!state.players[playerIndex].isAI) {
-      // Human asked — AI remembers
-      state.aiMemory.push(askRank);
-      if (state.aiMemory.length > 20) state.aiMemory.shift();
-    }
+    try {
+      const oppIndex = 1 - playerIndex;
+      const oppHand = state.hands[oppIndex];
+      const matching = oppHand.filter(c => c.rank === askRank);
+      const askerName = state.players[playerIndex].name;
+      const RANK_LABEL = r => r === 1 ? "A" : r === 11 ? "J" : r === 12 ? "Q" : r === 13 ? "K" : String(r);
 
-    if (matching.length > 0) {
-      // Remove from opponent's hand, add to asker's hand
-      for (const card of matching) {
-        const idx = oppHand.indexOf(card);
-        if (idx !== -1) oppHand.splice(idx, 1);
-        state.hands[playerIndex].push(card);
+      // Track in AI memory
+      if (!state.aiMemory) state.aiMemory = [];
+      if (!state.players[playerIndex].isAI) {
+        state.aiMemory.push(askRank);
+        if (state.aiMemory.length > 20) state.aiMemory.shift();
       }
 
-      io.to(roomId).emit("gofish:result", {
-        askerIndex: playerIndex,
-        askerName,
-        rank: askRank,
-        rankLabel: RANK_LABEL(askRank),
-        count: matching.length,
-        gotFish: false,
-      });
+      if (matching.length > 0) {
+        // Remove from opponent's hand, add to asker's hand
+        for (const card of matching) {
+          const idx = oppHand.indexOf(card);
+          if (idx !== -1) oppHand.splice(idx, 1);
+          state.hands[playerIndex].push(card);
+        }
 
-      // Check for completed sets
-      const newSets = checkForSets(state.hands[playerIndex], state.sets[playerIndex]);
-      if (newSets.length > 0) {
-        io.to(roomId).emit("gofish:setComplete", {
-          playerIndex,
-          ranks: newSets,
-          sets: state.sets,
+        io.to(roomId).emit("gofish:result", {
+          askerIndex: playerIndex,
+          askerName,
+          rank: askRank,
+          rankLabel: RANK_LABEL(askRank),
+          count: matching.length,
+          gotFish: false,
         });
-      }
 
-      emitHandUpdate(state, roomId, playerIndex);
+        // Check for completed sets
+        const newSets = checkForSets(state.hands[playerIndex], state.sets[playerIndex]);
+        if (newSets.length > 0) {
+          io.to(roomId).emit("gofish:setComplete", {
+            playerIndex,
+            ranks: newSets,
+            sets: state.sets,
+          });
+        }
 
-      if (isGameOver(state)) { endGame(state, roomId, determineWinner(state)); return; }
+        // Refill hand from deck if completing a set emptied it
+        refillIfEmpty(state, playerIndex);
 
-      // Same player goes again
-      await delay(600);
-      if (state.players[playerIndex].isAI) {
-        triggerAI(state, roomId);
-      }
-    } else {
-      // Go Fish!
-      io.to(roomId).emit("gofish:result", {
-        askerIndex: playerIndex,
-        askerName,
-        rank: askRank,
-        rankLabel: RANK_LABEL(askRank),
-        count: 0,
-        gotFish: true,
-      });
-
-      await delay(800);
-
-      const drawn = drawCard(state, playerIndex);
-      let goAgain = false;
-      if (drawn && drawn.rank === askRank) {
-        goAgain = true;
-        io.to(roomId).emit("gofish:luckyDraw", { playerIndex });
-      }
-
-      const newSets = checkForSets(state.hands[playerIndex], state.sets[playerIndex]);
-      if (newSets.length > 0) {
-        io.to(roomId).emit("gofish:setComplete", {
-          playerIndex,
-          ranks: newSets,
-          sets: state.sets,
-        });
-      }
-
-      if (isGameOver(state)) {
         emitHandUpdate(state, roomId, playerIndex);
-        endGame(state, roomId, determineWinner(state));
-        return;
-      }
 
-      if (!goAgain) {
-        state.currentPlayerIndex = oppIndex;
-      }
-      emitHandUpdate(state, roomId, playerIndex);
+        if (isGameOver(state)) { endGame(state, roomId, determineWinner(state)); return; }
 
-      await delay(600);
-      if (state.players[state.currentPlayerIndex].isAI) {
-        triggerAI(state, roomId);
+        // Same player goes again
+        state.processing = false;
+        await delay(600);
+        if (state.players[playerIndex].isAI) {
+          triggerAI(state, roomId);
+        }
+      } else {
+        // Go Fish!
+        io.to(roomId).emit("gofish:result", {
+          askerIndex: playerIndex,
+          askerName,
+          rank: askRank,
+          rankLabel: RANK_LABEL(askRank),
+          count: 0,
+          gotFish: true,
+        });
+
+        state.processing = false;
+        await delay(800);
+
+        // Re-acquire processing lock for the draw phase
+        state.processing = true;
+
+        const drawn = drawCard(state, playerIndex);
+        let goAgain = false;
+        if (drawn && drawn.rank === askRank) {
+          goAgain = true;
+          io.to(roomId).emit("gofish:luckyDraw", { playerIndex });
+        }
+
+        const newSets = checkForSets(state.hands[playerIndex], state.sets[playerIndex]);
+        if (newSets.length > 0) {
+          io.to(roomId).emit("gofish:setComplete", {
+            playerIndex,
+            ranks: newSets,
+            sets: state.sets,
+          });
+        }
+
+        // Refill hand from deck if completing a set emptied it
+        refillIfEmpty(state, playerIndex);
+
+        if (isGameOver(state)) {
+          emitHandUpdate(state, roomId, playerIndex);
+          endGame(state, roomId, determineWinner(state));
+          return;
+        }
+
+        if (!goAgain) {
+          state.currentPlayerIndex = oppIndex;
+        }
+        emitHandUpdate(state, roomId, playerIndex);
+
+        state.processing = false;
+        await delay(600);
+        if (state.players[state.currentPlayerIndex].isAI) {
+          triggerAI(state, roomId);
+        }
       }
+    } finally {
+      state.processing = false;
     }
   }
 
@@ -216,6 +235,7 @@ module.exports = function(io, helpers) {
       state.currentPlayerIndex = 0;
       state.phase = "playing";
       state.aiMemory = [];
+      state.processing = false;
 
       // Check for initial sets
       for (let i = 0; i < 2; i++) {
@@ -245,10 +265,10 @@ module.exports = function(io, helpers) {
       socket.on("gofish:ask", ({ roomId, rank }) => {
         const state = rooms.get(roomId);
         if (!state || state.phase !== "playing" || state.game !== "gofish") return;
+        if (state.processing) return;
         const playerIndex = state.players.findIndex(p => p.id === socket.id);
         if (playerIndex === -1 || playerIndex !== state.currentPlayerIndex) return;
 
-        // Validate: player must hold at least one card of this rank
         const hand = state.hands[playerIndex];
         if (!hand.some(c => c.rank === rank)) return;
 
@@ -261,6 +281,8 @@ module.exports = function(io, helpers) {
         hand: state.hands ? state.hands[playerIndex] : [],
         opponentCardCount: state.hands ? state.hands[1 - playerIndex].length : 0,
         sets: state.sets || [[], []],
+        deckCount: state.deck ? state.deck.length : 0,
+        currentPlayerIndex: state.currentPlayerIndex || 0,
       };
     },
   };

@@ -106,57 +106,8 @@
   <!-- ═══ GAME SCREEN ═══ -->
   <div id="game-screen" class="screen hidden">
 
-    <!-- Trash UI (hidden for non-trash games) -->
-    <div id="trash-ui">
-      <div class="player-area opponent-area">
-        <div class="player-label" id="opponent-label">Opponent</div>
-        <div class="board" id="opponent-board"></div>
-      </div>
-
-      <div id="game-center">
-        <div id="turn-indicator" class="turn-indicator">Your Turn</div>
-
-        <div class="pile-row">
-          <div class="pile-container">
-            <div id="deck-pile" class="card card-back pile-card">
-              <span id="deck-count" class="deck-count">52</span>
-            </div>
-            <div class="pile-label">Deck</div>
-          </div>
-          <div class="pile-container">
-            <div id="discard-pile" class="pile-card discard-empty">
-              <span class="pile-empty-label">Empty</span>
-            </div>
-            <div class="pile-label" id="discard-pile-label">Discard</div>
-          </div>
-        </div>
-
-        <div class="draw-buttons">
-          <button class="btn btn-draw" id="draw-deck-btn">Draw from Deck</button>
-          <button class="btn btn-draw btn-discard-draw" id="draw-discard-btn" disabled>Take Discard</button>
-        </div>
-      </div>
-
-      <div class="player-area my-area">
-        <div class="player-label" id="my-label">You</div>
-        <div id="reaction-bar" class="reaction-bar">
-          <button class="reaction-btn" data-emoji="👍">👍</button>
-          <button class="reaction-btn" data-emoji="😂">😂</button>
-          <button class="reaction-btn" data-emoji="😮">😮</button>
-          <button class="reaction-btn" data-emoji="🔥">🔥</button>
-          <button class="reaction-btn" data-emoji="💀">💀</button>
-          <button class="reaction-btn" data-emoji="😬">😬</button>
-          <button class="reaction-btn" data-emoji="🦍">🦍</button>
-          <button class="reaction-btn" data-emoji="6️⃣7️⃣">6️⃣7️⃣</button>
-        </div>
-        <div class="board" id="my-board"></div>
-      </div>
-
-      <div id="view-only-banner" class="view-only-banner hidden">
-        <span>Viewing final board</span>
-        <button class="btn btn-secondary" id="back-results-btn">← Results</button>
-      </div>
-    </div>
+    <!-- Trash UI (built dynamically by trash-client.js) -->
+    <div id="trash-ui"></div>
 
     <!-- Container for non-trash games (War, Go Fish, Old Maid, Solitaire) -->
     <div id="game-container" class="hidden"></div>
@@ -373,6 +324,7 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="game.js"></script>
+  <script src="games/trash-client.js"></script>
   <script src="games/war-client.js"></script>
   <script src="games/gofish-client.js"></script>
   <script src="games/oldmaid-client.js"></script>
