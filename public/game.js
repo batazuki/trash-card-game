@@ -732,3 +732,24 @@ socket.on("opponentDisconnected", () => {
 socket.on("reaction", ({ playerIndex, emoji }) => {
   showReaction(emoji, playerIndex === local.myPlayerIndex);
 });
+
+// ═══ REMAINING BUTTON WIRES ═══
+
+// Music toggle (only visible during Eleven games)
+$("music-toggle").addEventListener("click", toggleMusic);
+
+// Help buttons — lobby and in-game
+$("help-btn-lobby").addEventListener("click", openHelp);
+$("help-btn-game").addEventListener("click", openHelp);
+$("help-close").addEventListener("click", closeHelp);
+// Click outside the modal box to close
+$("help-modal").addEventListener("click", e => {
+  if (e.target === $("help-modal")) closeHelp();
+});
+
+// Share room code button
+$("share-btn").addEventListener("click", () => shareRoomCode(local.roomId));
+
+// See Cards / Back to Results (end screen ↔ game-screen view)
+$("see-cards-btn").addEventListener("click", viewCards);
+$("back-results-btn").addEventListener("click", closeViewCards);
