@@ -19,7 +19,7 @@ let local = {
   deckCount: 0,
   topDiscard: null,
   vsAI: false,
-  rowReversed: false,
+  rowReversed: localStorage.getItem("rowReversed") === "1",
   variant: "default",
   viewingCards: false,   // true when showing game-screen from end-screen
   oldies: localStorage.getItem("oldies") === "1",
@@ -81,48 +81,51 @@ function renderBoard(playerIndex, board) {
   const isEleven = local.variant === "eleven";
   container.classList.toggle("eleven-board", isEleven);
 
-  let order;
-  if (isEleven) {
-    order = local.rowReversed
-      ? [5, 6, 7, 8, 9, 10, 0, 1, 2, 3, 4]
-      : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-  } else {
-    order = local.rowReversed
-      ? [5, 6, 7, 8, 9, 0, 1, 2, 3, 4]
-      : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-  }
-
-  order.forEach(i => {
+  function buildSlotEl(i) {
     const slot = board[i];
-    if (!slot) return;
+    if (!slot) return null;
     const slotEl = document.createElement("div");
     let cls = "card-slot";
-    if (slot.filled)          cls += " filled";
-    if (slot.wildcardFilled)  cls += " wildcard-filled";
-    if (i === 10)             cls += " eleven-slot";
+    if (slot.filled)         cls += " filled";
+    if (slot.wildcardFilled) cls += " wildcard-filled";
+    if (i === 10)            cls += " eleven-slot";
     slotEl.className = cls;
     slotEl.dataset.slotIndex = i;
-
     if (!slot.filled) {
       const hint = document.createElement("span");
       hint.className = "slot-hint";
       hint.textContent = SLOT_LABELS[i];
       slotEl.appendChild(hint);
     }
-
     if (slot.card && slot.card.faceUp) {
       slotEl.appendChild(makeCard(slot.card));
     } else if (slot.card && !slot.card.faceUp) {
       slotEl.appendChild(makeCardBack());
     }
-
     if (isMe && local.turnPhase === "place-wildcard" && local.validSlots.includes(i)) {
       slotEl.classList.add("valid-slot");
       slotEl.addEventListener("click", () => onSlotClick(i), { once: true });
     }
+    return slotEl;
+  }
 
-    container.appendChild(slotEl);
-  });
+  if (isEleven) {
+    // Slots 0–9 in a 5×2 main grid; ★ (slot 10) floats to the right, centered
+    const mainGrid = document.createElement("div");
+    mainGrid.className = "eleven-main-grid";
+    const mainOrder = local.rowReversed
+      ? [5, 6, 7, 8, 9, 0, 1, 2, 3, 4]
+      : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    mainOrder.forEach(i => { const el = buildSlotEl(i); if (el) mainGrid.appendChild(el); });
+    container.appendChild(mainGrid);
+    const starEl = buildSlotEl(10);
+    if (starEl) container.appendChild(starEl);
+  } else {
+    const order = local.rowReversed
+      ? [5, 6, 7, 8, 9, 0, 1, 2, 3, 4]
+      : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    order.forEach(i => { const el = buildSlotEl(i); if (el) container.appendChild(el); });
+  }
 }
 
 function renderBothBoards() {
@@ -170,13 +173,14 @@ function updateTurnIndicator(msg) {
     el.className = "turn-indicator";
     return;
   }
-  if (local.isMyTurn) {
-    el.textContent = "Your Turn";
-    el.className = "turn-indicator my-turn";
-  } else {
-    const name = local.opponentName || "Opponent";
-    el.textContent = `${name}'s Turn`;
-    el.className = "turn-indicator their-turn";
+  const newClass = local.isMyTurn ? "turn-indicator my-turn" : "turn-indicator their-turn";
+  const newText  = local.isMyTurn ? "Your Turn" : `${local.opponentName || "Opponent"}'s Turn`;
+  const changed  = el.textContent !== newText;
+  el.textContent = newText;
+  el.className = newClass;
+  if (changed) {
+    el.classList.add("turn-pop");
+    el.addEventListener("animationend", () => el.classList.remove("turn-pop"), { once: true });
   }
 }
 
@@ -304,6 +308,22 @@ function applyVariantTheme(variant) {
   document.body.classList.toggle("variant-eleven", variant === "eleven");
 }
 
+// ═══ SCREEN WAKE LOCK ═══
+let wakeLock = null;
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; });
+  } catch (_) {}
+}
+function releaseWakeLock() {
+  if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && local.roomId) requestWakeLock();
+});
+
 // ═══ STRANGER THINGS SYNTH MUSIC ═══
 let musicCtx = null, musicMuted = false, musicScheduleTimer = null, musicMasterGain = null;
 const M_BPM = 80, M_BEAT = 60 / M_BPM, M_LOOP = 16 * (60 / M_BPM);
@@ -368,21 +388,53 @@ function startElevenMusic() {
     musicMasterGain.gain.value = musicMuted ? 0 : 0.55;
     musicMasterGain.connect(musicCtx.destination);
     scheduleMusicLoop(musicCtx.currentTime + 0.15);
-    const btn = $("settings-music");
-    if (btn) { btn.classList.remove("hidden"); btn.textContent = musicMuted ? "🔇 Music" : "🔊 Music"; }
   } catch(e) {}
 }
 function stopElevenMusic() {
   clearTimeout(musicScheduleTimer);
   if (musicCtx) { musicCtx.close().catch(()=>{}); musicCtx = null; musicMasterGain = null; }
-  const btn = $("settings-music");
-  if (btn) btn.classList.add("hidden");
 }
 function toggleMusic() {
   musicMuted = !musicMuted;
   if (musicMasterGain) musicMasterGain.gain.setTargetAtTime(musicMuted ? 0 : 0.55, musicCtx.currentTime, 0.1);
   const btn = $("settings-music");
   if (btn) btn.textContent = musicMuted ? "🔇 Music" : "🔊 Music";
+}
+
+// ═══ SOUND EFFECTS ═══
+let sfxCtx = null;
+function getSfxCtx() {
+  if (!sfxCtx || sfxCtx.state === 'closed')
+    sfxCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return sfxCtx;
+}
+function sfxTone(freq, dur, vol, type = 'sine', delay = 0) {
+  if (musicMuted) return;
+  const ctx = getSfxCtx();
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = type; o.frequency.value = freq;
+  o.connect(g); g.connect(ctx.destination);
+  const t = ctx.currentTime + delay;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(vol, t + 0.015);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.start(t); o.stop(t + dur + 0.02);
+}
+function playCardPlace() {
+  sfxTone(700, 0.07, 0.18, 'sine');
+  sfxTone(440, 0.09, 0.06, 'triangle', 0.01);
+}
+function playDiscard() {
+  sfxTone(380, 0.12, 0.10, 'sine');
+}
+function playTurnStart() {
+  sfxTone(660, 0.10, 0.12, 'sine');
+  sfxTone(880, 0.12, 0.10, 'sine', 0.10);
+}
+function playWinFanfare() {
+  [523.25, 659.25, 783.99, 1046.5].forEach((f, i) =>
+    sfxTone(f, 0.38, 0.18, 'triangle', i * 0.13)
+  );
 }
 
 // ═══ SHARE ROOM CODE ═══
@@ -446,11 +498,15 @@ function onSlotClick(slotIndex) {
   socket.emit("placeWildcard", { roomId: local.roomId, slotIndex });
 }
 
-// ═══ ROW ORDER TOGGLE ═══
-$("row-order-toggle").addEventListener("change", e => {
-  local.rowReversed = e.target.checked;
+// ═══ ROW ORDER ═══
+function setRowOrder(on) {
+  local.rowReversed = on;
+  localStorage.setItem("rowReversed", on ? "1" : "0");
+  $("settings-row-order").textContent = on ? "🔄 6–10 Top: On" : "🔄 6–10 Top: Off";
   if (local.boards[0].length) renderBothBoards();
-});
+}
+// Apply persisted row order preference immediately
+$("settings-row-order").textContent = local.rowReversed ? "🔄 6–10 Top: On" : "🔄 6–10 Top: Off";
 
 // ═══ OLDIES / HIGH-CONTRAST MODE ═══
 function setOldiesMode(on) {
@@ -498,7 +554,8 @@ function recalcCardSizes() {
 
 function setLandscape(on) {
   document.body.classList.toggle("is-landscape", on);
-  $("landscape-toggle").checked = on;
+  if (!isTouchDevice) localStorage.setItem("landscape", on ? "1" : "0");
+  $("settings-landscape").textContent = on ? "↔ Landscape: On" : "↔ Landscape: Off";
   recalcCardSizes();
   if (local.boards[0].length) renderBothBoards();
 }
@@ -518,17 +575,21 @@ window.addEventListener("resize", () => {
 // Initial setup
 recalcCardSizes();
 if (isTouchDevice) setLandscape(window.innerWidth > window.innerHeight);
-
-// Manual toggle: works on any device, overrides auto-detection on desktop
-$("landscape-toggle").addEventListener("change", e => {
-  document.body.classList.toggle("is-landscape", e.target.checked);
-  recalcCardSizes();
-  if (local.boards[0].length) renderBothBoards();
-});
+else setLandscape(localStorage.getItem("landscape") === "1");
 
 // ═══ LOBBY BUTTON HANDLERS ═══
-// Live lobby theme preview when variant changes
-$("variant-select").addEventListener("change", e => applyVariantTheme(e.target.value));
+// Restore persisted variant in lobby select
+(function() {
+  const saved = localStorage.getItem("variant") || "default";
+  $("variant-select").value = saved;
+  applyVariantTheme(saved);
+})();
+
+// Live lobby theme preview when variant changes + persist
+$("variant-select").addEventListener("change", e => {
+  localStorage.setItem("variant", e.target.value);
+  applyVariantTheme(e.target.value);
+});
 
 $("vs-ai-btn").addEventListener("click", () => {
   const name = $("player-name").value.trim() || "Player";
@@ -580,6 +641,7 @@ $("play-again-btn").addEventListener("click", () => {
 });
 
 $("back-lobby-btn").addEventListener("click", () => {
+  releaseWakeLock();
   stopElevenMusic();
   applyVariantTheme("default");
   local.roomId = null;
@@ -638,6 +700,7 @@ socket.on("gameStart", ({ roomId, myPlayerIndex, boards, currentPlayerIndex, pla
   setDrawButtonsEnabled(local.isMyTurn);
   updateTurnIndicator();
   showChainCard(null);
+  requestWakeLock();
   showScreen("game-screen");
   if (local.isMyTurn) notifyMyTurn();
   else document.title = "Trash ✨";
@@ -650,6 +713,7 @@ socket.on("boardUpdated", ({ playerIndex, slotIndex, card, wildcardFilled, deckC
   if (deckCount !== undefined) updateDeckCount(deckCount);
   renderBoard(playerIndex, local.boards[playerIndex]);
 
+  playCardPlace();
   // Animate the slot
   const isMe = playerIndex === local.myPlayerIndex;
   const boardId = isMe ? "my-board" : "opponent-board";
@@ -690,6 +754,7 @@ socket.on("chooseWildcardSlot", ({ card, validSlots }) => {
 });
 
 socket.on("discarded", ({ card, playerIndex, deckCount, topDiscard }) => {
+  playDiscard();
   if (deckCount !== undefined) updateDeckCount(deckCount);
   renderDiscardPile(topDiscard !== undefined ? topDiscard : card);
   showChainCard(null);
@@ -718,7 +783,7 @@ socket.on("turnEnded", ({ nextPlayerIndex, topDiscard, deckCount }) => {
   // Re-render my board to clear wildcard highlights
   renderBoard(local.myPlayerIndex, local.boards[local.myPlayerIndex]);
 
-  if (local.isMyTurn) notifyMyTurn();
+  if (local.isMyTurn) { notifyMyTurn(); playTurnStart(); }
   else document.title = "Trash ✨";
 });
 
@@ -727,6 +792,8 @@ socket.on("aiThinking", () => {
 });
 
 socket.on("gameOver", ({ winnerIndex, winnerName }) => {
+  releaseWakeLock();
+  if (winnerIndex === local.myPlayerIndex) playWinFanfare();
   const didWin = winnerIndex === local.myPlayerIndex;
   $("result-emoji").textContent = didWin ? "🎉" : "😔";
   $("result-text").textContent = didWin ? "You Win!" : `${winnerName} Wins!`;
@@ -743,6 +810,7 @@ socket.on("rematchRequested", ({ playerIndex }) => {
 });
 
 socket.on("opponentDisconnected", () => {
+  releaseWakeLock();
   stopElevenMusic();
   updateTurnIndicator("Opponent disconnected");
   setTimeout(() => {
@@ -775,6 +843,14 @@ $("settings-oldies").addEventListener("click", () => {
   setOldiesMode(!local.oldies);
   $("settings-panel").classList.add("hidden");
 });
+$("settings-row-order").addEventListener("click", () => {
+  setRowOrder(!local.rowReversed);
+  $("settings-panel").classList.add("hidden");
+});
+$("settings-landscape").addEventListener("click", () => {
+  setLandscape(!document.body.classList.contains("is-landscape"));
+  $("settings-panel").classList.add("hidden");
+});
 $("settings-help").addEventListener("click", () => {
   openHelp();
   $("settings-panel").classList.add("hidden");
@@ -783,6 +859,7 @@ $("settings-quit").addEventListener("click", () => {
   $("settings-panel").classList.add("hidden");
   if (!local.roomId) return;
   if (!confirm("Quit game? Your opponent will be notified.")) return;
+  releaseWakeLock();
   socket.emit("quitGame", { roomId: local.roomId });
   stopElevenMusic();
   local.roomId = null;
@@ -880,6 +957,7 @@ socket.on("opponentReconnected", () => {
 // Opponent quit voluntarily
 socket.on("opponentQuit", ({ quitterIndex }) => {
   if (quitterIndex === local.myPlayerIndex) return;
+  releaseWakeLock();
   stopElevenMusic();
   setTimeout(() => {
     $("result-emoji").textContent = "🏆";

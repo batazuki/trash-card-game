@@ -502,6 +502,12 @@ html, body {
   border-color: var(--accent2);
   color: var(--accent2);
 }
+@keyframes turn-pop {
+  0%   { transform: scale(1);    opacity: 0.5; }
+  50%  { transform: scale(1.18); opacity: 1;   }
+  100% { transform: scale(1);    opacity: 1;   }
+}
+.turn-indicator.turn-pop { animation: turn-pop 0.35s cubic-bezier(0.36,0.07,0.19,0.97) both; }
 
 .pile-row {
   display: flex;
@@ -919,6 +925,8 @@ body.variant-eleven #game-screen,
 body.variant-eleven #end-screen {
   background: linear-gradient(160deg, #0a0a14 0%, #0d0820 100%);
 }
+body.variant-eleven .result-text { color: #e8e8ff; }
+body.variant-eleven .result-sub  { color: #9090c0; }
 body.variant-eleven .game-title { color: #e0e0ff; text-shadow: 0 0 20px rgba(229,9,20,0.6); }
 body.variant-eleven .subtitle   { color: rgba(200,200,255,0.4); }
 body.variant-eleven .text-input {
@@ -958,13 +966,20 @@ body.variant-eleven .modal-section p, body.variant-eleven .modal-section li { co
 body.variant-eleven .modal-tabs    { border-color: rgba(0,229,255,0.2); }
 body.variant-eleven .modal-tab     { color: rgba(200,200,255,0.4); }
 
-/* Eleven board: 6-column grid */
+/* Eleven board: flex row — 5×2 main grid + ★ slot centered on the right */
 .eleven-board {
-  grid-template-columns: repeat(6, var(--card-w));
-  grid-template-rows: repeat(2, var(--card-h));
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
 }
-.opponent-area .eleven-board {
-  grid-template-columns: repeat(6, var(--opp-card-w));
+.eleven-main-grid {
+  display: grid;
+  grid-template-columns: repeat(5, var(--card-w));
+  grid-template-rows: repeat(2, var(--card-h));
+  gap: var(--gap);
+}
+.opponent-area .eleven-main-grid {
+  grid-template-columns: repeat(5, var(--opp-card-w));
   grid-template-rows: repeat(2, var(--opp-card-h));
 }
 

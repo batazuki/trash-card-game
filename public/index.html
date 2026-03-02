@@ -63,22 +63,6 @@
         </div>
       </label>
 
-      <label class="toggle-row">
-        <span class="toggle-label">6–10 on top row</span>
-        <div class="toggle-wrap">
-          <input type="checkbox" id="row-order-toggle">
-          <span class="toggle-slider"></span>
-        </div>
-      </label>
-
-      <label class="toggle-row">
-        <span class="toggle-label">Landscape layout</span>
-        <div class="toggle-wrap">
-          <input type="checkbox" id="landscape-toggle">
-          <span class="toggle-slider"></span>
-        </div>
-      </label>
-
       <p id="lobby-error" class="error hidden"></p>
     </div>
   </div>
@@ -121,8 +105,10 @@
     <div class="gear-wrap">
       <button id="gear-btn" class="gear-btn" aria-label="Settings">⚙</button>
       <div id="settings-panel" class="settings-panel hidden">
-        <button id="settings-music" class="settings-item hidden">🔊 Music</button>
+        <button id="settings-music" class="settings-item">🔊 Music</button>
         <button id="settings-oldies" class="settings-item">👓 Oldies: Off</button>
+        <button id="settings-row-order" class="settings-item">🔄 6–10 Top: Off</button>
+        <button id="settings-landscape" class="settings-item">↔ Landscape: Off</button>
         <button id="settings-help" class="settings-item">❓ How to Play</button>
         <button id="settings-quit" class="settings-item settings-quit">🚪 Quit</button>
       </div>
