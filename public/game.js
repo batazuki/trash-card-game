@@ -184,7 +184,9 @@ function getValidSlotClient(card, board) {
   const idx = card.rank - 1;
   const slot = board[idx];
   if (!slot) return null;
-  if (!slot.filled || slot.wildcardFilled) return idx;
+  if (!slot.filled) return idx;
+  // Wildcard overlay: Eleven variant only
+  if (local.variant === "eleven" && slot.wildcardFilled) return idx;
   if (local.variant === "eleven" && card.rank === 1 && board[10]) {
     const s10 = board[10];
     if (!s10.filled || s10.wildcardFilled) return 10;
@@ -661,7 +663,10 @@ socket.on("chooseWildcardSlot", ({ card, validSlots }) => {
   local.validSlots = validSlots;
   local.turnPhase = "place-wildcard";
   showChainCard(card);
-  updateTurnIndicator(`Place ${RANK_LABEL(card.rank)} — tap a glowing slot`);
+  const isAceChoice = card.rank !== 11 && card.rank !== 13;
+  updateTurnIndicator(isAceChoice
+    ? "Ace in A or ★? — tap a glowing slot"
+    : `Place ${RANK_LABEL(card.rank)} — tap a glowing slot`);
   renderBoard(local.myPlayerIndex, local.boards[local.myPlayerIndex]);
 });
 
@@ -753,3 +758,75 @@ $("share-btn").addEventListener("click", () => shareRoomCode(local.roomId));
 // See Cards / Back to Results (end screen ↔ game-screen view)
 $("see-cards-btn").addEventListener("click", viewCards);
 $("back-results-btn").addEventListener("click", closeViewCards);
+
+// ═══ RECONNECTION ═══
+
+// Show reconnecting message when our socket drops
+socket.on("disconnect", () => {
+  updateTurnIndicator("Reconnecting…");
+  document.title = "Reconnecting… — Trash";
+});
+
+// On connect (and reconnect), try to rejoin an active game
+socket.on("connect", () => {
+  if (local.roomId && local.myPlayerIndex !== null) {
+    socket.emit("rejoinRoom", { roomId: local.roomId, playerIndex: local.myPlayerIndex });
+  }
+});
+
+// Server confirmed rejoin — restore full game state
+socket.on("gameRejoined", ({
+  roomId, myPlayerIndex, boards, currentPlayerIndex, players,
+  deckCount, variant, turnPhase, topDiscard,
+  pendingWildcard, pendingValidSlots,
+}) => {
+  local.roomId              = roomId;
+  local.myPlayerIndex       = myPlayerIndex;
+  local.boards              = boards;
+  local.currentPlayerIndex  = currentPlayerIndex;
+  local.isMyTurn            = myPlayerIndex === currentPlayerIndex;
+  local.turnPhase           = turnPhase;
+  local.topDiscard          = topDiscard;
+  local.variant             = variant || "default";
+  local.pendingWildcard     = pendingWildcard || null;
+  local.validSlots          = pendingValidSlots || [];
+
+  applyVariantTheme(local.variant);
+  if (local.variant === "eleven") startElevenMusic();
+  recalcCardSizes();
+
+  const me  = players[myPlayerIndex];
+  const opp = players[1 - myPlayerIndex];
+  local.playerName   = me.name;
+  local.opponentName = opp.name;
+  $("my-label").textContent       = me.name;
+  $("opponent-label").textContent = opp.name + (opp.isAI ? " 🤖" : "");
+
+  updateDeckCount(deckCount);
+  renderBothBoards();
+  renderDiscardPile(topDiscard || null);
+  setDrawButtonsEnabled(local.isMyTurn && turnPhase === "draw");
+
+  if (turnPhase === "place-wildcard" && local.isMyTurn && pendingWildcard) {
+    renderBoard(myPlayerIndex, boards[myPlayerIndex]);
+    const isAceChoice = pendingWildcard.rank !== 11 && pendingWildcard.rank !== 13;
+    updateTurnIndicator(isAceChoice
+      ? "Ace in A or ★? — tap a glowing slot"
+      : `Place ${RANK_LABEL(pendingWildcard.rank)} — tap a glowing slot`);
+  } else {
+    updateTurnIndicator();
+  }
+
+  showScreen("game-screen");
+  document.title = "Trash ✨";
+});
+
+// Opponent's socket dropped — give them time to reconnect
+socket.on("opponentDisconnecting", () => {
+  updateTurnIndicator(`${local.opponentName || "Opponent"} reconnecting…`);
+});
+
+// Opponent reconnected successfully
+socket.on("opponentReconnected", () => {
+  updateTurnIndicator();
+});

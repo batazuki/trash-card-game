@@ -857,10 +857,10 @@ body.variant-eleven {
   --bg-bot:  #0d0820;
   --red:     #ff3366;
   --black:   #00e5ff;
-  --card-bg:          #1a1a2e;
-  --card-border:      #3a3a5e;
-  --card-back-bg:     #16213e;
-  --card-back-border: #8b0000;
+  --card-bg:          #262645;
+  --card-border:      #5252a0;
+  --card-back-bg:     #1e2d56;
+  --card-back-border: #aa0000;
   --slot-bg:            rgba(0,229,255,0.04);
   --slot-border:        rgba(0,229,255,0.18);
   --slot-filled-border: rgba(0,229,255,0.45);
