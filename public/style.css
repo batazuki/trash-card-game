@@ -964,12 +964,74 @@ body.variant-eleven.your-turn-flash #game-screen { animation: bg-pulse-eleven 1.
   padding: 6px 14px;
   white-space: nowrap;
 }
-/* Small tools row in game center (music toggle + help) */
-.center-tools {
-  display: flex;
-  gap: 10px;
+/* ═══ GEAR / SETTINGS MENU ═══ */
+.gear-wrap {
+  position: relative;
+  display: inline-flex;
   align-items: center;
 }
+.gear-btn {
+  background: rgba(255,255,255,0.55);
+  border: 1.5px solid #fcd5e8;
+  border-radius: 50%;
+  width: 32px; height: 32px;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text);
+  font-family: var(--font);
+  flex-shrink: 0;
+  transition: background 0.1s, transform 0.2s;
+  display: flex; align-items: center; justify-content: center;
+}
+.gear-btn:hover  { background: rgba(255,255,255,0.9); }
+.gear-btn:active { transform: rotate(60deg); }
+.settings-panel {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  background: #fff;
+  border: 1.5px solid #fcd5e8;
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(168,85,247,0.18);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 148px;
+  z-index: 300;
+}
+.settings-item {
+  background: none;
+  border: none;
+  border-radius: 9px;
+  padding: 9px 14px;
+  text-align: left;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.12s;
+  white-space: nowrap;
+}
+.settings-item:hover { background: #fdf0f9; }
+.settings-quit { color: #e53935; }
+.settings-quit:hover { background: #fff0f0; }
+/* Eleven variant panel overrides */
+body.variant-eleven .settings-panel {
+  background: #1a1a2e;
+  border-color: #aa0000;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+body.variant-eleven .settings-item { color: #c0c0e0; }
+body.variant-eleven .settings-item:hover { background: #252545; }
+body.variant-eleven .gear-btn {
+  background: rgba(0,0,0,0.35);
+  border-color: rgba(0,229,255,0.35);
+  color: #e0e0ff;
+}
+body.variant-eleven .gear-btn:hover { background: rgba(0,0,0,0.55); }
 /* Modal rule blocks */
 .modal-rule {
   font-size: 13px;
@@ -983,3 +1045,103 @@ body.variant-eleven.your-turn-flash #game-screen { animation: bg-pulse-eleven 1.
 .modal-rule strong { color: var(--accent); display: block; margin-bottom: 1px; }
 body.variant-eleven .modal-rule { border-color: rgba(0,229,255,0.1); color: #c0c0e0; }
 body.variant-eleven .modal-rule strong { color: var(--accent2); }
+
+/* ═══ OLDIES / HIGH-CONTRAST MODE ═══ */
+body.mode-oldies {
+  --red:   #cc0000;
+  --black: #111111;
+  --card-bg: #ffffff;
+  --card-border: #333333;
+  --card-back-bg: #003087;
+  --card-back-border: #bbbbbb;
+  --slot-bg:            rgba(0,0,0,0.05);
+  --slot-border:        rgba(0,0,0,0.3);
+  --slot-filled-border: #444444;
+  --valid-slot-border:  #cc7700;
+  --bg-top: #e0e0e0;
+  --bg-bot: #cccccc;
+  --text:      #111111;
+  --text-dim:  rgba(0,0,0,0.5);
+  --accent:    #cc0000;
+  --accent2:   #cc7700;
+  --surface:   rgba(255,255,255,0.75);
+}
+/* Lobby bg */
+body.mode-oldies #lobby-screen {
+  background: linear-gradient(160deg, #e0e0e0 0%, #cccccc 100%);
+}
+/* Cards — thick border, plain shadow */
+body.mode-oldies .card {
+  border-width: 2.5px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.22);
+}
+/* Corner rank — much larger */
+body.mode-oldies .card-corner {
+  font-size: clamp(10px, calc(var(--card-w) * 0.3), 20px);
+}
+/* Center suit — much larger */
+body.mode-oldies .card-center {
+  font-size: clamp(18px, calc(var(--card-w) * 0.52), 38px);
+}
+/* Opponent cards match the scale-up */
+body.mode-oldies .opponent-area .card-corner {
+  font-size: clamp(9px, calc(var(--opp-card-w) * 0.3), 16px);
+}
+body.mode-oldies .opponent-area .card-center {
+  font-size: clamp(13px, calc(var(--opp-card-w) * 0.52), 30px);
+}
+/* Face-down card — navy with plain spade symbols */
+body.mode-oldies .card-back {
+  border-width: 2.5px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+}
+body.mode-oldies .card-back::before {
+  content: "♠";
+  font-size: clamp(9px, calc(var(--card-w) * 0.22), 16px);
+  color: rgba(255,255,255,0.55);
+}
+body.mode-oldies .card-back::after {
+  content: "♠";
+  font-size: clamp(20px, calc(var(--card-w) * 0.52), 40px);
+  color: rgba(255,255,255,0.38);
+}
+/* Slot hint label — bigger and bolder */
+body.mode-oldies .slot-hint {
+  font-size: clamp(13px, calc(var(--card-w) * 0.3), 22px);
+  font-weight: 900;
+  color: rgba(0,0,0,0.4);
+}
+body.mode-oldies .card-slot.filled {
+  border-color: #555;
+  background: rgba(0,0,0,0.04);
+}
+/* Eleven ★ slot in Oldies */
+body.mode-oldies.variant-eleven .eleven-slot {
+  border-color: #aa0000;
+}
+body.mode-oldies .eleven-slot .slot-hint { color: rgba(180,0,0,0.5) !important; }
+/* Wildcard-filled amber border still visible */
+body.mode-oldies .card-slot.wildcard-filled {
+  border-color: #cc7700 !important;
+}
+/* Oldies fully overrides Eleven variant card theme —
+   hardcoded box-shadows, symbols, and slot colors must be
+   explicitly beaten with the combined selector */
+body.mode-oldies.variant-eleven .card {
+  box-shadow: 0 2px 6px rgba(0,0,0,0.22);
+}
+body.mode-oldies.variant-eleven .card-back {
+  box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+}
+body.mode-oldies.variant-eleven .card-back::before {
+  content: "♠";
+  color: rgba(255,255,255,0.55);
+}
+body.mode-oldies.variant-eleven .card-back::after {
+  content: "♠";
+  color: rgba(255,255,255,0.38);
+}
+body.mode-oldies.variant-eleven .card-slot.filled {
+  border-color: #555;
+  background: rgba(0,0,0,0.04);
+}

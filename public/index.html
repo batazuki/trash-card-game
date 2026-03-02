@@ -71,6 +71,14 @@
         </div>
       </label>
 
+      <label class="toggle-row">
+        <span class="toggle-label">Oldies (high contrast)</span>
+        <div class="toggle-wrap">
+          <input type="checkbox" id="oldies-toggle">
+          <span class="toggle-slider"></span>
+        </div>
+      </label>
+
       <p id="lobby-error" class="error hidden"></p>
     </div>
   </div>
@@ -108,9 +116,14 @@
         <button class="btn btn-draw btn-discard-draw" id="draw-discard-btn" disabled>Take Discard</button>
       </div>
 
-      <div class="center-tools">
-        <button id="music-toggle" class="music-toggle hidden">🔊</button>
-        <button class="help-btn" id="help-btn-game">?</button>
+      <div class="gear-wrap">
+        <button id="gear-btn" class="gear-btn" aria-label="Settings">⚙</button>
+        <div id="settings-panel" class="settings-panel hidden">
+          <button id="settings-music" class="settings-item hidden">🔊 Music</button>
+          <button id="settings-oldies" class="settings-item">👓 Oldies: Off</button>
+          <button id="settings-help" class="settings-item">❓ How to Play</button>
+          <button id="settings-quit" class="settings-item settings-quit">🚪 Quit</button>
+        </div>
       </div>
     </div>
 

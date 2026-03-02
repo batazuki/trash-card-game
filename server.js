@@ -574,6 +574,17 @@ io.on("connection", socket => {
     }
   });
 
+  // ── Quit Game ──
+  socket.on("quitGame", ({ roomId }) => {
+    const state = rooms.get(roomId);
+    if (!state || state.phase !== "playing") return;
+    const quitterIndex = state.players.findIndex(p => p.id === socket.id);
+    if (quitterIndex === -1) return;
+    state.phase = "ended";
+    io.to(roomId).emit("opponentQuit", { quitterIndex });
+    setTimeout(() => rooms.delete(roomId), 30000);
+  });
+
   // ── Reaction Emoji ──
   socket.on("sendReaction", ({ roomId, emoji }) => {
     const state = rooms.get(roomId);

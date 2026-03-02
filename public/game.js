@@ -22,7 +22,10 @@ let local = {
   rowReversed: false,
   variant: "default",
   viewingCards: false,   // true when showing game-screen from end-screen
+  oldies: localStorage.getItem("oldies") === "1",
 };
+// Apply persisted Oldies preference immediately
+document.body.classList.toggle("mode-oldies", local.oldies);
 
 // ═══ HELPERS ═══
 const $ = id => document.getElementById(id);
@@ -81,7 +84,7 @@ function renderBoard(playerIndex, board) {
   let order;
   if (isEleven) {
     order = local.rowReversed
-      ? [6, 7, 8, 9, 10, 0, 1, 2, 3, 4, 5]
+      ? [5, 6, 7, 8, 9, 10, 0, 1, 2, 3, 4]
       : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   } else {
     order = local.rowReversed
@@ -362,21 +365,21 @@ function startElevenMusic() {
     musicMasterGain.gain.value = musicMuted ? 0 : 0.55;
     musicMasterGain.connect(musicCtx.destination);
     scheduleMusicLoop(musicCtx.currentTime + 0.15);
-    const btn = $("music-toggle");
-    if (btn) { btn.classList.remove("hidden"); btn.textContent = musicMuted ? "🔇" : "🔊"; }
+    const btn = $("settings-music");
+    if (btn) { btn.classList.remove("hidden"); btn.textContent = musicMuted ? "🔇 Music" : "🔊 Music"; }
   } catch(e) {}
 }
 function stopElevenMusic() {
   clearTimeout(musicScheduleTimer);
   if (musicCtx) { musicCtx.close().catch(()=>{}); musicCtx = null; musicMasterGain = null; }
-  const btn = $("music-toggle");
+  const btn = $("settings-music");
   if (btn) btn.classList.add("hidden");
 }
 function toggleMusic() {
   musicMuted = !musicMuted;
   if (musicMasterGain) musicMasterGain.gain.setTargetAtTime(musicMuted ? 0 : 0.55, musicCtx.currentTime, 0.1);
-  const btn = $("music-toggle");
-  if (btn) btn.textContent = musicMuted ? "🔇" : "🔊";
+  const btn = $("settings-music");
+  if (btn) btn.textContent = musicMuted ? "🔇 Music" : "🔊 Music";
 }
 
 // ═══ SHARE ROOM CODE ═══
@@ -445,6 +448,19 @@ $("row-order-toggle").addEventListener("change", e => {
   local.rowReversed = e.target.checked;
   if (local.boards[0].length) renderBothBoards();
 });
+
+// ═══ OLDIES / HIGH-CONTRAST MODE ═══
+function setOldiesMode(on) {
+  local.oldies = on;
+  localStorage.setItem("oldies", on ? "1" : "0");
+  document.body.classList.toggle("mode-oldies", on);
+  $("oldies-toggle").checked = on;
+  $("settings-oldies").textContent = on ? "👓 Oldies: On" : "👓 Oldies: Off";
+}
+// Init both controls to match persisted state
+$("oldies-toggle").checked = local.oldies;
+$("settings-oldies").textContent = local.oldies ? "👓 Oldies: On" : "👓 Oldies: Off";
+$("oldies-toggle").addEventListener("change", e => setOldiesMode(e.target.checked));
 
 // ═══ CARD SIZING & LANDSCAPE MODE ═══
 // Sets --card-w/h and --opp-card-w/h as inline styles on :root so they
@@ -634,7 +650,7 @@ socket.on("boardUpdated", ({ playerIndex, slotIndex, card, wildcardFilled, deckC
   // Animate the slot
   const isMe = playerIndex === local.myPlayerIndex;
   const boardId = isMe ? "my-board" : "opponent-board";
-  const slot = $(boardId).children[slotIndex];
+  const slot = $(boardId).querySelector('[data-slot-index="' + slotIndex + '"]');
   if (slot) {
     const cardEl = slot.querySelector(".card");
     if (cardEl) cardEl.classList.add("card-animate-in");
@@ -740,12 +756,39 @@ socket.on("reaction", ({ playerIndex, emoji }) => {
 
 // ═══ REMAINING BUTTON WIRES ═══
 
-// Music toggle (only visible during Eleven games)
-$("music-toggle").addEventListener("click", toggleMusic);
+// Gear / settings menu
+$("gear-btn").addEventListener("click", e => {
+  e.stopPropagation();
+  $("settings-panel").classList.toggle("hidden");
+});
+document.addEventListener("click", () => $("settings-panel").classList.add("hidden"));
+$("settings-panel").addEventListener("click", e => e.stopPropagation());
 
-// Help buttons — lobby and in-game
+$("settings-music").addEventListener("click", () => {
+  toggleMusic();
+  $("settings-panel").classList.add("hidden");
+});
+$("settings-oldies").addEventListener("click", () => {
+  setOldiesMode(!local.oldies);
+  $("settings-panel").classList.add("hidden");
+});
+$("settings-help").addEventListener("click", () => {
+  openHelp();
+  $("settings-panel").classList.add("hidden");
+});
+$("settings-quit").addEventListener("click", () => {
+  $("settings-panel").classList.add("hidden");
+  if (!local.roomId) return;
+  if (!confirm("Quit game? Your opponent will be notified.")) return;
+  socket.emit("quitGame", { roomId: local.roomId });
+  stopElevenMusic();
+  local.roomId = null;
+  local.myPlayerIndex = null;
+  showScreen("lobby-screen");
+});
+
+// Help buttons — lobby and in-game (lobby ? button + settings panel help)
 $("help-btn-lobby").addEventListener("click", openHelp);
-$("help-btn-game").addEventListener("click", openHelp);
 $("help-close").addEventListener("click", closeHelp);
 // Click outside the modal box to close
 $("help-modal").addEventListener("click", e => {
@@ -829,4 +872,16 @@ socket.on("opponentDisconnecting", () => {
 // Opponent reconnected successfully
 socket.on("opponentReconnected", () => {
   updateTurnIndicator();
+});
+
+// Opponent quit voluntarily
+socket.on("opponentQuit", ({ quitterIndex }) => {
+  if (quitterIndex === local.myPlayerIndex) return;
+  stopElevenMusic();
+  setTimeout(() => {
+    $("result-emoji").textContent = "🏆";
+    $("result-text").textContent = "You Win!";
+    $("result-sub").textContent = "Opponent quit the game.";
+    showScreen("end-screen");
+  }, 500);
 });
