@@ -6,7 +6,7 @@
   let state = {
     pileCounts: [26, 26],
     lastResult: null,
-    animating: false,
+    flipTimeout: null,
   };
 
   function buildUI(container) {
@@ -23,9 +23,15 @@
         <div class="war-center">
           <div id="war-message" class="war-message"></div>
           <div class="war-battle-area">
-            <div class="war-battle-card" id="war-battle-opp"></div>
+            <div class="war-battle-slot">
+              <span class="war-battle-label" id="war-label-opp"></span>
+              <div class="war-battle-card" id="war-battle-opp"></div>
+            </div>
             <div class="war-vs">VS</div>
-            <div class="war-battle-card" id="war-battle-me"></div>
+            <div class="war-battle-slot">
+              <div class="war-battle-card" id="war-battle-me"></div>
+              <span class="war-battle-label" id="war-label-me">You</span>
+            </div>
           </div>
           <div id="war-war-cards" class="war-war-cards"></div>
         </div>
@@ -37,8 +43,6 @@
             <span class="war-pile-count" id="war-my-count">26</span>
           </div>
         </div>
-
-        <button class="btn btn-primary war-flip-btn" id="war-flip-btn">Flip!</button>
       </div>
     `;
   }
@@ -62,31 +66,32 @@
       const container = document.getElementById("game-container");
       buildUI(container);
       state.pileCounts = data.pileCounts || [26, 26];
-      state.animating = false;
+      state.flipTimeout = null;
 
       const myIdx = data.myPlayerIndex;
       document.getElementById("war-my-name").textContent = data.players[myIdx].name;
       document.getElementById("war-opp-name").textContent = data.players[1 - myIdx].name +
         (data.players[1 - myIdx].isAI ? " 🤖" : "");
+
+      // Battle card labels
+      document.getElementById("war-label-opp").textContent = data.players[1 - myIdx].name +
+        (data.players[1 - myIdx].isAI ? " 🤖" : "");
+      document.getElementById("war-label-me").textContent = data.players[myIdx].name;
+
       updateCounts();
 
       // Pile visuals
       document.getElementById("war-my-card").appendChild(makeCardBack());
       document.getElementById("war-opp-card").appendChild(makeCardBack());
 
-      document.getElementById("war-flip-btn").addEventListener("click", () => {
-        if (state.animating) return;
-        state.animating = true;
-        document.getElementById("war-flip-btn").disabled = true;
-        clearBattle();
-        socket.emit("war:flip", { roomId: window._gameLocal.roomId });
-      });
+      document.getElementById("war-message").textContent = "Ready...";
 
-      document.getElementById("war-message").textContent = "Tap Flip to play!";
+      // Auto-flip after 1.2s delay
+      state.flipTimeout = setTimeout(() => emitFlip(), 1200);
 
       // Deal animation
       const da = window._gameShared && window._gameShared.dealAnimate;
-      if (da) da(container, ".war-card-area .card, .war-flip-btn, .war-pile-info", 120);
+      if (da) da(container, ".war-card-area .card, .war-pile-info", 120);
     },
 
     onReconnect(data) {
@@ -94,9 +99,16 @@
     },
 
     cleanup() {
-      state = { pileCounts: [26, 26], lastResult: null, animating: false };
+      clearTimeout(state.flipTimeout);
+      state = { pileCounts: [26, 26], lastResult: null, flipTimeout: null };
     },
   };
+
+  function emitFlip() {
+    if (!window._gameLocal.roomId) return;
+    clearBattle();
+    socket.emit("war:flip", { roomId: window._gameLocal.roomId });
+  }
 
   // Socket handlers
   socket.on("war:result", ({ faceUp, winnerIndex, pileCounts, warCards }) => {
@@ -148,13 +160,25 @@
       msg.className = "war-message " + (winnerIndex === myIdx ? "war-win" : "war-lose");
     }
 
+    // Play sound effect
+    const sfxTone = window._gameShared && window._gameShared.sfxTone;
+    if (warCards && warCards.length > 0) {
+      // War chain result: fanfare
+      const playWinFanfare = window._gameShared && window._gameShared.playWinFanfare;
+      if (playWinFanfare) playWinFanfare();
+    } else {
+      // Normal result: soft card-place sound
+      if (sfxTone) {
+        sfxTone(600, 0.08, 0.15, "sine");
+        sfxTone(400, 0.1, 0.08, "triangle", 0.02);
+      }
+    }
+
     updateCounts();
 
-    setTimeout(() => {
-      state.animating = false;
-      const btn = document.getElementById("war-flip-btn");
-      if (btn) btn.disabled = false;
-    }, 1200);
+    // Schedule next flip after showing result
+    clearTimeout(state.flipTimeout);
+    state.flipTimeout = setTimeout(() => emitFlip(), 2500);
   });
 
   socket.on("war:tie", ({ faceUp, warDown, pileCounts }) => {
@@ -178,8 +202,22 @@
 
     const msg = document.getElementById("war-message");
     if (msg) {
-      msg.textContent = "TIE — WAR!";
+      msg.textContent = "⚔️ WAR! ⚔️";
       msg.className = "war-message war-tie";
+      // Add shake animation to layout
+      const layout = document.querySelector(".war-layout");
+      if (layout) {
+        layout.classList.add("war-tie-shake");
+        setTimeout(() => layout.classList.remove("war-tie-shake"), 550);
+      }
+    }
+
+    // Play dramatic WAR sound
+    const sfxTone = window._gameShared && window._gameShared.sfxTone;
+    if (sfxTone) {
+      sfxTone(165, 0.5, 0.25, "sawtooth");
+      sfxTone(220, 0.5, 0.2, "sawtooth", 0.06);
+      sfxTone(277, 0.4, 0.12, "square", 0.12);
     }
 
     updateCounts();

@@ -14,6 +14,7 @@
     timerInterval: null,
     wasteFlip: false,  // true when waste card should animate a flip
     autoCompleting: false,
+    dragging: null,    // { source, colIdx, cardIdx, cards, startX, startY, ghostEl, pointerId }
   };
 
   function makeCard(card) {
@@ -209,6 +210,201 @@
     }, 1000);
   }
 
+  function startDrag(e, source, colIdx, cardIdx) {
+    if (state.autoCompleting) return;
+    state.dragging = {
+      source,
+      colIdx,
+      cardIdx,
+      cards: source === "waste"
+        ? [state.waste[state.waste.length - 1]]
+        : state.tableau[colIdx].slice(cardIdx),
+      startX: e.clientX,
+      startY: e.clientY,
+      ghostEl: null,
+      pointerId: e.pointerId,
+    };
+  }
+
+  function updateDragGhost(e) {
+    if (!state.dragging) return;
+    const drag = state.dragging;
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist < 6) {
+      // Below threshold, don't start drag yet
+      return false;
+    }
+
+    if (!drag.ghostEl) {
+      // First movement above threshold: create ghost
+      const ghost = document.createElement("div");
+      ghost.className = "sol-drag-ghost";
+      ghost.style.position = "fixed";
+      ghost.style.pointerEvents = "none";
+      ghost.style.zIndex = "1000";
+      ghost.style.filter = "drop-shadow(0 8px 20px rgba(0,0,0,0.4))";
+
+      drag.cards.forEach((card, i) => {
+        const cardEl = makeCard({ ...card, faceUp: true });
+        cardEl.style.position = "absolute";
+        cardEl.style.top = `${i * 22}px`;
+        ghost.appendChild(cardEl);
+      });
+
+      document.body.appendChild(ghost);
+      drag.ghostEl = ghost;
+
+      // Hide source cards
+      if (drag.source === "waste") {
+        const wasteEl = document.getElementById("sol-waste");
+        if (wasteEl) wasteEl.style.opacity = "0.35";
+      } else {
+        const col = state.tableau[drag.colIdx];
+        for (let i = drag.cardIdx; i < col.length; i++) {
+          const cardEl = document.querySelector(
+            `[data-col="${drag.colIdx}"] .card[data-card-idx="${i}"]`
+          );
+          if (cardEl) cardEl.style.opacity = "0.35";
+        }
+      }
+    }
+
+    // Update ghost position
+    const rect = drag.ghostEl.children[0].getBoundingClientRect();
+    const offsetX = 70; // Approximate card width / 2
+    const offsetY = 100; // Approximate card height / 2
+    drag.ghostEl.style.left = e.clientX - offsetX + "px";
+    drag.ghostEl.style.top = e.clientY - offsetY + "px";
+
+    // Highlight drop target
+    const targets = document.elementsFromPoint(e.clientX, e.clientY);
+    document.querySelectorAll(".sol-col, .sol-foundation").forEach(el => {
+      el.classList.remove("sol-drop-hover");
+    });
+    for (const target of targets) {
+      if (target.classList.contains("sol-col")) {
+        target.classList.add("sol-drop-hover");
+        break;
+      }
+      if (target.classList.contains("sol-foundation")) {
+        target.classList.add("sol-drop-hover");
+        break;
+      }
+    }
+
+    return true;
+  }
+
+  function endDrag(e) {
+    if (!state.dragging) return;
+
+    const drag = state.dragging;
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+    const dist = Math.hypot(dx, dy);
+
+    // Remove ghost
+    if (drag.ghostEl) {
+      drag.ghostEl.remove();
+    }
+
+    // Unhide source
+    if (drag.source === "waste") {
+      const wasteEl = document.getElementById("sol-waste");
+      if (wasteEl) wasteEl.style.opacity = "";
+    } else {
+      const col = state.tableau[drag.colIdx];
+      for (let i = drag.cardIdx; i < col.length; i++) {
+        const cardEl = document.querySelector(
+          `[data-col="${drag.colIdx}"] .card[data-card-idx="${i}"]`
+        );
+        if (cardEl) cardEl.style.opacity = "";
+      }
+    }
+
+    // Clear drop highlights
+    document.querySelectorAll(".sol-col, .sol-foundation").forEach(el => {
+      el.classList.remove("sol-drop-hover");
+    });
+
+    // If drag didn't start (< threshold), treat as click
+    if (dist < 6) {
+      state.dragging = null;
+      if (drag.source === "waste") {
+        handleWasteClick();
+      } else {
+        handleTableauClick(drag.colIdx, drag.cardIdx);
+      }
+      return;
+    }
+
+    // Find drop target
+    const targets = document.elementsFromPoint(e.clientX, e.clientY);
+    let dropCol = -1;
+    let dropFound = -1;
+
+    for (const target of targets) {
+      const col = target.closest(".sol-col");
+      if (col) {
+        dropCol = parseInt(col.dataset.col);
+        break;
+      }
+      const found = target.closest(".sol-foundation");
+      if (found) {
+        dropFound = parseInt(found.dataset.idx);
+        break;
+      }
+    }
+
+    state.dragging = null;
+
+    // Try to place cards
+    if (dropCol !== -1) {
+      // Tableau drop
+      const topCard = drag.cards[0];
+      const targetCol = state.tableau[dropCol];
+      if (targetCol.length === 0 ? topCard.rank === 13 : canPlaceOnTableau(topCard, dropCol)) {
+        // Valid move
+        if (drag.source === "waste") {
+          state.waste.pop();
+        } else {
+          state.tableau[drag.colIdx] = state.tableau[drag.colIdx].slice(0, drag.cardIdx);
+          flipTopCard(drag.colIdx);
+        }
+        targetCol.push(...drag.cards);
+        incrementMoves();
+        render();
+        if (checkWin()) onWin(); else checkStuck();
+        return;
+      }
+    } else if (dropFound !== -1) {
+      // Foundation drop - only single card allowed
+      if (drag.cards.length === 1) {
+        const card = drag.cards[0];
+        if (canPlaceOnFoundation(card, dropFound)) {
+          // Valid move
+          if (drag.source === "waste") {
+            state.waste.pop();
+          } else {
+            state.tableau[drag.colIdx].pop();
+            flipTopCard(drag.colIdx);
+          }
+          state.foundations[dropFound].push(card);
+          incrementMoves();
+          render();
+          if (checkWin()) onWin(); else checkStuck();
+          return;
+        }
+      }
+    }
+
+    // Invalid drop, re-render to snap back
+    render();
+  }
+
   function render() {
     // Tableau
     const tableau = document.getElementById("sol-tableau");
@@ -230,6 +426,7 @@
         const cardEl = makeCard(card);
         cardEl.style.top = `${ri * 22}px`;
         cardEl.classList.add("sol-stacked");
+        cardEl.dataset.cardIdx = ri;
 
         const isSelected = state.selected &&
           state.selected.source === "tableau" &&
@@ -238,10 +435,31 @@
         if (isSelected) cardEl.classList.add("sol-selected");
 
         if (card.faceUp) {
-          cardEl.addEventListener("click", (e) => {
+          cardEl.classList.add("sol-draggable");
+          cardEl.style.touchAction = "none";
+
+          cardEl.addEventListener("pointerdown", (e) => {
             e.stopPropagation();
-            handleTableauClick(ci, ri);
+            startDrag(e, "tableau", ci, ri);
+            cardEl.setPointerCapture(e.pointerId);
           });
+
+          cardEl.addEventListener("pointermove", (e) => {
+            if (state.dragging && state.dragging.pointerId === e.pointerId) {
+              updateDragGhost(e);
+            }
+          });
+
+          cardEl.addEventListener("pointerup", (e) => {
+            if (state.dragging && state.dragging.pointerId === e.pointerId) {
+              endDrag(e);
+            }
+          });
+
+          cardEl.addEventListener("click", (e) => {
+            // Short click (no drag) - already handled in endDrag
+          });
+
           // Double-click to auto-send to foundation
           cardEl.addEventListener("dblclick", (e) => {
             e.stopPropagation();
@@ -272,7 +490,6 @@
       if (state.waste.length > 0) {
         const top = state.waste[state.waste.length - 1];
         const flip = window._gameShared && window._gameShared.animateFlip;
-        wasteEl.onclick = () => handleWasteClick();
         wasteEl.ondblclick = () => autoFoundation(top, "waste");
         if (state.wasteFlip && flip) {
           state.wasteFlip = false;
@@ -282,8 +499,35 @@
           const cardEl = makeCard({ ...top, faceUp: true });
           const isSelected = state.selected && state.selected.source === "waste";
           if (isSelected) cardEl.classList.add("sol-selected");
+          cardEl.classList.add("sol-draggable");
+          cardEl.style.touchAction = "none";
+
+          cardEl.addEventListener("pointerdown", (e) => {
+            e.stopPropagation();
+            startDrag(e, "waste", -1, -1);
+            cardEl.setPointerCapture(e.pointerId);
+          });
+
+          cardEl.addEventListener("pointermove", (e) => {
+            if (state.dragging && state.dragging.pointerId === e.pointerId) {
+              updateDragGhost(e);
+            }
+          });
+
+          cardEl.addEventListener("pointerup", (e) => {
+            if (state.dragging && state.dragging.pointerId === e.pointerId) {
+              endDrag(e);
+            }
+          });
+
+          cardEl.addEventListener("click", (e) => {
+            // Short click handled in endDrag
+          });
+
           wasteEl.appendChild(cardEl);
         }
+      } else {
+        wasteEl.onclick = null;
       }
     }
 
@@ -465,9 +709,13 @@
 
     cleanup() {
       clearInterval(state.timerInterval);
+      if (state.dragging && state.dragging.ghostEl) {
+        state.dragging.ghostEl.remove();
+      }
       state = {
         tableau: [], foundations: [[], [], [], []], stock: [], waste: [],
         selected: null, moves: 0, startTime: 0, timerInterval: null, wasteFlip: false, autoCompleting: false,
+        dragging: null,
       };
     },
   };
