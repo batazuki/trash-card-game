@@ -172,7 +172,7 @@ io.on("connection", socket => {
       wantsRematch: false,
     });
     socket.join(roomId);
-    socket.emit("joinedRoom", { roomId });
+    socket.emit("joinedRoom", { roomId, game: state.game });
     startGame(state, roomId);
   });
 

@@ -327,7 +327,27 @@ function showShareToast(msg) {
 }
 
 // ═══ HELP MODAL ═══
-function openHelp() { $("help-modal").classList.remove("hidden"); }
+const GAME_TO_TAB = { trash: "default", "trash-eleven": "eleven", war: "war", gofish: "gofish", oldmaid: "oldmaid", solitaire: "solitaire" };
+
+function openHelp() {
+  // Determine current game — in-game uses local.gameType, lobby uses dropdown
+  const game = local.roomId ? local.gameType : ($("game-select").value || "trash");
+  const tabKey = GAME_TO_TAB[game] || "default";
+
+  // Hide all tabs and sections, then show only the relevant one
+  document.querySelectorAll(".modal-tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".modal-section").forEach(s => s.classList.remove("active"));
+
+  const tab = document.querySelector(`.modal-tab[data-tab="${tabKey}"]`);
+  if (tab) tab.classList.add("active");
+  const sec = document.getElementById("help-" + tabKey);
+  if (sec) sec.classList.add("active");
+
+  // During a game, hide the tab bar since only one game is relevant
+  document.querySelector(".modal-tabs").classList.toggle("hidden", !!local.roomId);
+
+  $("help-modal").classList.remove("hidden");
+}
 function closeHelp() { $("help-modal").classList.add("hidden"); }
 document.querySelectorAll(".modal-tab").forEach(tab => {
   tab.addEventListener("click", () => {
@@ -500,6 +520,7 @@ $("back-lobby-btn").addEventListener("click", () => {
   $("room-code-display").classList.add("hidden");
   $("room-code-text").textContent = "";
   $("score-display").classList.add("hidden");
+  $("shared-reaction-bar").classList.add("hidden");
   showScreen("lobby-screen");
 });
 
@@ -511,8 +532,14 @@ socket.on("roomCreated", ({ roomId }) => {
   $("room-code-display").classList.remove("hidden");
 });
 
-socket.on("joinedRoom", ({ roomId }) => {
+socket.on("joinedRoom", ({ roomId, game }) => {
   local.roomId = roomId;
+  if (game) {
+    local.gameType = game;
+    $("game-select").value = game;
+    applyGameTheme(game);
+    updateLobbyForGame(game);
+  }
 });
 
 socket.on("joinError", ({ message }) => {
@@ -545,6 +572,10 @@ socket.on("gameStart", (data) => {
   // Toggle Trash UI vs game-container
   $("trash-ui").classList.toggle("hidden", !isTrash);
   $("game-container").classList.toggle("hidden", isTrash);
+
+  // Show shared reaction bar for non-trash multiplayer games (not solitaire)
+  const showSharedReactions = !isTrash && local.gameType !== "solitaire";
+  $("shared-reaction-bar").classList.toggle("hidden", !showSharedReactions);
 
   if (gameClient) {
     gameClient.onGameStart(data);
@@ -692,6 +723,9 @@ socket.on("gameRejoined", (data) => {
 
   $("trash-ui").classList.toggle("hidden", !isTrash);
   $("game-container").classList.toggle("hidden", isTrash);
+
+  const showSharedReactions = !isTrash && local.gameType !== "solitaire";
+  $("shared-reaction-bar").classList.toggle("hidden", !showSharedReactions);
 
   if (gameClient && gameClient.onReconnect) {
     gameClient.onReconnect(data);

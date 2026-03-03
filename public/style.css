@@ -1638,24 +1638,24 @@ body.is-landscape .oldmaid-center { flex: 0.6; }
 }
 .sol-top {
   display: flex; justify-content: space-between; align-items: flex-start;
-  gap: 8px; flex-shrink: 0;
+  gap: 4px; flex-shrink: 0;
 }
 .sol-stock-waste {
-  display: flex; gap: 6px; align-items: flex-start;
+  display: flex; gap: 4px; align-items: flex-start;
 }
 .sol-stock {
-  cursor: pointer; width: var(--card-w, 60px); height: var(--card-h, 86px);
+  cursor: pointer; width: clamp(40px, 14vw, var(--card-w, 60px)); aspect-ratio: 5/7; height: auto;
 }
 .sol-stock .card { width: 100%; height: 100%; }
 .sol-waste {
-  width: var(--card-w, 60px); height: var(--card-h, 86px);
+  width: clamp(40px, 14vw, var(--card-w, 60px)); aspect-ratio: 5/7; height: auto;
 }
 .sol-waste .card { width: 100%; height: 100%; }
 .sol-foundations {
   display: flex; gap: 4px;
 }
 .sol-foundation {
-  width: var(--card-w, 60px); height: var(--card-h, 86px);
+  width: clamp(40px, 14vw, var(--card-w, 60px)); aspect-ratio: 5/7; height: auto;
   border: 2px dashed rgba(255,255,255,0.15); border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; position: relative;
@@ -1669,17 +1669,17 @@ body.is-landscape .oldmaid-center { flex: 0.6; }
   justify-content: center;
 }
 .sol-col {
-  position: relative; flex: 1; max-width: var(--card-w, 60px);
+  position: relative; flex: 1; max-width: clamp(40px, 14vw, var(--card-w, 60px));
   min-height: 120px;
 }
 .sol-empty-slot {
-  width: 100%; height: var(--card-h, 86px);
+  width: 100%; aspect-ratio: 5/7; height: auto;
   border: 2px dashed rgba(255,255,255,0.1); border-radius: 8px;
   cursor: pointer;
 }
 .sol-stacked {
   position: absolute; left: 0;
-  width: 100% !important; height: var(--card-h, 86px) !important;
+  width: 100% !important; aspect-ratio: 5/7; height: auto !important;
   cursor: pointer;
 }
 .sol-selected {
@@ -1716,10 +1716,8 @@ body.is-landscape .sol-col { max-width: none; }
   .oldmaid-opp-card { width: clamp(40px, 8vw, 64px); height: clamp(58px, 11vw, 92px); }
   .oldmaid-name { font-size: 16px; }
 
-  .sol-stock, .sol-waste, .sol-foundation { width: clamp(60px, 9vw, 90px); height: auto; aspect-ratio: 5/7; }
+  .sol-stock, .sol-waste, .sol-foundation { width: clamp(60px, 9vw, 90px); }
   .sol-col { max-width: clamp(60px, 9vw, 90px); }
-  .sol-stacked { height: clamp(86px, 13vw, 130px) !important; }
-  .sol-empty-slot { height: auto; aspect-ratio: 5/7; }
 }
 
 /* ═══════════════════════════════════════════════

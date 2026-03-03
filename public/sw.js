@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ttg-v5';
+const CACHE_NAME = 'ttg-v7';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
