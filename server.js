@@ -89,16 +89,12 @@ function endGame(state, roomId, winnerIndex) {
 const helpers = { createDeck, shuffle, delay, endGame };
 const trashGame    = require("./games/trash")(io, helpers);
 const warGame      = require("./games/war")(io, helpers);
-const gofishGame   = require("./games/gofish")(io, helpers);
-const oldmaidGame  = require("./games/oldmaid")(io, helpers);
 const solitaireGame = require("./games/solitaire")(io, helpers);
 
 const gameModules = {
   trash: trashGame,
   "trash-eleven": trashGame,
   war: warGame,
-  gofish: gofishGame,
-  oldmaid: oldmaidGame,
   solitaire: solitaireGame,
 };
 
@@ -124,8 +120,6 @@ io.on("connection", socket => {
 
   // Register game-specific socket events
   warGame.registerEvents(socket, rooms);
-  gofishGame.registerEvents(socket, rooms);
-  oldmaidGame.registerEvents(socket, rooms);
   solitaireGame.registerEvents(socket, rooms);
 
   // ── Create Room ──
@@ -260,6 +254,27 @@ io.on("connection", socket => {
     state.phase = "ended";
     io.to(roomId).emit("opponentQuit", { quitterIndex });
     setTimeout(() => rooms.delete(roomId), 30000);
+  });
+
+  // ── Leave Room ──
+  socket.on("leaveRoom", ({ roomId }) => {
+    const state = rooms.get(roomId);
+    if (!state) return;
+    const pi = state.players.findIndex(p => p.id === socket.id);
+    if (pi === -1) return;
+    socket.leave(roomId);
+    io.to(roomId).emit("opponentLeft");
+    clearTimeout(state.endedTimer);
+    setTimeout(() => rooms.delete(roomId), 5000);
+  });
+
+  // ── Change Game Type (from end screen) ──
+  socket.on("changeGame", ({ roomId, game }) => {
+    const state = rooms.get(roomId);
+    if (!state || state.phase !== "ended") return;
+    if (!gameModules[game]) return;
+    state.game = game;
+    io.to(roomId).emit("gameChanged", { game });
   });
 
   // ── Reaction Emoji ──

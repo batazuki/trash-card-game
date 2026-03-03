@@ -447,6 +447,10 @@
       setDrawButtonsEnabled(loc.isMyTurn);
       updateTurnIndicator();
       showChainCard(null);
+
+      // Deal animation
+      const da = shared().dealAnimate;
+      if (da) da(container, ".card-slot .card", 40);
     },
 
     onReconnect(data) {

@@ -328,7 +328,7 @@ function showShareToast(msg) {
 }
 
 // ═══ HELP MODAL ═══
-const GAME_TO_TAB = { trash: "default", "trash-eleven": "eleven", war: "war", gofish: "gofish", oldmaid: "oldmaid", solitaire: "solitaire" };
+const GAME_TO_TAB = { trash: "default", "trash-eleven": "eleven", war: "war", solitaire: "solitaire" };
 
 function openHelp() {
   // Determine current game — in-game uses local.gameType, lobby uses dropdown
@@ -449,10 +449,18 @@ recalcCardSizes();
 if (isTouchDevice) setLandscape(window.innerWidth > window.innerHeight);
 else setLandscape(localStorage.getItem("landscape") === "1");
 
+function dealAnimate(container, selector, staggerMs = 50) {
+  const els = container.querySelectorAll(selector);
+  els.forEach((el, i) => {
+    el.classList.add("deal-animate");
+    setTimeout(() => el.classList.add("dealt"), i * staggerMs);
+  });
+}
+
 // ═══ EXPOSE SHARED UTILITIES ═══
 window._gameShared = {
   makeCard, makeCardBack, RANK_LABEL, SUIT_SYMBOL, isRed, SLOT_LABELS,
-  sfxTone, notifyMyTurn, recalcCardSizes, $, animateFlip, showScreen,
+  sfxTone, notifyMyTurn, recalcCardSizes, $, animateFlip, showScreen, dealAnimate,
 };
 
 // ═══ LOBBY BUTTON HANDLERS ═══
@@ -514,6 +522,10 @@ $("play-again-btn").addEventListener("click", () => {
 $("back-lobby-btn").addEventListener("click", () => {
   releaseWakeLock();
   stopElevenMusic();
+  // Notify server we're leaving
+  if (local.roomId) {
+    socket.emit("leaveRoom", { roomId: local.roomId });
+  }
   // Clean up current game client
   const gameClient = window.gameClients[local.gameType];
   if (gameClient && gameClient.cleanup) gameClient.cleanup();
@@ -527,6 +539,7 @@ $("back-lobby-btn").addEventListener("click", () => {
   $("room-code-text").textContent = "";
   $("score-display").classList.add("hidden");
   $("shared-reaction-bar").classList.add("hidden");
+  $("end-game-switch").classList.add("hidden");
   showScreen("lobby-screen");
 });
 
@@ -603,14 +616,17 @@ socket.on("gameOver", ({ winnerIndex, winnerName, scores, gamesPlayed }) => {
     trash: didWin ? "You filled all your spots first!" : "Better luck next time.",
     "trash-eleven": didWin ? "You filled all 11 slots first!" : "Better luck next time.",
     war: didWin ? "You captured all the cards!" : "Your opponent took all the cards.",
-    gofish: didWin ? "You collected the most sets!" : "Your opponent had more sets.",
-    oldmaid: didWin ? "You emptied your hand!" : "You're stuck with the Old Maid!",
     solitaire: "Congratulations!",
   };
   $("result-sub").textContent = subTexts[local.gameType] || (didWin ? "Nice job!" : "Better luck next time.");
   $("play-again-btn").disabled = false;
   $("play-again-btn").textContent = (local.vsAI || local.gameType === "solitaire") ? "Play Again" : "Rematch";
   $("see-cards-btn").style.display = local.gameType.startsWith("trash") ? "" : "none";
+
+  // Show game switcher only for multiplayer (not AI, not solitaire)
+  const showSwitcher = !local.vsAI && local.gameType !== "solitaire";
+  $("end-game-switch").classList.toggle("hidden", !showSwitcher);
+  if (showSwitcher) $("end-game-select").value = local.gameType;
 
   const scoreEl = $("score-display");
   if (scores && gamesPlayed > 1) {
@@ -644,6 +660,27 @@ socket.on("opponentDisconnected", () => {
 
 socket.on("reaction", ({ playerIndex, emoji }) => {
   showReaction(emoji, playerIndex === local.myPlayerIndex);
+});
+
+socket.on("opponentLeft", () => {
+  $("play-again-btn").disabled = true;
+  $("play-again-btn").textContent = "Opponent Left";
+  $("end-game-switch").classList.add("hidden");
+  $("result-sub").textContent = "Opponent left the room.";
+});
+
+socket.on("gameChanged", ({ game }) => {
+  local.gameType = game;
+  applyGameTheme(game);
+  const sel = $("end-game-select");
+  if (sel && sel.value !== game) sel.value = game;
+});
+
+// ── End screen game selector ──
+$("end-game-select").addEventListener("change", e => {
+  if (!local.roomId) return;
+  const game = e.target.value;
+  socket.emit("changeGame", { roomId: local.roomId, game });
 });
 
 // ═══ REMAINING BUTTON WIRES ═══
@@ -681,9 +718,17 @@ $("settings-quit").addEventListener("click", () => {
   if (!confirm("Quit game? Your opponent will be notified.")) return;
   releaseWakeLock();
   socket.emit("quitGame", { roomId: local.roomId });
+  socket.emit("leaveRoom", { roomId: local.roomId });
   stopElevenMusic();
+  const gameClient = window.gameClients[local.gameType];
+  if (gameClient && gameClient.cleanup) gameClient.cleanup();
+  const savedGame = $("game-select").value || "trash";
+  applyGameTheme(savedGame);
   local.roomId = null;
+  local.vsAI = false;
   local.myPlayerIndex = null;
+  local.gameType = savedGame;
+  $("shared-reaction-bar").classList.add("hidden");
   showScreen("lobby-screen");
 });
 

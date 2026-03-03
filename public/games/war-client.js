@@ -83,6 +83,10 @@
       });
 
       document.getElementById("war-message").textContent = "Tap Flip to play!";
+
+      // Deal animation
+      const da = window._gameShared && window._gameShared.dealAnimate;
+      if (da) da(container, ".war-card-area .card, .war-flip-btn, .war-pile-info", 120);
     },
 
     onReconnect(data) {

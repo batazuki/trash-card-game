@@ -13,6 +13,7 @@
     startTime: 0,
     timerInterval: null,
     wasteFlip: false,  // true when waste card should animate a flip
+    autoCompleting: false,
   };
 
   function makeCard(card) {
@@ -130,8 +131,49 @@
     return false;
   }
 
+  function canAutoComplete() {
+    if (state.stock.length > 0 || state.waste.length > 0) return false;
+    return state.tableau.every(col => col.every(c => c.faceUp));
+  }
+
+  function doAutoComplete() {
+    if (state.autoCompleting) return;
+    state.autoCompleting = true;
+    state.selected = null;
+
+    function step() {
+      if (checkWin()) {
+        state.autoCompleting = false;
+        onWin();
+        return;
+      }
+      // Find a card to move to foundation
+      for (let ci = 0; ci < 7; ci++) {
+        const col = state.tableau[ci];
+        if (col.length === 0) continue;
+        const card = col[col.length - 1];
+        const fi = getFoundationIndex(card);
+        if (fi !== -1) {
+          col.pop();
+          state.foundations[fi].push(card);
+          incrementMoves();
+          render();
+          setTimeout(step, 80);
+          return;
+        }
+      }
+      // Shouldn't reach here, but safety
+      state.autoCompleting = false;
+    }
+    step();
+  }
+
   function checkStuck() {
-    if (checkWin()) return;
+    if (checkWin() || state.autoCompleting) return;
+    if (canAutoComplete()) {
+      doAutoComplete();
+      return;
+    }
     if (!hasAnyMoves()) {
       clearInterval(state.timerInterval);
       const status = document.querySelector(".sol-status");
@@ -265,6 +307,7 @@
   }
 
   function handleStockClick() {
+    if (state.autoCompleting) return;
     if (state.stock.length === 0) {
       // Recycle waste back to stock
       if (state.waste.length === 0) return;
@@ -284,6 +327,7 @@
   }
 
   function handleWasteClick() {
+    if (state.autoCompleting) return;
     if (state.waste.length === 0) return;
     if (state.selected && state.selected.source === "waste") {
       state.selected = null;
@@ -294,6 +338,7 @@
   }
 
   function handleTableauClick(colIdx, cardIdx) {
+    if (state.autoCompleting) return;
     const col = state.tableau[colIdx];
 
     if (state.selected) {
@@ -337,6 +382,7 @@
   }
 
   function handleFoundationClick(foundIdx) {
+    if (state.autoCompleting) return;
     if (!state.selected) return;
 
     let card;
@@ -401,8 +447,16 @@
       state.selected = null;
       state.moves = 0;
       state.wasteFlip = false;
+      state.autoCompleting = false;
       startTimer();
       render();
+
+      // Deal animation — stagger tableau cards
+      const da = window._gameShared && window._gameShared.dealAnimate;
+      if (da) {
+        const tableau = document.getElementById("sol-tableau");
+        if (tableau) da(tableau, ".sol-stacked", 35);
+      }
     },
 
     onReconnect(data) {
@@ -413,7 +467,7 @@
       clearInterval(state.timerInterval);
       state = {
         tableau: [], foundations: [[], [], [], []], stock: [], waste: [],
-        selected: null, moves: 0, startTime: 0, timerInterval: null, wasteFlip: false,
+        selected: null, moves: 0, startTime: 0, timerInterval: null, wasteFlip: false, autoCompleting: false,
       };
     },
   };
