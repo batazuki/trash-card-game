@@ -1,9 +1,7 @@
 // games/gofish-client.js — Go Fish card game client
 
 (function() {
-  const RANK_LABEL = r => r === 1 ? "A" : r === 11 ? "J" : r === 12 ? "Q" : r === 13 ? "K" : String(r);
-  const SUIT_SYMBOL = { hearts: "♥", diamonds: "♦", clubs: "♣", spades: "♠" };
-  const isRed = suit => suit === "hearts" || suit === "diamonds";
+  const { makeCard: _makeCard, RANK_LABEL } = window._gameShared;
 
   let state = {
     hand: [],
@@ -15,15 +13,8 @@
   };
 
   function makeCard(card, clickable) {
-    const el = document.createElement("div");
-    el.className = `card ${isRed(card.suit) ? "red" : "black"}${clickable ? " gofish-clickable" : ""}`;
-    const rank = RANK_LABEL(card.rank);
-    const sym = SUIT_SYMBOL[card.suit];
-    el.innerHTML = `
-      <span class="card-corner tl">${rank}</span>
-      <span class="card-center">${sym}</span>
-      <span class="card-corner br">${rank}</span>
-    `;
+    const el = _makeCard(card);
+    if (clickable) el.classList.add("gofish-clickable");
     return el;
   }
 

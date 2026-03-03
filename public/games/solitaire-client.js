@@ -1,10 +1,7 @@
 // games/solitaire-client.js — Klondike Solitaire client (client-authoritative)
 
 (function() {
-  const RANK_LABEL = r => r === 1 ? "A" : r === 11 ? "J" : r === 12 ? "Q" : r === 13 ? "K" : String(r);
-  const SUIT_SYMBOL = { hearts: "♥", diamonds: "♦", clubs: "♣", spades: "♠" };
-  const isRed = suit => suit === "hearts" || suit === "diamonds";
-  const SUIT_ORDER = { hearts: 0, diamonds: 1, clubs: 2, spades: 3 };
+  const { makeCard: _makeCard, makeCardBack, isRed } = window._gameShared;
 
   let state = {
     tableau: [],       // 7 columns of cards
@@ -18,21 +15,9 @@
     wasteFlip: false,  // true when waste card should animate a flip
   };
 
-  function makeCard(card, small) {
-    const el = document.createElement("div");
-    if (!card.faceUp) {
-      el.className = "card card-back" + (small ? " sol-small" : "");
-      return el;
-    }
-    el.className = `card ${isRed(card.suit) ? "red" : "black"}` + (small ? " sol-small" : "");
-    const rank = RANK_LABEL(card.rank);
-    const sym = SUIT_SYMBOL[card.suit];
-    el.innerHTML = `
-      <span class="card-corner tl">${rank}</span>
-      <span class="card-center">${sym}</span>
-      <span class="card-corner br">${rank}</span>
-    `;
-    return el;
+  function makeCard(card) {
+    if (!card.faceUp) return makeCardBack();
+    return _makeCard(card);
   }
 
   function buildUI(container) {
@@ -92,6 +77,77 @@
 
   function checkWin() {
     return state.foundations.every(f => f.length === 13);
+  }
+
+  function hasAnyMoves() {
+    // Can we flip stock or recycle waste?
+    if (state.stock.length > 0) return true;
+    if (state.stock.length === 0 && state.waste.length > 0) return true;
+
+    // Check waste top card
+    if (state.waste.length > 0) {
+      const w = state.waste[state.waste.length - 1];
+      // Can waste card go to any foundation?
+      for (let i = 0; i < 4; i++) {
+        if (canPlaceOnFoundation(w, i)) return true;
+      }
+      // Can waste card go to any tableau column?
+      for (let i = 0; i < 7; i++) {
+        if (canPlaceOnTableau(w, i)) return true;
+      }
+      // King to empty column
+      if (w.rank === 13 && state.tableau.some(c => c.length === 0)) return true;
+    }
+
+    // Check tableau moves
+    for (let ci = 0; ci < 7; ci++) {
+      const col = state.tableau[ci];
+      if (col.length === 0) continue;
+      const top = col[col.length - 1];
+      if (!top.faceUp) continue;
+
+      // Top card to foundation?
+      for (let fi = 0; fi < 4; fi++) {
+        if (canPlaceOnFoundation(top, fi)) return true;
+      }
+
+      // Any face-up run to another column?
+      for (let ri = 0; ri < col.length; ri++) {
+        if (!col[ri].faceUp) continue;
+        const card = col[ri];
+        for (let tj = 0; tj < 7; tj++) {
+          if (tj === ci) continue;
+          if (state.tableau[tj].length === 0) {
+            // King to empty — only useful if it reveals a card
+            if (card.rank === 13 && ri > 0) return true;
+          } else if (canPlaceOnTableau(card, tj)) {
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
+  }
+
+  function checkStuck() {
+    if (checkWin()) return;
+    if (!hasAnyMoves()) {
+      clearInterval(state.timerInterval);
+      const status = document.querySelector(".sol-status");
+      if (status) {
+        status.innerHTML = `
+          <span class="sol-stuck-msg">No moves left!</span>
+          <button class="btn btn-primary sol-new-game-btn" id="sol-new-game">New Game</button>
+        `;
+        document.getElementById("sol-new-game").addEventListener("click", () => {
+          socket.emit("playVsAI", {
+            playerName: window._gameLocal.myName || "Player",
+            game: "solitaire",
+          });
+        });
+      }
+    }
   }
 
   function incrementMoves() {
@@ -174,19 +230,16 @@
       if (state.waste.length > 0) {
         const top = state.waste[state.waste.length - 1];
         const flip = window._gameShared && window._gameShared.animateFlip;
+        wasteEl.onclick = () => handleWasteClick();
+        wasteEl.ondblclick = () => autoFoundation(top, "waste");
         if (state.wasteFlip && flip) {
           state.wasteFlip = false;
           flip(wasteEl, { ...top, faceUp: true });
-          // Add click handlers after flip
-          wasteEl.addEventListener("click", () => handleWasteClick());
-          wasteEl.addEventListener("dblclick", () => autoFoundation(top, "waste"));
         } else {
           state.wasteFlip = false;
           const cardEl = makeCard({ ...top, faceUp: true });
           const isSelected = state.selected && state.selected.source === "waste";
           if (isSelected) cardEl.classList.add("sol-selected");
-          cardEl.addEventListener("click", () => handleWasteClick());
-          cardEl.addEventListener("dblclick", () => autoFoundation(top, "waste"));
           wasteEl.appendChild(cardEl);
         }
       }
@@ -197,7 +250,6 @@
     if (foundContainer) {
       foundContainer.querySelectorAll(".sol-foundation").forEach((el, i) => {
         const pile = state.foundations[i];
-        // Keep the label, add top card if any
         el.innerHTML = "";
         if (pile.length > 0) {
           el.appendChild(makeCard({ ...pile[pile.length - 1], faceUp: true }));
@@ -207,7 +259,7 @@
           label.textContent = ["♥", "♦", "♣", "♠"][i];
           el.appendChild(label);
         }
-        el.addEventListener("click", () => handleFoundationClick(i));
+        el.onclick = () => handleFoundationClick(i);
       });
     }
   }
@@ -228,6 +280,7 @@
     state.selected = null;
     incrementMoves();
     render();
+    checkStuck();
   }
 
   function handleWasteClick() {
@@ -253,7 +306,7 @@
           incrementMoves();
           state.selected = null;
           render();
-          if (checkWin()) onWin();
+          if (checkWin()) onWin(); else checkStuck();
           return;
         }
       } else if (state.selected.source === "tableau") {
@@ -267,7 +320,7 @@
           incrementMoves();
           state.selected = null;
           render();
-          if (checkWin()) onWin();
+          if (checkWin()) onWin(); else checkStuck();
           return;
         }
       }
@@ -308,7 +361,7 @@
     }
     state.selected = null;
     render();
-    if (checkWin()) onWin();
+    if (checkWin()) onWin(); else checkStuck();
   }
 
   function autoFoundation(card, source, colIdx) {
@@ -324,7 +377,7 @@
     state.selected = null;
     incrementMoves();
     render();
-    if (checkWin()) onWin();
+    if (checkWin()) onWin(); else checkStuck();
   }
 
   function onWin() {
@@ -335,6 +388,7 @@
   window.gameClients = window.gameClients || {};
   window.gameClients.solitaire = {
     onGameStart(data) {
+      clearInterval(state.timerInterval);
       const container = document.getElementById("game-container");
       buildUI(container);
 
@@ -346,6 +400,7 @@
       }
       state.selected = null;
       state.moves = 0;
+      state.wasteFlip = false;
       startTimer();
       render();
     },

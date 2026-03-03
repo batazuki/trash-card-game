@@ -110,8 +110,9 @@ function animateFlip(containerEl, card, options = {}) {
 
 // ═══ TURN SOUND ═══
 function playTurnSound() {
+  if (musicMuted) return;
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = getSfxCtx();
     const t = ctx.currentTime;
     [523.25, 659.25].forEach((freq, i) => {
       const osc  = ctx.createOscillator();
@@ -513,10 +514,15 @@ $("play-again-btn").addEventListener("click", () => {
 $("back-lobby-btn").addEventListener("click", () => {
   releaseWakeLock();
   stopElevenMusic();
-  applyGameTheme("trash");
+  // Clean up current game client
+  const gameClient = window.gameClients[local.gameType];
+  if (gameClient && gameClient.cleanup) gameClient.cleanup();
+  // Restore lobby to saved game selection
+  const savedGame = $("game-select").value || "trash";
+  applyGameTheme(savedGame);
   local.roomId = null;
   local.vsAI = false;
-  local.gameType = "trash";
+  local.gameType = savedGame;
   $("room-code-display").classList.add("hidden");
   $("room-code-text").textContent = "";
   $("score-display").classList.add("hidden");

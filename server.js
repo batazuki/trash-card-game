@@ -72,6 +72,14 @@ function endGame(state, roomId, winnerIndex) {
     scores: state.scores,
     gamesPlayed: state.gamesPlayed,
   });
+  // Auto-cleanup room after 5 minutes if no rematch
+  clearTimeout(state.endedTimer);
+  state.endedTimer = setTimeout(() => {
+    if (rooms.has(roomId) && rooms.get(roomId).phase === "ended") {
+      rooms.delete(roomId);
+      console.log(`Room ${roomId} cleaned up (TTL expired)`);
+    }
+  }, 5 * 60 * 1000);
 }
 
 // ═══════════════════════════════════════════════
@@ -215,6 +223,7 @@ io.on("connection", socket => {
     io.to(roomId).emit("rematchRequested", { playerIndex: pi });
     const allWant = state.players.every(p => p.isAI || p.wantsRematch);
     if (allWant) {
+      clearTimeout(state.endedTimer);
       state.players.forEach(p => { p.wantsRematch = false; });
       startGame(state, roomId);
     }
