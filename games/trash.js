@@ -114,14 +114,18 @@ module.exports = function(io, helpers) {
     if (checkWin(board)) { endGame(state, roomId, playerIndex); return; }
 
     if (isDisplacingWildcard) {
+      state.discardPile.push({ ...chainCard, faceUp: true });
+      io.to(roomId).emit("discarded", { card: chainCard, playerIndex, topDiscard: { ...chainCard, faceUp: true }, deckCount: state.deck.length });
       endTurn(state, roomId, playerIndex);
       return;
     }
 
     state.turnPhase = "chain";
     await delay(isAI ? 500 : 300);
+    if (state.phase !== "playing") return;
     io.to(roomId).emit("chainCard", { playerIndex, card: { ...chainCard, faceUp: true } });
     await delay(isAI ? 400 : 200);
+    if (state.phase !== "playing") return;
     await evaluateCard(state, roomId, playerIndex, chainCard, true);
   }
 
@@ -143,8 +147,10 @@ module.exports = function(io, helpers) {
     state.turnPhase = "chain";
     const isAI = state.players[playerIndex].isAI;
     await delay(isAI ? 500 : 300);
+    if (state.phase !== "playing") return;
     io.to(roomId).emit("chainCard", { playerIndex, card: { ...chainCard, faceUp: true } });
     await delay(isAI ? 400 : 200);
+    if (state.phase !== "playing") return;
     await evaluateCard(state, roomId, playerIndex, chainCard, true);
   }
 
@@ -154,7 +160,7 @@ module.exports = function(io, helpers) {
 
     if (card.rank === 12) {
       state.discardPile.push({ ...card, faceUp: true });
-      io.to(roomId).emit("discarded", { card, playerIndex, topDiscard: card, deckCount: state.deck.length });
+      io.to(roomId).emit("discarded", { card, playerIndex, topDiscard: { ...card, faceUp: true }, deckCount: state.deck.length });
       endTurn(state, roomId, playerIndex);
       return;
     }
@@ -163,14 +169,15 @@ module.exports = function(io, helpers) {
       const validSlots = getValidSlotsForWildcard(card, board, state.game);
       if (validSlots.length === 0) {
         state.discardPile.push({ ...card, faceUp: true });
-        io.to(roomId).emit("discarded", { card, playerIndex, topDiscard: card, deckCount: state.deck.length });
+        io.to(roomId).emit("discarded", { card, playerIndex, topDiscard: { ...card, faceUp: true }, deckCount: state.deck.length });
         endTurn(state, roomId, playerIndex);
         return;
       }
       if (player.isAI) {
         const chosenSlot = pickAIWildcardSlot(validSlots, board);
         await delay(500);
-        placeWildcardForPlayer(state, roomId, playerIndex, card, chosenSlot);
+        if (state.phase !== "playing") return;
+        await placeWildcardForPlayer(state, roomId, playerIndex, card, chosenSlot);
       } else {
         state.turnPhase = "place-wildcard";
         state.pendingWildcard = card;
@@ -200,7 +207,7 @@ module.exports = function(io, helpers) {
     const slotIndex = getValidSlot(card, board, state.game);
     if (slotIndex === null) {
       state.discardPile.push({ ...card, faceUp: true });
-      io.to(roomId).emit("discarded", { card, playerIndex, topDiscard: card, deckCount: state.deck.length });
+      io.to(roomId).emit("discarded", { card, playerIndex, topDiscard: { ...card, faceUp: true }, deckCount: state.deck.length });
       endTurn(state, roomId, playerIndex);
       return;
     }
@@ -233,7 +240,7 @@ module.exports = function(io, helpers) {
         card = state.deck.pop();
       }
       await evaluateCard(state, roomId, aiIndex, card, false);
-    })();
+    })().catch(err => console.error("triggerAI error:", err));
   }
 
   // ── Public API ──
@@ -288,7 +295,8 @@ module.exports = function(io, helpers) {
         card = state.deck.pop();
       }
       state.turnPhase = "chain";
-      evaluateCard(state, roomId, playerIndex, card, false);
+      evaluateCard(state, roomId, playerIndex, card, false)
+        .catch(err => console.error("evaluateCard error:", err));
     },
 
     handlePlaceWildcard(state, roomId, playerIndex, slotIndex) {
@@ -306,11 +314,10 @@ module.exports = function(io, helpers) {
       state.pendingWildcard = null;
       state.pendingValidSlots = null;
 
-      if (card.rank !== 11 && card.rank !== 13) {
-        placeNumberCardForPlayer(state, roomId, playerIndex, card, slotIndex);
-      } else {
-        placeWildcardForPlayer(state, roomId, playerIndex, card, slotIndex);
-      }
+      const fn = (card.rank !== 11 && card.rank !== 13)
+        ? placeNumberCardForPlayer(state, roomId, playerIndex, card, slotIndex)
+        : placeWildcardForPlayer(state, roomId, playerIndex, card, slotIndex);
+      fn.catch(err => console.error("placeCard error:", err));
     },
 
     getReconnectData(state, playerIndex) {
