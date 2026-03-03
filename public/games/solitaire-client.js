@@ -487,10 +487,32 @@
     const wasteEl = document.getElementById("sol-waste");
     if (wasteEl) {
       wasteEl.innerHTML = "";
+      wasteEl.onpointerdown = null;
+      wasteEl.onpointermove = null;
+      wasteEl.onpointerup = null;
+      wasteEl.ondblclick = null;
       if (state.waste.length > 0) {
         const top = state.waste[state.waste.length - 1];
         const flip = window._gameShared && window._gameShared.animateFlip;
         wasteEl.ondblclick = () => autoFoundation(top, "waste");
+        wasteEl.style.touchAction = "none";
+        wasteEl.classList.add("sol-draggable");
+
+        wasteEl.onpointerdown = (e) => {
+          startDrag(e, "waste", -1, -1);
+          wasteEl.setPointerCapture(e.pointerId);
+        };
+        wasteEl.onpointermove = (e) => {
+          if (state.dragging && state.dragging.pointerId === e.pointerId) {
+            updateDragGhost(e);
+          }
+        };
+        wasteEl.onpointerup = (e) => {
+          if (state.dragging && state.dragging.pointerId === e.pointerId) {
+            endDrag(e);
+          }
+        };
+
         if (state.wasteFlip && flip) {
           state.wasteFlip = false;
           flip(wasteEl, { ...top, faceUp: true });
@@ -499,35 +521,11 @@
           const cardEl = makeCard({ ...top, faceUp: true });
           const isSelected = state.selected && state.selected.source === "waste";
           if (isSelected) cardEl.classList.add("sol-selected");
-          cardEl.classList.add("sol-draggable");
-          cardEl.style.touchAction = "none";
-
-          cardEl.addEventListener("pointerdown", (e) => {
-            e.stopPropagation();
-            startDrag(e, "waste", -1, -1);
-            cardEl.setPointerCapture(e.pointerId);
-          });
-
-          cardEl.addEventListener("pointermove", (e) => {
-            if (state.dragging && state.dragging.pointerId === e.pointerId) {
-              updateDragGhost(e);
-            }
-          });
-
-          cardEl.addEventListener("pointerup", (e) => {
-            if (state.dragging && state.dragging.pointerId === e.pointerId) {
-              endDrag(e);
-            }
-          });
-
-          cardEl.addEventListener("click", (e) => {
-            // Short click handled in endDrag
-          });
-
           wasteEl.appendChild(cardEl);
         }
       } else {
-        wasteEl.onclick = null;
+        wasteEl.classList.remove("sol-draggable");
+        wasteEl.style.touchAction = "";
       }
     }
 

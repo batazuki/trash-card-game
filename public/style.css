@@ -289,10 +289,10 @@ html, body {
   user-select: none;
 }
 .game-select {
-  background: rgba(255,255,255,0.75);
+  background: rgba(255,255,255,0.9);
   border: 1.5px solid #fcd5e8;
   border-radius: 10px;
-  color: var(--text);
+  color: #333;
   font-family: var(--font);
   font-size: 13px;
   font-weight: 800;
@@ -302,6 +302,11 @@ html, body {
   appearance: none;
   -webkit-appearance: none;
   box-shadow: 0 2px 6px rgba(236,72,153,0.08);
+}
+.game-select option,
+.game-select optgroup {
+  color: #333;
+  background: #fff;
 }
 .toggle-wrap { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
 .toggle-wrap input { opacity: 0; width: 0; height: 0; }
