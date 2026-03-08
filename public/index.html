@@ -61,6 +61,7 @@
           <option value="war">War</option>
           <option value="solitaire">Solitaire</option>
           <option value="hockey">Cat Paw Hockey</option>
+          <option value="mancala">Mancala</option>
         </select>
       </label>
 
@@ -167,6 +168,7 @@
           <option value="war">War</option>
           <option value="solitaire">Solitaire</option>
           <option value="hockey">Cat Paw Hockey</option>
+          <option value="mancala">Mancala</option>
         </select>
       </label>
 
@@ -189,6 +191,7 @@
         <button class="modal-tab" data-tab="war">War</button>
         <button class="modal-tab" data-tab="solitaire">Solitaire</button>
         <button class="modal-tab" data-tab="hockey">Hockey</button>
+        <button class="modal-tab" data-tab="mancala">Mancala</button>
       </div>
 
       <div id="help-default" class="modal-section active">
@@ -314,6 +317,33 @@
         </div>
       </div>
 
+      <div id="help-mancala" class="modal-section">
+        <div class="modal-rule">
+          <strong>Goal</strong>
+          Collect more seeds in your store (right side) than your opponent. First to 25+ or most after the board clears wins!
+        </div>
+        <div class="modal-rule">
+          <strong>Setup</strong>
+          Each player has 6 pits with 4 seeds each. 🌸 🫐 🍓 Your pits are on the bottom row.
+        </div>
+        <div class="modal-rule">
+          <strong>Your Turn</strong>
+          Tap any of your pits (bottom row). Seeds are distributed one-by-one counter-clockwise into pits and your store — but never into your opponent's store.
+        </div>
+        <div class="modal-rule">
+          <strong>Capture!</strong>
+          If your last seed lands in one of your own empty pits AND the pit directly across has seeds — you capture all of them plus your seed into your store.
+        </div>
+        <div class="modal-rule">
+          <strong>Extra Turn</strong>
+          If your last seed lands in your store (right side), you get another turn immediately!
+        </div>
+        <div class="modal-rule">
+          <strong>Game End</strong>
+          When all of one player's pits are empty, the other player sweeps their remaining seeds into their store. Most seeds wins!
+        </div>
+      </div>
+
       <button class="btn btn-secondary modal-close" id="help-close">Got it</button>
     </div>
   </div>
@@ -324,6 +354,7 @@
   <script src="games/war-client.js"></script>
   <script src="games/solitaire-client.js"></script>
   <script src="games/hockey-client.js"></script>
+  <script src="games/mancala-client.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});

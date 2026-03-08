@@ -91,6 +91,7 @@ const trashGame    = require("./games/trash")(io, helpers);
 const warGame      = require("./games/war")(io, helpers);
 const solitaireGame = require("./games/solitaire")(io, helpers);
 const hockeyGame   = require("./games/hockey")(io, helpers);
+const mancalaGame  = require("./games/mancala")(io, helpers);
 
 const gameModules = {
   trash: trashGame,
@@ -98,6 +99,7 @@ const gameModules = {
   war: warGame,
   solitaire: solitaireGame,
   hockey: hockeyGame,
+  mancala: mancalaGame,
 };
 
 function getGameModule(gameType) {
@@ -124,6 +126,7 @@ io.on("connection", socket => {
   warGame.registerEvents(socket, rooms);
   solitaireGame.registerEvents(socket, rooms);
   hockeyGame.registerEvents(socket, rooms);
+  mancalaGame.registerEvents(socket, rooms);
 
   // ── Create Room ──
   socket.on("createRoom", ({ playerName, game }) => {

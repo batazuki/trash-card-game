@@ -328,7 +328,7 @@ function showShareToast(msg) {
 }
 
 // ═══ HELP MODAL ═══
-const GAME_TO_TAB = { trash: "default", "trash-eleven": "eleven", war: "war", solitaire: "solitaire", hockey: "hockey" };
+const GAME_TO_TAB = { trash: "default", "trash-eleven": "eleven", war: "war", solitaire: "solitaire", hockey: "hockey", mancala: "mancala" };
 
 function openHelp() {
   // Determine current game — in-game uses local.gameType, lobby uses dropdown
@@ -612,12 +612,18 @@ socket.on("gameOver", ({ winnerIndex, winnerName, scores, gamesPlayed }) => {
   const didWin = winnerIndex === local.myPlayerIndex;
   $("result-emoji").textContent = didWin ? "🎉" : "😔";
   $("result-text").textContent = didWin ? "You Win!" : `${winnerName} Wins!`;
+  // Mancala tie detection (client sets window._mancalaTied via mancala:state before gameOver arrives)
+  if (local.gameType === "mancala" && window._mancalaTied) {
+    $("result-emoji").textContent = "🤝";
+    $("result-text").textContent = "It's a Tie!";
+  }
   const subTexts = {
     trash: didWin ? "You filled all your spots first!" : "Better luck next time.",
     "trash-eleven": didWin ? "You filled all 11 slots first!" : "Better luck next time.",
     war: didWin ? "You captured all the cards!" : "Your opponent took all the cards.",
     solitaire: "Congratulations!",
     hockey: didWin ? "Purrfect victory!" : "The yarn got away...",
+    mancala: window._mancalaTied ? "24 seeds each — beautifully played! 🌸" : didWin ? "A bountiful harvest! 🌸" : "The seeds slipped away...",
   };
   $("result-sub").textContent = subTexts[local.gameType] || (didWin ? "Nice job!" : "Better luck next time.");
   $("play-again-btn").disabled = false;

@@ -1751,3 +1751,27 @@ body.game-hockey .result-sub  { color: #90c090; }
   margin: 0 auto;
   box-shadow: 0 4px 20px rgba(0,0,0,0.4);
 }
+
+/* ── Mancala theme ───────────────────────────────────────────── */
+body.game-mancala {
+  --bg-top: #1e0a30;
+  --bg-bot: #07030e;
+  --text: #f0e0ff;
+  --text-dim: rgba(210,180,240,0.5);
+  --accent: #d070ff;
+  --accent2: #ff70aa;
+}
+body.game-mancala .btn-primary {
+  background: linear-gradient(135deg, #b040e0, #7010b0);
+  box-shadow: 0 4px 14px rgba(140,20,200,0.4);
+}
+body.game-mancala .btn-secondary { border-color: #7040a0; color: var(--text); }
+body.game-mancala .result-text   { color: #f0e0ff; }
+body.game-mancala .result-sub    { color: #c090e0; }
+.mancala-canvas {
+  touch-action: none;
+  border-radius: 12px;
+  display: block;
+  margin: 0 auto;
+  box-shadow: 0 4px 24px rgba(80,10,130,0.55);
+}

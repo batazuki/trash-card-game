@@ -1,0 +1,451 @@
+/* public/games/mancala-client.js — Mancala with cherry blossoms, blueberries & strawberries */
+(function () {
+  'use strict';
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  let canvas, ctx, myIdx = 0;
+  let pits = new Array(14).fill(0);
+  let currentPlayer = 0;
+  let lastMove = null;
+  let lastMoveTime = 0;
+  let playerNames = ['You', 'Opponent'];
+  let disposed = false;
+  let rafId = null;
+  let layout = null;
+
+  const FRUITS = ['🌸', '🫐', '🍓'];
+  const HIGHLIGHT_MS = 1400;
+
+  // ── Audio ──────────────────────────────────────────────────────────────────
+  function sfxTone(freq, dur, type = 'sine', vol = 0.15) {
+    try {
+      const ac = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+      osc.connect(gain); gain.connect(ac.destination);
+      osc.type = type; osc.frequency.value = freq;
+      gain.gain.setValueAtTime(vol, ac.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + dur);
+      osc.start(); osc.stop(ac.currentTime + dur);
+    } catch (e) {}
+  }
+
+  function sfxPlace()     { sfxTone(420, 0.07, 'triangle', 0.14); }
+  function sfxCapture()   { sfxTone(660, 0.14, 'square',   0.10); setTimeout(() => sfxTone(880, 0.10, 'square', 0.08), 100); }
+  function sfxExtraTurn() { sfxTone(880, 0.08, 'sine', 0.13); setTimeout(() => sfxTone(1100, 0.08, 'sine', 0.11), 100); }
+  function sfxEnd()       { [350, 500, 680].forEach((f, i) => setTimeout(() => sfxTone(f, 0.22, 'sine', 0.12), i * 140)); }
+
+  // ── Canvas Setup ───────────────────────────────────────────────────────────
+  function initCanvas() {
+    const container = document.getElementById('game-container');
+    canvas = document.createElement('canvas');
+    canvas.className = 'mancala-canvas';
+    container.appendChild(canvas);
+    ctx = canvas.getContext('2d');
+    sizeCanvas();
+  }
+
+  function sizeCanvas() {
+    if (!canvas) return;
+    const pad = 32;
+    let w = window.innerWidth - pad;
+    let h = w * (4 / 3);
+    if (h > window.innerHeight - pad) { h = window.innerHeight - pad; w = h * (3 / 4); }
+    w = Math.floor(w); h = Math.floor(h);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width  = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width  = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    computeLayout();
+  }
+
+  // ── Layout ─────────────────────────────────────────────────────────────────
+  function computeLayout() {
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+
+    const bx = W * 0.01, bw = W * 0.98;
+    const by = H * 0.17, bh = H * 0.62;
+    const boardR = bh * 0.08;
+
+    const storeW   = bw * 0.135;
+    const pitAreaX = bx + storeW;
+    const pitAreaW = bw - 2 * storeW;
+    const pitSpacing = pitAreaW / 6;
+    const pitR    = Math.min(pitSpacing * 0.43, bh * 0.22);
+    const pitHitR = Math.max(pitR * 1.35, 24);
+
+    const topRowCY = by + bh * 0.27;
+    const botRowCY = by + bh * 0.73;
+    const storeCY  = by + bh * 0.5;
+    const storeRx  = storeW * 0.36;
+    const storeRy  = bh * 0.37;
+    const leftCX   = bx + storeW * 0.5;
+    const rightCX  = bx + bw - storeW * 0.5;
+
+    // Pit descriptors from viewer's perspective (my pits always at bottom)
+    const pitDescs = [];
+    if (myIdx === 0) {
+      for (let k = 0; k < 6; k++)
+        pitDescs.push({ idx: k,    cx: pitAreaX + k * pitSpacing + pitSpacing / 2, cy: botRowCY });
+      for (let k = 0; k < 6; k++)
+        pitDescs.push({ idx: 12-k, cx: pitAreaX + k * pitSpacing + pitSpacing / 2, cy: topRowCY });
+      pitDescs.push({ idx: 13, cx: leftCX,  cy: storeCY, isStore: true, isMine: false });
+      pitDescs.push({ idx: 6,  cx: rightCX, cy: storeCY, isStore: true, isMine: true  });
+    } else {
+      for (let k = 0; k < 6; k++)
+        pitDescs.push({ idx: 7+k,  cx: pitAreaX + k * pitSpacing + pitSpacing / 2, cy: botRowCY });
+      for (let k = 0; k < 6; k++)
+        pitDescs.push({ idx: 5-k,  cx: pitAreaX + k * pitSpacing + pitSpacing / 2, cy: topRowCY });
+      pitDescs.push({ idx: 6,  cx: leftCX,  cy: storeCY, isStore: true, isMine: false });
+      pitDescs.push({ idx: 13, cx: rightCX, cy: storeCY, isStore: true, isMine: true  });
+    }
+
+    layout = {
+      W, H, bx, bw, by, bh, boardR,
+      storeW, pitAreaX, pitAreaW, pitSpacing, pitR, pitHitR,
+      topRowCY, botRowCY, storeCY, storeRx, storeRy, leftCX, rightCX,
+      pitDescs,
+    };
+  }
+
+  // ── Render Loop ────────────────────────────────────────────────────────────
+  function render() {
+    if (disposed || !canvas || !layout) return;
+    const { W, H } = layout;
+    ctx.clearRect(0, 0, W, H);
+    drawBg(W, H);
+    drawBoard();
+    drawLabels(W, H);
+    rafId = requestAnimationFrame(render);
+  }
+
+  function drawBg(W, H) {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#1e0a30');
+    g.addColorStop(1, '#07030e');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    // Decorative scattered fruits in background
+    const deco = [
+      [0.08, 0.06, '🌸'], [0.92, 0.07, '🫐'], [0.05, 0.88, '🍓'],
+      [0.95, 0.90, '🌸'], [0.12, 0.50, '🫐'], [0.88, 0.52, '🍓'],
+      [0.50, 0.96, '🌸'],
+    ];
+    ctx.font = `${W * 0.024}px serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.globalAlpha = 0.10;
+    for (const [fx, fy, f] of deco) ctx.fillText(f, W * fx, H * fy);
+    ctx.globalAlpha = 1;
+  }
+
+  function rrect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  function drawBoard() {
+    const { bx, bw, by, bh, boardR, storeW, pitAreaX, pitAreaW, pitR,
+            storeRx, storeRy, pitDescs } = layout;
+    const now = Date.now();
+    const hlActive = lastMove && (now - lastMoveTime < HIGHLIGHT_MS);
+
+    // Board body
+    ctx.save();
+    rrect(bx, by, bw, bh, boardR);
+    const woodG = ctx.createLinearGradient(bx, by, bx + bw, by + bh);
+    woodG.addColorStop(0,   '#5c2d09');
+    woodG.addColorStop(0.3, '#7e4015');
+    woodG.addColorStop(0.7, '#6a3410');
+    woodG.addColorStop(1,   '#4a2208');
+    ctx.fillStyle = woodG;
+    ctx.fill();
+    ctx.strokeStyle = '#2a1005';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.restore();
+
+    // Wood grain (subtle bezier arcs)
+    ctx.save();
+    ctx.globalAlpha = 0.07;
+    ctx.strokeStyle = '#fff6d0';
+    ctx.lineWidth = 1;
+    for (let i = 1; i < 8; i++) {
+      const ly = by + bh * i / 8;
+      ctx.beginPath();
+      ctx.moveTo(bx + boardR, ly);
+      ctx.bezierCurveTo(bx + bw * 0.3, ly - 4, bx + bw * 0.7, ly + 4, bx + bw - boardR, ly);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    // Store separator lines
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,200,80,0.18)';
+    ctx.lineWidth = 2;
+    [[bx + storeW, by + bh * 0.07, bx + storeW, by + bh * 0.93],
+     [bx + bw - storeW, by + bh * 0.07, bx + bw - storeW, by + bh * 0.93]].forEach(([x1,y1,x2,y2]) => {
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    });
+    ctx.restore();
+
+    // Center divider
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,200,80,0.2)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([7, 5]);
+    ctx.beginPath();
+    ctx.moveTo(pitAreaX + pitR, by + bh / 2);
+    ctx.lineTo(pitAreaX + pitAreaW - pitR, by + bh / 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    // Draw all pits
+    for (const p of pitDescs) {
+      const count = pits[p.idx] || 0;
+      const isSource  = hlActive && lastMove && lastMove.pitIdx === p.idx;
+      const isLanded  = hlActive && lastMove && lastMove.lastIdx === p.idx;
+      const isCaptureOpp = hlActive && lastMove && lastMove.captured && p.idx === (12 - lastMove.pitIdx);
+      const canSelect = !p.isStore && isMyPit(p.idx) && currentPlayer === myIdx && count > 0;
+
+      if (p.isStore) {
+        drawStore(p.cx, p.cy, storeRx, storeRy, count, p.isMine);
+      } else {
+        drawPit(p.cx, p.cy, pitR, count, canSelect, isSource, isLanded || isCaptureOpp);
+      }
+    }
+  }
+
+  function drawPit(cx, cy, r, count, canSelect, isSource, isLanded) {
+    // Outer shadow
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, r + 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fill();
+
+    // Cavity
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    const g = ctx.createRadialGradient(cx - r * 0.28, cy - r * 0.28, r * 0.04, cx, cy, r);
+    if (isSource) {
+      g.addColorStop(0, '#7a4020');
+      g.addColorStop(1, '#200a04');
+    } else if (isLanded) {
+      g.addColorStop(0, '#5a3018');
+      g.addColorStop(1, '#180804');
+    } else {
+      g.addColorStop(0, '#3e1e0c');
+      g.addColorStop(1, '#140604');
+    }
+    ctx.fillStyle = g;
+    ctx.fill();
+
+    // Rim
+    if (canSelect) { ctx.shadowColor = '#ffcc44'; ctx.shadowBlur = 14; }
+    ctx.strokeStyle = canSelect ? '#ffcc44' : isLanded ? '#ff9955' : 'rgba(150,70,20,0.5)';
+    ctx.lineWidth = canSelect ? 2.5 : 1.5;
+    ctx.stroke();
+    ctx.restore();
+
+    drawStonesInPit(cx, cy, r, count);
+  }
+
+  function drawStore(cx, cy, rx, ry, count, isMine) {
+    // Shadow
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx + 3, ry + 4, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fill();
+
+    // Cavity
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+    const g = ctx.createRadialGradient(cx - rx * 0.2, cy - ry * 0.2, rx * 0.05, cx, cy, ry);
+    g.addColorStop(0, '#3e1e0a');
+    g.addColorStop(1, '#100503');
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.strokeStyle = isMine ? 'rgba(255,200,80,0.65)' : 'rgba(150,75,20,0.35)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+
+    // Count number
+    const numSize = Math.min(rx * 1.15, ry * 0.52);
+    ctx.fillStyle = isMine ? '#ffe090' : '#b08050';
+    ctx.font = `bold ${numSize}px Nunito, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(count, cx, cy - ry * 0.14);
+
+    // Sample stones (ring)
+    if (count > 0) {
+      const show = Math.min(count, 6);
+      const fSize = Math.min(rx * 0.48, ry * 0.20);
+      ctx.font = `${fSize}px serif`;
+      for (let i = 0; i < show; i++) {
+        const angle = (i / show) * Math.PI * 2 - Math.PI / 2;
+        const sx = cx + Math.cos(angle) * rx * 0.60;
+        const sy = cy + ry * 0.35 + Math.sin(angle) * ry * 0.24;
+        if (sy > cy - ry * 0.3) ctx.fillText(FRUITS[i % 3], sx, sy);
+      }
+    }
+
+    // Label
+    const lblSize = Math.max(Math.min(rx * 0.45, 11), 7);
+    ctx.fillStyle = isMine ? 'rgba(255,200,80,0.55)' : 'rgba(150,100,50,0.45)';
+    ctx.font = `${lblSize}px Nunito, sans-serif`;
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(isMine ? '▲ Mine' : 'Theirs', cx, cy + ry * 0.97);
+  }
+
+  function drawStonesInPit(cx, cy, r, count) {
+    if (count <= 0) return;
+    const maxShow = 12;
+    const show = Math.min(count, maxShow);
+
+    const cols = show <= 2 ? show : show <= 4 ? 2 : show <= 9 ? 3 : 4;
+    const rows = Math.ceil(show / cols);
+    const fSize = Math.min(r * 1.55 / cols, r * 1.55 / rows, r * 0.54);
+    const stepX = fSize * 1.05, stepY = fSize * 1.00;
+
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `${fSize}px serif`;
+
+    let drawn = 0;
+    for (let row = 0; row < rows && drawn < show; row++) {
+      const inRow = Math.min(cols, show - drawn);
+      const startX = cx - (inRow - 1) * stepX / 2;
+      const startY = cy - (rows - 1) * stepY / 2 + row * stepY;
+      for (let col = 0; col < inRow; col++) {
+        ctx.fillText(FRUITS[drawn % 3], startX + col * stepX, startY);
+        drawn++;
+      }
+    }
+
+    if (count > maxShow) {
+      ctx.fillStyle = 'rgba(255,230,150,0.85)';
+      ctx.font = `bold ${r * 0.30}px Nunito, sans-serif`;
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(`+${count - maxShow}`, cx + r * 0.60, cy + r * 0.92);
+      ctx.textBaseline = 'middle';
+    }
+  }
+
+  function drawLabels(W, H) {
+    if (!layout) return;
+    const { by, bh } = layout;
+    const isMeTurn = currentPlayer === myIdx;
+
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+    // Opponent name (above board)
+    const oppName = playerNames[1 - myIdx];
+    ctx.font = `bold ${W * 0.042}px Nunito, sans-serif`;
+    ctx.fillStyle = !isMeTurn ? '#ffdd88' : 'rgba(190,155,110,0.55)';
+    ctx.fillText((!isMeTurn ? '▶ ' : '') + oppName, W / 2, by * 0.52);
+
+    // My name + turn indicator (below board)
+    const myName = playerNames[myIdx];
+    const bottomY = by + bh + (H - by - bh) * 0.38;
+    ctx.font = `bold ${W * 0.044}px Nunito, sans-serif`;
+    ctx.fillStyle = isMeTurn ? '#ffdd88' : 'rgba(190,155,110,0.55)';
+    const myLabel = (isMeTurn ? '▶ ' : '') + myName + (isMeTurn ? ' — Your turn!' : '');
+    ctx.fillText(myLabel, W / 2, bottomY);
+  }
+
+  // ── Input ──────────────────────────────────────────────────────────────────
+  function onPointerDown(e) {
+    e.preventDefault();
+    if (currentPlayer !== myIdx || !layout) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (canvas.clientWidth  / rect.width);
+    const y = (e.clientY - rect.top)  * (canvas.clientHeight / rect.height);
+    const pit = hitTest(x, y);
+    if (pit === null || !isMyPit(pit) || (pits[pit] || 0) <= 0) return;
+    socket.emit('mancala:move', { roomId: window._gameLocal.roomId, pit });
+  }
+
+  function hitTest(x, y) {
+    for (const p of layout.pitDescs) {
+      if (p.isStore) continue;
+      const dx = x - p.cx, dy = y - p.cy;
+      if (dx * dx + dy * dy <= layout.pitHitR * layout.pitHitR) return p.idx;
+    }
+    return null;
+  }
+
+  function isMyPit(idx) {
+    return myIdx === 0 ? idx >= 0 && idx <= 5 : idx >= 7 && idx <= 12;
+  }
+
+  // ── Socket Events ──────────────────────────────────────────────────────────
+  function registerEvents() {
+    socket.on('mancala:state', (data) => {
+      pits = data.pits;
+      currentPlayer = data.currentPlayer;
+      if (data.lastMove) {
+        lastMove = data.lastMove;
+        lastMoveTime = Date.now();
+        sfxPlace();
+        if (data.lastMove.captured)  sfxCapture();
+        if (data.lastMove.extraTurn) sfxExtraTurn();
+        if (data.lastMove.gameOver) {
+          sfxEnd();
+          if (pits[6] === pits[13]) window._mancalaTied = true;
+        }
+      }
+    });
+  }
+
+  // ── Lifecycle ──────────────────────────────────────────────────────────────
+  function handleResize() { sizeCanvas(); }
+
+  window.gameClients = window.gameClients || {};
+  window.gameClients.mancala = {
+    onGameStart(data) {
+      disposed = false;
+      myIdx         = data.myPlayerIndex;
+      pits          = data.mancala.pits;
+      currentPlayer = data.mancala.currentPlayer;
+      playerNames[0] = data.players[0].name;
+      playerNames[1] = data.players[1].name;
+      lastMove = null;
+      window._mancalaTied = false;
+
+      initCanvas();
+      registerEvents();
+      canvas.addEventListener('pointerdown', onPointerDown);
+      window.addEventListener('resize', handleResize);
+      rafId = requestAnimationFrame(render);
+    },
+
+    onReconnect(data) {
+      this.onGameStart(data);
+    },
+
+    cleanup() {
+      disposed = true;
+      if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+      socket.off('mancala:state');
+      if (canvas) {
+        canvas.removeEventListener('pointerdown', onPointerDown);
+        canvas.remove();
+        canvas = ctx = null;
+      }
+      window.removeEventListener('resize', handleResize);
+      pits = new Array(14).fill(0);
+      lastMove = null; layout = null;
+    },
+  };
+})();
