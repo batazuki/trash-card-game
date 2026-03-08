@@ -12,6 +12,7 @@
   let disposed = false;
   let rafId = null;
   let layout = null;
+  let _cssW = 0, _cssH = 0; // stored from sizeCanvas; used in computeLayout (clientWidth is 0 when screen is hidden)
 
   const FRUITS = ['🌸', '🫐', '🍓'];
   const HIGHLIGHT_MS = 1400;
@@ -58,12 +59,14 @@
     canvas.style.width  = w + 'px';
     canvas.style.height = h + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    _cssW = w; _cssH = h;
     computeLayout();
   }
 
   // ── Layout ─────────────────────────────────────────────────────────────────
   function computeLayout() {
-    const W = canvas.clientWidth, H = canvas.clientHeight;
+    const W = _cssW, H = _cssH;
+    if (!W || !H) { layout = null; return; }
 
     const bx = W * 0.01, bw = W * 0.98;
     const by = H * 0.17, bh = H * 0.62;
@@ -112,7 +115,10 @@
 
   // ── Render Loop ────────────────────────────────────────────────────────────
   function render() {
-    if (disposed || !canvas || !layout) return;
+    if (disposed || !canvas) return;
+    // layout is null if computeLayout ran while screen was hidden (clientWidth=0); retry now
+    if (!layout) sizeCanvas();
+    if (!layout) { rafId = requestAnimationFrame(render); return; }
     const { W, H } = layout;
     ctx.clearRect(0, 0, W, H);
     drawBg(W, H);
@@ -157,31 +163,32 @@
     const now = Date.now();
     const hlActive = lastMove && (now - lastMoveTime < HIGHLIGHT_MS);
 
-    // Board body
+    // Board body — warm amber wood, clearly visible against dark bg
     ctx.save();
     rrect(bx, by, bw, bh, boardR);
     const woodG = ctx.createLinearGradient(bx, by, bx + bw, by + bh);
-    woodG.addColorStop(0,   '#5c2d09');
-    woodG.addColorStop(0.3, '#7e4015');
-    woodG.addColorStop(0.7, '#6a3410');
-    woodG.addColorStop(1,   '#4a2208');
+    woodG.addColorStop(0,   '#c8742a');
+    woodG.addColorStop(0.3, '#d9883a');
+    woodG.addColorStop(0.7, '#bf6a22');
+    woodG.addColorStop(1,   '#a85818');
     ctx.fillStyle = woodG;
     ctx.fill();
-    ctx.strokeStyle = '#2a1005';
-    ctx.lineWidth = 3;
+    // Bright border so the board edge is unmistakable
+    ctx.strokeStyle = '#7a3c08';
+    ctx.lineWidth = 4;
     ctx.stroke();
     ctx.restore();
 
     // Wood grain (subtle bezier arcs)
     ctx.save();
-    ctx.globalAlpha = 0.07;
-    ctx.strokeStyle = '#fff6d0';
-    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.10;
+    ctx.strokeStyle = '#fff0b0';
+    ctx.lineWidth = 1.5;
     for (let i = 1; i < 8; i++) {
       const ly = by + bh * i / 8;
       ctx.beginPath();
       ctx.moveTo(bx + boardR, ly);
-      ctx.bezierCurveTo(bx + bw * 0.3, ly - 4, bx + bw * 0.7, ly + 4, bx + bw - boardR, ly);
+      ctx.bezierCurveTo(bx + bw * 0.3, ly - 5, bx + bw * 0.7, ly + 5, bx + bw - boardR, ly);
       ctx.stroke();
     }
     ctx.globalAlpha = 1;
@@ -189,19 +196,19 @@
 
     // Store separator lines
     ctx.save();
-    ctx.strokeStyle = 'rgba(255,200,80,0.18)';
-    ctx.lineWidth = 2;
-    [[bx + storeW, by + bh * 0.07, bx + storeW, by + bh * 0.93],
-     [bx + bw - storeW, by + bh * 0.07, bx + bw - storeW, by + bh * 0.93]].forEach(([x1,y1,x2,y2]) => {
+    ctx.strokeStyle = 'rgba(80,30,0,0.45)';
+    ctx.lineWidth = 3;
+    [[bx + storeW, by + bh * 0.06, bx + storeW, by + bh * 0.94],
+     [bx + bw - storeW, by + bh * 0.06, bx + bw - storeW, by + bh * 0.94]].forEach(([x1,y1,x2,y2]) => {
       ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
     });
     ctx.restore();
 
     // Center divider
     ctx.save();
-    ctx.strokeStyle = 'rgba(255,200,80,0.2)';
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([7, 5]);
+    ctx.strokeStyle = 'rgba(80,30,0,0.35)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 6]);
     ctx.beginPath();
     ctx.moveTo(pitAreaX + pitR, by + bh / 2);
     ctx.lineTo(pitAreaX + pitAreaW - pitR, by + bh / 2);
@@ -226,34 +233,38 @@
   }
 
   function drawPit(cx, cy, r, count, canSelect, isSource, isLanded) {
-    // Outer shadow
     ctx.save();
+
+    // Outer shadow ring — gives depth against the board
     ctx.beginPath();
-    ctx.arc(cx, cy, r + 2.5, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.arc(cx, cy, r + 3, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.50)';
     ctx.fill();
 
-    // Cavity
+    // Cavity — dark concave depression, clearly visible on the amber wood
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    const g = ctx.createRadialGradient(cx - r * 0.28, cy - r * 0.28, r * 0.04, cx, cy, r);
+    const g = ctx.createRadialGradient(cx - r * 0.25, cy - r * 0.25, r * 0.05, cx, cy, r);
     if (isSource) {
-      g.addColorStop(0, '#7a4020');
-      g.addColorStop(1, '#200a04');
+      g.addColorStop(0, '#8b4a22'); g.addColorStop(1, '#280e04');
     } else if (isLanded) {
-      g.addColorStop(0, '#5a3018');
-      g.addColorStop(1, '#180804');
+      g.addColorStop(0, '#6a3818'); g.addColorStop(1, '#1e0904');
     } else {
-      g.addColorStop(0, '#3e1e0c');
-      g.addColorStop(1, '#140604');
+      g.addColorStop(0, '#4a2410'); g.addColorStop(1, '#180804');
     }
     ctx.fillStyle = g;
     ctx.fill();
 
-    // Rim
-    if (canSelect) { ctx.shadowColor = '#ffcc44'; ctx.shadowBlur = 14; }
-    ctx.strokeStyle = canSelect ? '#ffcc44' : isLanded ? '#ff9955' : 'rgba(150,70,20,0.5)';
-    ctx.lineWidth = canSelect ? 2.5 : 1.5;
+    // Rim highlight
+    if (canSelect) {
+      ctx.shadowColor = '#ffee44';
+      ctx.shadowBlur = 16;
+      ctx.strokeStyle = '#ffee44';
+      ctx.lineWidth = 3;
+    } else {
+      ctx.strokeStyle = isLanded ? '#ffaa55' : 'rgba(255,180,80,0.30)';
+      ctx.lineWidth = 1.5;
+    }
     ctx.stroke();
     ctx.restore();
 
@@ -261,29 +272,31 @@
   }
 
   function drawStore(cx, cy, rx, ry, count, isMine) {
-    // Shadow
     ctx.save();
+
+    // Shadow
     ctx.beginPath();
-    ctx.ellipse(cx, cy, rx + 3, ry + 4, 0, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.ellipse(cx, cy, rx + 4, ry + 5, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
     ctx.fill();
 
     // Cavity
     ctx.beginPath();
     ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
     const g = ctx.createRadialGradient(cx - rx * 0.2, cy - ry * 0.2, rx * 0.05, cx, cy, ry);
-    g.addColorStop(0, '#3e1e0a');
-    g.addColorStop(1, '#100503');
+    g.addColorStop(0, '#4e2812');
+    g.addColorStop(1, '#140604');
     ctx.fillStyle = g;
     ctx.fill();
-    ctx.strokeStyle = isMine ? 'rgba(255,200,80,0.65)' : 'rgba(150,75,20,0.35)';
-    ctx.lineWidth = 2;
+    // Bright rim so stores are unmistakable
+    ctx.strokeStyle = isMine ? '#ffcc44' : 'rgba(255,180,80,0.40)';
+    ctx.lineWidth = isMine ? 2.5 : 1.5;
     ctx.stroke();
     ctx.restore();
 
-    // Count number
-    const numSize = Math.min(rx * 1.15, ry * 0.52);
-    ctx.fillStyle = isMine ? '#ffe090' : '#b08050';
+    // Count number — large and bright
+    const numSize = Math.min(rx * 1.3, ry * 0.55);
+    ctx.fillStyle = isMine ? '#ffee80' : '#d0a060';
     ctx.font = `bold ${numSize}px Nunito, sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(count, cx, cy - ry * 0.14);
@@ -328,8 +341,8 @@
       }
     } else {
       // Show count number prominently + 3 tiny emoji around rim
-      ctx.fillStyle = '#ffe090';
-      ctx.font = `bold ${r * 0.72}px Nunito, sans-serif`;
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `bold ${r * 0.75}px Nunito, sans-serif`;
       ctx.fillText(count, cx, cy);
       const fSize = r * 0.38;
       ctx.font = `${fSize}px serif`;
@@ -349,15 +362,15 @@
 
     // Opponent name (above board)
     const oppName = playerNames[1 - myIdx];
-    ctx.font = `bold ${W * 0.042}px Nunito, sans-serif`;
-    ctx.fillStyle = !isMeTurn ? '#ffdd88' : 'rgba(190,155,110,0.55)';
+    ctx.font = `bold ${Math.max(W * 0.044, 14)}px Nunito, sans-serif`;
+    ctx.fillStyle = !isMeTurn ? '#ffee66' : 'rgba(240,210,160,0.65)';
     ctx.fillText((!isMeTurn ? '▶ ' : '') + oppName, W / 2, by * 0.52);
 
     // My name + turn indicator (below board)
     const myName = playerNames[myIdx];
     const bottomY = by + bh + (H - by - bh) * 0.38;
-    ctx.font = `bold ${W * 0.044}px Nunito, sans-serif`;
-    ctx.fillStyle = isMeTurn ? '#ffdd88' : 'rgba(190,155,110,0.55)';
+    ctx.font = `bold ${Math.max(W * 0.046, 14)}px Nunito, sans-serif`;
+    ctx.fillStyle = isMeTurn ? '#ffee66' : 'rgba(240,210,160,0.65)';
     const myLabel = (isMeTurn ? '▶ ' : '') + myName + (isMeTurn ? ' — Your turn!' : '');
     ctx.fillText(myLabel, W / 2, bottomY);
   }
