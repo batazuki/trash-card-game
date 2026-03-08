@@ -18,7 +18,7 @@
   let playerNames = ["You", "Opponent"]; // indexed by actual player index
 
   // Constants matching server
-  const BALL_R   = 0.025;
+  const BALL_R   = 0.038;
   const PADDLE_R = 0.055;
   const GOAL_W   = 0.35;
 

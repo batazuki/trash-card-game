@@ -4,12 +4,13 @@ module.exports = function(io, helpers) {
   const { endGame } = helpers;
 
   // Physics constants (normalized 0–1 coordinate space)
-  const BALL_R    = 0.025;
+  const BALL_R    = 0.038;
   const PADDLE_R  = 0.055;
   const MOUSE_R   = 0.02;
   const GOAL_W    = 0.35;   // goal width centered
-  const MAX_SPEED = 0.025;
+  const MAX_SPEED = 0.038;
   const FRICTION  = 0.9993;
+  const RAIL      = 0.022;  // normalized width of side rails (matches client drawing)
   const WIN_SCORE = 7;
   const TICK_MS   = 16;     // ~60fps
   const BROADCAST_EVERY = 2; // broadcast every 2nd tick (~30Hz)
@@ -42,7 +43,7 @@ module.exports = function(io, helpers) {
     h.ball.x = 0.5;
     h.ball.y = 0.5;
     const angle = (Math.random() * 0.6 - 0.3); // slight random x
-    const speed = 0.008;
+    const speed = 0.012;
     h.ball.vx = Math.sin(angle) * speed;
     h.ball.vy = towardPlayer === 0 ? speed : -speed;
     h.paused = true;
@@ -155,39 +156,44 @@ module.exports = function(io, helpers) {
     const paddle = h.paddles[aiIndex];
     const ball = h.ball;
 
-    // Predict where ball will be at AI's y level
+    // Predict intercept point at AI's resting y
     let targetX = ball.x;
     const aiY = aiIndex === 1 ? 0.15 : 0.85;
-
-    // Simple prediction: if ball is moving toward AI, predict intercept
     const movingTowardAI = (aiIndex === 1 && ball.vy < 0) || (aiIndex === 0 && ball.vy > 0);
     if (movingTowardAI && Math.abs(ball.vy) > 0.001) {
       const ticksToReach = (aiY - ball.y) / ball.vy;
       if (ticksToReach > 0 && ticksToReach < 200) {
         targetX = ball.x + ball.vx * ticksToReach;
-        // Handle wall bounces in prediction
-        while (targetX < 0 || targetX > 1) {
-          if (targetX < 0) targetX = -targetX;
-          if (targetX > 1) targetX = 2 - targetX;
+        while (targetX < RAIL || targetX > 1 - RAIL) {
+          if (targetX < RAIL) targetX = RAIL * 2 - targetX;
+          if (targetX > 1 - RAIL) targetX = 2 * (1 - RAIL) - targetX;
         }
       }
     }
 
-    // Add slight randomness
-    targetX += (Math.random() - 0.5) * 0.04;
+    // Slowly-drifting random offset — refreshes every ~45 ticks so AI isn't perfectly centered
+    if (h.aiRandOffset === undefined) h.aiRandOffset = 0;
+    if (h.aiRandTick === undefined)   h.aiRandTick = 0;
+    h.aiRandTick++;
+    if (h.aiRandTick >= 45) {
+      h.aiRandTick = 0;
+      h.aiRandOffset = (Math.random() - 0.5) * 0.07;
+    }
+    targetX = clamp(targetX + h.aiRandOffset, RAIL + PADDLE_R, 1 - RAIL - PADDLE_R);
 
-    // Move toward target
-    const maxAISpeed = 0.012;
+    // Velocity-based movement: accelerate toward target with damping for smooth motion
+    if (h.aiVx === undefined) h.aiVx = 0;
     const dx = targetX - paddle.x;
-    paddle.x += clamp(dx, -maxAISpeed, maxAISpeed);
-    paddle.x = clamp(paddle.x, PADDLE_R, 1 - PADDLE_R);
+    h.aiVx += clamp(dx * 0.28, -0.0025, 0.0025); // gentle acceleration
+    h.aiVx *= 0.80;                               // damping (inertia)
+    h.aiVx  = clamp(h.aiVx, -0.013, 0.013);
+    paddle.x = clamp(paddle.x + h.aiVx, RAIL + PADDLE_R, 1 - RAIL - PADDLE_R);
 
-    // Slight y movement toward resting position
+    // Drift back toward resting y
     const restY = aiIndex === 1 ? 0.15 : 0.85;
-    const dy = restY - paddle.y;
-    paddle.y += clamp(dy, -0.003, 0.003);
-    paddle.y = clamp(paddle.y, aiIndex === 1 ? P1_Y_MIN : P0_Y_MIN,
-                               aiIndex === 1 ? P1_Y_MAX : P0_Y_MAX);
+    paddle.y += clamp(restY - paddle.y, -0.003, 0.003);
+    paddle.y  = clamp(paddle.y, aiIndex === 1 ? P1_Y_MIN : P0_Y_MIN,
+                                aiIndex === 1 ? P1_Y_MAX : P0_Y_MAX);
   }
 
   function physicsTick(state, roomId) {
@@ -224,12 +230,14 @@ module.exports = function(io, helpers) {
     h.ball.vx *= FRICTION;
     h.ball.vy *= FRICTION;
 
-    // Side wall bounces
-    if (h.ball.x - BALL_R < 0) {
-      h.ball.x = BALL_R;
+    // Side wall bounces (inner edge of rail)
+    const wallL = RAIL + BALL_R;
+    const wallR = 1 - RAIL - BALL_R;
+    if (h.ball.x < wallL) {
+      h.ball.x = wallL;
       h.ball.vx = Math.abs(h.ball.vx);
-    } else if (h.ball.x + BALL_R > 1) {
-      h.ball.x = 1 - BALL_R;
+    } else if (h.ball.x > wallR) {
+      h.ball.x = wallR;
       h.ball.vx = -Math.abs(h.ball.vx);
     }
 
@@ -342,8 +350,8 @@ module.exports = function(io, helpers) {
         const pi = state.players.findIndex(p => p.id === socket.id);
         if (pi === -1) return;
 
-        // Clamp to player's half
-        const px = clamp(x, PADDLE_R, 1 - PADDLE_R);
+        // Clamp to player's half, keeping within rails
+        const px = clamp(x, RAIL + PADDLE_R, 1 - RAIL - PADDLE_R);
         let py;
         if (pi === 0) {
           py = clamp(y, P0_Y_MIN, P0_Y_MAX);
