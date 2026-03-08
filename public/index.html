@@ -60,6 +60,7 @@
           </optgroup>
           <option value="war">War</option>
           <option value="solitaire">Solitaire</option>
+          <option value="hockey">Cat Paw Hockey</option>
         </select>
       </label>
 
@@ -165,6 +166,7 @@
           </optgroup>
           <option value="war">War</option>
           <option value="solitaire">Solitaire</option>
+          <option value="hockey">Cat Paw Hockey</option>
         </select>
       </label>
 
@@ -186,6 +188,7 @@
         <button class="modal-tab" data-tab="eleven">Eleven</button>
         <button class="modal-tab" data-tab="war">War</button>
         <button class="modal-tab" data-tab="solitaire">Solitaire</button>
+        <button class="modal-tab" data-tab="hockey">Hockey</button>
       </div>
 
       <div id="help-default" class="modal-section active">
@@ -288,6 +291,29 @@
         </div>
       </div>
 
+      <div id="help-hockey" class="modal-section">
+        <div class="modal-rule">
+          <strong>Goal</strong>
+          Score 7 goals to win. Swipe your cat paw to hit the yarn ball into your opponent's goal.
+        </div>
+        <div class="modal-rule">
+          <strong>Controls</strong>
+          Touch and drag anywhere to move your paw paddle. Your paw stays in your half of the table.
+        </div>
+        <div class="modal-rule">
+          <strong>Scoring</strong>
+          Hit the yarn ball into the goal zone at your opponent's end. First to 7 wins!
+        </div>
+        <div class="modal-rule">
+          <strong>Mouse NPC</strong>
+          A mouse occasionally runs across the table. If the yarn hits it, the ball deflects in a random direction!
+        </div>
+        <div class="modal-rule">
+          <strong>Tips</strong>
+          Move your paw into the ball to give it momentum. A faster-moving paw hits harder. Defend your goal and look for angles!
+        </div>
+      </div>
+
       <button class="btn btn-secondary modal-close" id="help-close">Got it</button>
     </div>
   </div>
@@ -297,6 +323,7 @@
   <script src="games/trash-client.js"></script>
   <script src="games/war-client.js"></script>
   <script src="games/solitaire-client.js"></script>
+  <script src="games/hockey-client.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});

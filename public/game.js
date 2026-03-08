@@ -328,7 +328,7 @@ function showShareToast(msg) {
 }
 
 // ═══ HELP MODAL ═══
-const GAME_TO_TAB = { trash: "default", "trash-eleven": "eleven", war: "war", solitaire: "solitaire" };
+const GAME_TO_TAB = { trash: "default", "trash-eleven": "eleven", war: "war", solitaire: "solitaire", hockey: "hockey" };
 
 function openHelp() {
   // Determine current game — in-game uses local.gameType, lobby uses dropdown
@@ -617,11 +617,14 @@ socket.on("gameOver", ({ winnerIndex, winnerName, scores, gamesPlayed }) => {
     "trash-eleven": didWin ? "You filled all 11 slots first!" : "Better luck next time.",
     war: didWin ? "You captured all the cards!" : "Your opponent took all the cards.",
     solitaire: "Congratulations!",
+    hockey: didWin ? "Purrfect victory!" : "The yarn got away...",
   };
   $("result-sub").textContent = subTexts[local.gameType] || (didWin ? "Nice job!" : "Better luck next time.");
   $("play-again-btn").disabled = false;
   $("play-again-btn").textContent = (local.vsAI || local.gameType === "solitaire") ? "Play Again" : "Rematch";
   $("see-cards-btn").style.display = local.gameType.startsWith("trash") ? "" : "none";
+  // Hide hockey from physics cleanup (already handled by clearInterval on server)
+
 
   // Show game switcher only for multiplayer (not AI, not solitaire)
   const showSwitcher = !local.vsAI && local.gameType !== "solitaire";

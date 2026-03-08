@@ -1720,3 +1720,41 @@ body.game-solitaire #lobby-screen,
 body.game-solitaire #end-screen {
   background: linear-gradient(160deg, #2a1f14 0%, #1a1208 100%);
 }
+
+/* ═══════════════════════════════════════════════
+   THEME: CAT PAW HOCKEY — Forest Green
+   ═══════════════════════════════════════════════ */
+body.game-hockey {
+  --bg-top: #1a472a; --bg-bot: #0d2818;
+  --text: #e0f0e0; --text-dim: rgba(200,240,200,0.45);
+  --accent: #ff6b35; --accent2: #ffd166;
+  --btn-sec: rgba(255,107,53,0.15);
+}
+body.game-hockey #game-screen {
+  background: linear-gradient(160deg, #1a472a 0%, #0d2818 100%);
+}
+body.game-hockey #lobby-screen,
+body.game-hockey #end-screen {
+  background: linear-gradient(160deg, #1a472a 0%, #0d2818 100%);
+}
+body.game-hockey .btn-primary {
+  background: linear-gradient(135deg, #ff6b35, #cc4400);
+  box-shadow: 0 4px 14px rgba(255,107,53,0.35);
+}
+body.game-hockey .btn-secondary { border-color: #4a8a5a; color: var(--text); }
+body.game-hockey .result-text { color: #e0f0e0; }
+body.game-hockey .result-sub  { color: #90c090; }
+.hockey-canvas {
+  touch-action: none;
+  border-radius: 12px;
+  display: block;
+  margin: 0 auto;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+#game-container:has(.hockey-canvas) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  padding: 8px;
+}
