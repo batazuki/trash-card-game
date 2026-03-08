@@ -592,8 +592,8 @@ socket.on("gameStart", (data) => {
   $("trash-ui").classList.toggle("hidden", !isTrash);
   $("game-container").classList.toggle("hidden", isTrash);
 
-  // Show shared reaction bar for non-trash multiplayer games (not solitaire)
-  const showSharedReactions = !isTrash && local.gameType !== "solitaire";
+  // Show shared reaction bar for non-trash multiplayer games (not solitaire, not hockey)
+  const showSharedReactions = !isTrash && local.gameType !== "solitaire" && local.gameType !== "hockey";
   $("shared-reaction-bar").classList.toggle("hidden", !showSharedReactions);
 
   if (gameClient) {

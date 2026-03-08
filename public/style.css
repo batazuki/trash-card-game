@@ -1751,10 +1751,3 @@ body.game-hockey .result-sub  { color: #90c090; }
   margin: 0 auto;
   box-shadow: 0 4px 20px rgba(0,0,0,0.4);
 }
-#game-container:has(.hockey-canvas) {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  padding: 8px;
-}
