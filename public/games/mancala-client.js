@@ -302,8 +302,8 @@
     }
 
     // Label
-    const lblSize = Math.max(Math.min(rx * 0.45, 11), 7);
-    ctx.fillStyle = isMine ? 'rgba(255,200,80,0.55)' : 'rgba(150,100,50,0.45)';
+    const lblSize = Math.max(rx * 0.55, 9);
+    ctx.fillStyle = isMine ? 'rgba(255,200,80,0.60)' : 'rgba(150,100,50,0.50)';
     ctx.font = `${lblSize}px Nunito, sans-serif`;
     ctx.textBaseline = 'bottom';
     ctx.fillText(isMine ? '▲ Mine' : 'Theirs', cx, cy + ry * 0.97);
@@ -311,34 +311,32 @@
 
   function drawStonesInPit(cx, cy, r, count) {
     if (count <= 0) return;
-    const maxShow = 12;
-    const show = Math.min(count, maxShow);
-
-    const cols = show <= 2 ? show : show <= 4 ? 2 : show <= 9 ? 3 : 4;
-    const rows = Math.ceil(show / cols);
-    const fSize = Math.min(r * 1.55 / cols, r * 1.55 / rows, r * 0.54);
-    const stepX = fSize * 1.05, stepY = fSize * 1.00;
-
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = `${fSize}px serif`;
 
-    let drawn = 0;
-    for (let row = 0; row < rows && drawn < show; row++) {
-      const inRow = Math.min(cols, show - drawn);
-      const startX = cx - (inRow - 1) * stepX / 2;
-      const startY = cy - (rows - 1) * stepY / 2 + row * stepY;
-      for (let col = 0; col < inRow; col++) {
-        ctx.fillText(FRUITS[drawn % 3], startX + col * stepX, startY);
-        drawn++;
+    if (count <= 4) {
+      // Show individual emoji at a legible size
+      const POS = {
+        1: [[0, 0]],
+        2: [[-0.40, 0], [0.40, 0]],
+        3: [[0, -0.38], [-0.38, 0.30], [0.38, 0.30]],
+        4: [[-0.38, -0.38], [0.38, -0.38], [-0.38, 0.38], [0.38, 0.38]],
+      };
+      const fSize = count === 1 ? r * 1.18 : r * 0.88;
+      ctx.font = `${fSize}px serif`;
+      for (let i = 0; i < count; i++) {
+        ctx.fillText(FRUITS[i % 3], cx + POS[count][i][0] * r, cy + POS[count][i][1] * r);
       }
-    }
-
-    if (count > maxShow) {
-      ctx.fillStyle = 'rgba(255,230,150,0.85)';
-      ctx.font = `bold ${r * 0.30}px Nunito, sans-serif`;
-      ctx.textBaseline = 'bottom';
-      ctx.fillText(`+${count - maxShow}`, cx + r * 0.60, cy + r * 0.92);
-      ctx.textBaseline = 'middle';
+    } else {
+      // Show count number prominently + 3 tiny emoji around rim
+      ctx.fillStyle = '#ffe090';
+      ctx.font = `bold ${r * 0.72}px Nunito, sans-serif`;
+      ctx.fillText(count, cx, cy);
+      const fSize = r * 0.38;
+      ctx.font = `${fSize}px serif`;
+      for (let i = 0; i < 3; i++) {
+        const a = (i / 3) * Math.PI * 2 - Math.PI / 2;
+        ctx.fillText(FRUITS[i], cx + Math.cos(a) * r * 0.72, cy + Math.sin(a) * r * 0.72);
+      }
     }
   }
 
@@ -368,6 +366,7 @@
   function onPointerDown(e) {
     e.preventDefault();
     if (currentPlayer !== myIdx || !layout) return;
+    canvas.setPointerCapture(e.pointerId);
     const rect = canvas.getBoundingClientRect();
     const x = (e.clientX - rect.left) * (canvas.clientWidth  / rect.width);
     const y = (e.clientY - rect.top)  * (canvas.clientHeight / rect.height);
@@ -375,6 +374,8 @@
     if (pit === null || !isMyPit(pit) || (pits[pit] || 0) <= 0) return;
     socket.emit('mancala:move', { roomId: window._gameLocal.roomId, pit });
   }
+
+  function onContextMenu(e) { e.preventDefault(); }
 
   function hitTest(x, y) {
     for (const p of layout.pitDescs) {
@@ -426,6 +427,7 @@
       initCanvas();
       registerEvents();
       canvas.addEventListener('pointerdown', onPointerDown);
+      canvas.addEventListener('contextmenu', onContextMenu);
       window.addEventListener('resize', handleResize);
       rafId = requestAnimationFrame(render);
     },
@@ -440,6 +442,7 @@
       socket.off('mancala:state');
       if (canvas) {
         canvas.removeEventListener('pointerdown', onPointerDown);
+        canvas.removeEventListener('contextmenu', onContextMenu);
         canvas.remove();
         canvas = ctx = null;
       }
