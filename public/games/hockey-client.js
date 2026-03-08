@@ -49,11 +49,15 @@
 
   function sizeCanvas() {
     if (!canvas) return;
-    const maxW = window.innerWidth;
-    const maxH = window.innerHeight;
+    // Subtract container padding (8px each side) so canvas never overflows
+    const pad  = 16;
+    const maxW = window.innerWidth  - pad;
+    const maxH = window.innerHeight - pad;
     let w = maxW;
     let h = w * (4 / 3);
     if (h > maxH) { h = maxH; w = h * (3 / 4); }
+    w = Math.floor(w);
+    h = Math.floor(h);
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width  = w * dpr;
     canvas.height = h * dpr;
@@ -392,7 +396,7 @@
       drawPaw(
         toX(renderState.paddles[i].x),
         toY(renderState.paddles[i].y),
-        toR(PADDLE_R),
+        toR(PADDLE_R * 2),
         i === myIdx
       );
     }

@@ -8,7 +8,7 @@ module.exports = function(io, helpers) {
   const PADDLE_R  = 0.055;
   const MOUSE_R   = 0.02;
   const GOAL_W    = 0.35;   // goal width centered
-  const MAX_SPEED = 0.038;
+  const MAX_SPEED = 0.048;
   const FRICTION  = 0.9993;
   const RAIL      = 0.022;  // normalized width of side rails (matches client drawing)
   const WIN_SCORE = 7;
@@ -43,7 +43,7 @@ module.exports = function(io, helpers) {
     h.ball.x = 0.5;
     h.ball.y = 0.5;
     const angle = (Math.random() * 0.6 - 0.3); // slight random x
-    const speed = 0.012;
+    const speed = 0.015;
     h.ball.vx = Math.sin(angle) * speed;
     h.ball.vy = towardPlayer === 0 ? speed : -speed;
     h.paused = true;
@@ -77,26 +77,28 @@ module.exports = function(io, helpers) {
     const nx = (ball.x - paddle.x) / d;
     const ny = (ball.y - paddle.y) / d;
 
-    // Push ball out of paddle
-    ball.x = paddle.x + nx * (minDist + 0.001);
-    ball.y = paddle.y + ny * (minDist + 0.001);
+    // Push ball well clear of paddle to prevent re-triggering next tick
+    ball.x = paddle.x + nx * (minDist + 0.003);
+    ball.y = paddle.y + ny * (minDist + 0.003);
 
-    // Reflect velocity
+    // Reflect velocity off normal
     const dot = ball.vx * nx + ball.vy * ny;
     ball.vx -= 2 * dot * nx;
     ball.vy -= 2 * dot * ny;
 
-    // Add paddle velocity influence (directional push)
-    const pvx = (paddle.x - prevPaddle.x) * 0.35;
-    const pvy = (paddle.y - prevPaddle.y) * 0.35;
+    // Add paddle velocity influence (reduced to avoid stickiness)
+    const pvx = (paddle.x - prevPaddle.x) * 0.2;
+    const pvy = (paddle.y - prevPaddle.y) * 0.2;
     ball.vx += pvx;
     ball.vy += pvy;
 
-    // Ensure minimum speed after paddle hit
-    const spd = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
-    if (spd < 0.004) {
-      ball.vx = nx * 0.005;
-      ball.vy = ny * 0.005;
+    // Enforce minimum outward speed along the normal — this is what prevents grabbing.
+    // If the ball isn't leaving the paddle fast enough, boost it away.
+    const outDot = ball.vx * nx + ball.vy * ny;
+    const minOut = 0.015;
+    if (outDot < minOut) {
+      ball.vx += (minOut - outDot) * nx;
+      ball.vy += (minOut - outDot) * ny;
     }
 
     clampSpeed(ball);
