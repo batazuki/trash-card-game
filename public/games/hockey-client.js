@@ -49,8 +49,8 @@
 
   function sizeCanvas() {
     if (!canvas) return;
-    // Subtract container padding (8px each side) so canvas never overflows
-    const pad  = 16;
+    // #game-screen has 8px padding + #game-container has 8px padding = 16px per side = 32px total
+    const pad  = 32;
     const maxW = window.innerWidth  - pad;
     const maxH = window.innerHeight - pad;
     let w = maxW;

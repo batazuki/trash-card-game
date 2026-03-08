@@ -8,7 +8,7 @@ module.exports = function(io, helpers) {
   const PADDLE_R  = 0.055;
   const MOUSE_R   = 0.02;
   const GOAL_W    = 0.35;   // goal width centered
-  const MAX_SPEED = 0.048;
+  const MAX_SPEED = 0.062;
   const FRICTION  = 0.9993;
   const RAIL      = 0.022;  // normalized width of side rails (matches client drawing)
   const WIN_SCORE = 7;
@@ -43,7 +43,7 @@ module.exports = function(io, helpers) {
     h.ball.x = 0.5;
     h.ball.y = 0.5;
     const angle = (Math.random() * 0.6 - 0.3); // slight random x
-    const speed = 0.015;
+    const speed = 0.020;
     h.ball.vx = Math.sin(angle) * speed;
     h.ball.vy = towardPlayer === 0 ? speed : -speed;
     h.paused = true;
