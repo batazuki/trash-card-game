@@ -25,13 +25,11 @@ module.exports = function(io, helpers) {
   function distribute(pits, pitIdx, player) {
     let stones = pits[pitIdx];
     pits[pitIdx] = 0;
-    const oppStore = player === 0 ? 13 : 6;
     let pos = CIRCLE_POS[pitIdx];
     let lastIdx = pitIdx;
     while (stones > 0) {
-      pos = (pos + 1) % 14;
+      pos = (pos + 13) % 14;   // clockwise — step backward around the ring
       const idx = CIRCLE[pos];
-      if (idx === oppStore) continue;
       pits[idx]++;
       stones--;
       lastIdx = idx;
@@ -146,7 +144,7 @@ module.exports = function(io, helpers) {
         if (state.phase !== "playing" || !state.mancala) return;
         const aiMove = chooseBestMove(m.pits, result.nextPlayer);
         if (aiMove !== null) processMove(state, roomId, result.nextPlayer, aiMove);
-      }, 650 + Math.random() * 400);
+      }, 1100 + Math.random() * 600);
     }
   }
 
@@ -173,7 +171,7 @@ module.exports = function(io, helpers) {
           if (state.phase !== "playing") return;
           const aiMove = chooseBestMove(state.mancala.pits, 0);
           if (aiMove !== null) processMove(state, roomId, 0, aiMove);
-        }, 1000);
+        }, 1400);
       }
     },
 

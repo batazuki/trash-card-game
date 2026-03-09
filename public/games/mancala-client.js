@@ -15,7 +15,7 @@
   let _cssW = 0, _cssH = 0;
 
   const FRUITS = ['\uD83C\uDF38', '\uD83E\uDED0', '\uD83C\uDF53']; // 🌸 🫐 🍓
-  const HIGHLIGHT_MS = 1400;
+  const HIGHLIGHT_MS = 2400;
 
   // ── Audio ──────────────────────────────────────────────────────────────────
   function sfxTone(freq, dur, type, vol) {
