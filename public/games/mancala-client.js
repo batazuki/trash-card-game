@@ -100,7 +100,7 @@
       myStoreCX  = bx + bw / 2;
       myStoreCY  = by + bh - storeH / 2;
       storeRx = bw * 0.41;
-      storeRy = storeH * 0.40;
+      storeRy = storeH * 0.44;
 
     } else {
       // ── Landscape: stores on left and right sides ────────────────────────
@@ -250,8 +250,6 @@
     ctx.strokeStyle = 'rgba(70,25,0,0.50)';
     ctx.lineWidth = 2.5;
     if (isPortrait) {
-      var storeH = storeRy / 0.40;  // storeRy = storeH * 0.40 → storeH = storeRy/0.40
-      // More robust: use the first store's cy to derive separator Y
       var myStoreDesc = null, oppStoreDesc = null;
       for (var sd = 0; sd < pitDescs.length; sd++) {
         if (pitDescs[sd].isStore) {
@@ -305,7 +303,7 @@
       var count = pits[p.idx] || 0;
       var isSource   = hlActive && lastMove.pitIdx  === p.idx;
       var isLanded   = hlActive && lastMove.lastIdx  === p.idx;
-      var isCaptured = hlActive && lastMove.captured && p.idx === (12 - lastMove.pitIdx);
+      var isCaptured = hlActive && lastMove.captured && p.idx === (12 - lastMove.lastIdx);
       var canSelect  = !p.isStore && isMyPit(p.idx) && currentPlayer === myIdx && count > 0;
 
       if (p.isStore) {
@@ -348,67 +346,79 @@
   }
 
   function drawStore(cx, cy, rx, ry, count, isMine, isPortrait) {
-    ctx.save();
+    var cornerR = Math.min(rx, ry) * 0.30;
 
     // Shadow
-    ctx.beginPath();
-    ctx.ellipse(cx, cy + 3, rx + 2, ry + 3, 0, 0, Math.PI * 2);
+    ctx.save();
+    rrect(cx - rx, cy - ry + 3, rx * 2, ry * 2, cornerR);
     ctx.fillStyle = 'rgba(0,0,0,0.40)';
     ctx.fill();
 
-    // Cavity
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+    // Body
+    rrect(cx - rx, cy - ry, rx * 2, ry * 2, cornerR);
     ctx.fillStyle = '#2a1006';
     ctx.fill();
     ctx.strokeStyle = isMine ? '#ffcc44' : 'rgba(255,160,60,0.35)';
     ctx.lineWidth   = isMine ? 2.5 : 1.5;
     ctx.stroke();
-
     ctx.restore();
 
-    // Count number
-    var numSize = isPortrait
-      ? Math.max(Math.min(ry * 2.0, rx * 0.22, 28), 12)
-      : Math.max(Math.min(rx * 1.4, ry * 0.55), 12);
     ctx.save();
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = isMine ? '#ffee70' : '#cc9040';
-    ctx.font = 'bold ' + numSize + 'px Nunito, sans-serif';
-    ctx.fillText(count, cx, cy - (isPortrait ? ry * 0.12 : ry * 0.15));
 
-    // Emoji row / halo
-    if (count > 0) {
-      var show = Math.min(count, isPortrait ? 7 : 5);
-      var fSize = isPortrait
-        ? Math.max(Math.min(ry * 0.75, rx * 0.14, 16), 7)
-        : Math.max(Math.min(rx * 0.5, ry * 0.18), 7);
-      ctx.font = fSize + 'px serif';
-      if (isPortrait) {
-        // Spread horizontally along the bottom half of the store
-        var spacing = Math.min(rx * 0.26, fSize * 1.6);
-        var totalW = spacing * (show - 1);
+    if (isPortrait) {
+      // Wide, thin rectangle — label | count | emoji arranged left–center–right
+      var lblSize = Math.max(Math.min(ry * 0.88, 13), 8);
+      ctx.font = lblSize + 'px Nunito, sans-serif';
+      ctx.fillStyle = isMine ? 'rgba(255,200,70,0.65)' : 'rgba(200,130,50,0.50)';
+      ctx.fillText(isMine ? 'My Store' : 'Theirs', cx - rx * 0.62, cy);
+
+      // Count — center
+      var numSize = Math.max(Math.min(ry * 1.55, 26), 12);
+      ctx.font = 'bold ' + numSize + 'px Nunito, sans-serif';
+      ctx.fillStyle = isMine ? '#ffee70' : '#cc9040';
+      ctx.fillText(count, cx, cy);
+
+      // Emoji — right third
+      if (count > 0) {
+        var show = Math.min(count, 4);
+        var fSize = Math.max(Math.min(ry * 0.72, 14), 7);
+        ctx.font = fSize + 'px serif';
+        var spacing = fSize * 1.25;
+        var totalEW = spacing * (show - 1);
+        var emoX = cx + rx * 0.62;
         for (var ei = 0; ei < show; ei++) {
-          var ex = cx - totalW / 2 + ei * spacing;
-          ctx.fillText(FRUITS[ei % 3], ex, cy + ry * 0.38);
+          ctx.fillText(FRUITS[ei % 3], emoX - totalEW / 2 + ei * spacing, cy);
         }
-      } else {
-        // Ring arrangement
-        for (var ej = 0; ej < show; ej++) {
-          var a = (ej / show) * Math.PI * 2 - Math.PI * 0.5;
-          var sx = cx + Math.cos(a) * rx * 0.58;
-          var sy = cy + ry * 0.32 + Math.sin(a) * ry * 0.22;
-          if (sy > cy - ry * 0.1) ctx.fillText(FRUITS[ej % 3], sx, sy);
+      }
+
+    } else {
+      // Tall, narrow rectangle — label top, emoji cluster middle, count lower-center
+      var lblSize2 = Math.max(Math.min(rx * 0.55, 13), 8);
+      ctx.font = lblSize2 + 'px Nunito, sans-serif';
+      ctx.fillStyle = isMine ? 'rgba(255,200,70,0.65)' : 'rgba(200,130,50,0.50)';
+      ctx.fillText(isMine ? 'Mine' : 'Theirs', cx, cy - ry * 0.72);
+
+      // Count
+      var numSize2 = Math.max(Math.min(rx * 1.4, ry * 0.30), 12);
+      ctx.font = 'bold ' + numSize2 + 'px Nunito, sans-serif';
+      ctx.fillStyle = isMine ? '#ffee70' : '#cc9040';
+      ctx.fillText(count, cx, cy + ry * 0.22);
+
+      // Emoji cluster above count
+      if (count > 0) {
+        var show2 = Math.min(count, 5);
+        var fSize2 = Math.max(Math.min(rx * 0.50, ry * 0.18), 7);
+        ctx.font = fSize2 + 'px serif';
+        for (var ej = 0; ej < show2; ej++) {
+          var a = (ej / show2) * Math.PI * 2 - Math.PI * 0.5;
+          var eSx = cx + Math.cos(a) * rx * 0.52;
+          var eSy = cy - ry * 0.12 + Math.sin(a) * ry * 0.22;
+          if (eSy < cy + ry * 0.06) ctx.fillText(FRUITS[ej % 3], eSx, eSy);
         }
       }
     }
 
-    // Label
-    var lblSize = isPortrait ? Math.max(ry * 0.72, 8) : Math.max(rx * 0.5, 8);
-    ctx.fillStyle = isMine ? 'rgba(255,200,70,0.65)' : 'rgba(200,130,50,0.50)';
-    ctx.font = lblSize + 'px Nunito, sans-serif';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText(isMine ? 'My Store' : 'Theirs', cx, cy + ry * 0.96);
     ctx.restore();
   }
 
