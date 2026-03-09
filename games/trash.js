@@ -114,9 +114,15 @@ module.exports = function(io, helpers) {
     if (checkWin(board)) { endGame(state, roomId, playerIndex); return; }
 
     if (isDisplacingWildcard) {
-      state.discardPile.push({ ...chainCard, faceUp: true });
-      io.to(roomId).emit("discarded", { card: chainCard, playerIndex, topDiscard: { ...chainCard, faceUp: true }, deckCount: state.deck.length });
-      endTurn(state, roomId, playerIndex);
+      // The displaced wildcard becomes the next chain card (Trash-Eleven rule).
+      // Route it through evaluateCard so the player can place it.
+      state.turnPhase = "chain";
+      await delay(isAI ? 500 : 300);
+      if (state.phase !== "playing") return;
+      io.to(roomId).emit("chainCard", { playerIndex, card: { ...chainCard, faceUp: true } });
+      await delay(isAI ? 400 : 200);
+      if (state.phase !== "playing") return;
+      await evaluateCard(state, roomId, playerIndex, chainCard, true);
       return;
     }
 

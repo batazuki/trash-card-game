@@ -721,10 +721,8 @@ $("settings-help").addEventListener("click", () => {
   openHelp();
   $("settings-panel").classList.add("hidden");
 });
-$("settings-quit").addEventListener("click", () => {
-  $("settings-panel").classList.add("hidden");
+function doQuitGame() {
   if (!local.roomId) return;
-  if (!confirm("Quit game? Your opponent will be notified.")) return;
   releaseWakeLock();
   socket.emit("quitGame", { roomId: local.roomId });
   socket.emit("leaveRoom", { roomId: local.roomId });
@@ -739,6 +737,14 @@ $("settings-quit").addEventListener("click", () => {
   local.gameType = savedGame;
   $("shared-reaction-bar").classList.add("hidden");
   showScreen("lobby-screen");
+}
+window._quitCurrentGame = doQuitGame;
+
+$("settings-quit").addEventListener("click", () => {
+  $("settings-panel").classList.add("hidden");
+  if (!local.roomId) return;
+  if (!confirm("Quit game? Your opponent will be notified.")) return;
+  doQuitGame();
 });
 
 $("help-btn-lobby").addEventListener("click", openHelp);

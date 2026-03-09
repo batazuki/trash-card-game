@@ -45,6 +45,16 @@
           <span id="sol-timer">Time: 0:00</span>
         </div>
       </div>
+      <div class="sol-stuck-overlay hidden" id="sol-stuck-overlay">
+        <div class="sol-stuck-dialog">
+          <div class="sol-stuck-title">No moves left!</div>
+          <div class="sol-stuck-sub">The deck is exhausted and no moves remain.</div>
+          <div class="sol-stuck-actions">
+            <button class="btn btn-primary" id="sol-stuck-new-game">New Game</button>
+            <button class="btn btn-secondary" id="sol-stuck-quit">Quit</button>
+          </div>
+        </div>
+      </div>
     `;
   }
 
@@ -177,17 +187,17 @@
     }
     if (!hasAnyMoves()) {
       clearInterval(state.timerInterval);
-      const status = document.querySelector(".sol-status");
-      if (status) {
-        status.innerHTML = `
-          <span class="sol-stuck-msg">No moves left!</span>
-          <button class="btn btn-primary sol-new-game-btn" id="sol-new-game">New Game</button>
-        `;
-        document.getElementById("sol-new-game").addEventListener("click", () => {
+      const overlay = document.getElementById("sol-stuck-overlay");
+      if (overlay) {
+        overlay.classList.remove("hidden");
+        document.getElementById("sol-stuck-new-game").addEventListener("click", () => {
           socket.emit("playVsAI", {
             playerName: window._gameLocal.myName || "Player",
             game: "solitaire",
           });
+        });
+        document.getElementById("sol-stuck-quit").addEventListener("click", () => {
+          if (window._quitCurrentGame) window._quitCurrentGame();
         });
       }
     }

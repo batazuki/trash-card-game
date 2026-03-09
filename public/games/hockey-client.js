@@ -318,13 +318,13 @@
 
     // Base color
     const grad = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.35, 0, cx, cy, r);
-    grad.addColorStop(0, "#ff9f43");
-    grad.addColorStop(1, "#c0370a");
+    grad.addColorStop(0, "#c8cdd4");
+    grad.addColorStop(1, "#6e7680");
     ctx.fillStyle = grad;
     ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
 
     // Yarn winding strokes
-    ctx.strokeStyle = "rgba(255,210,100,0.55)";
+    ctx.strokeStyle = "rgba(220,230,240,0.60)";
     ctx.lineWidth   = r * 0.18;
     ctx.lineCap     = "round";
 
@@ -354,7 +354,7 @@
     // Outer border
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(120,30,0,0.5)";
+    ctx.strokeStyle = "rgba(40,50,60,0.45)";
     ctx.lineWidth   = r * 0.12;
     ctx.stroke();
   }
