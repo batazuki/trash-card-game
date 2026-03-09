@@ -1768,6 +1768,11 @@ body.game-mancala .btn-primary {
 body.game-mancala .btn-secondary { border-color: #7040a0; color: var(--text); }
 body.game-mancala .result-text   { color: #f0e0ff; }
 body.game-mancala .result-sub    { color: #c090e0; }
+body.game-mancala #game-screen,
+body.game-mancala #lobby-screen,
+body.game-mancala #end-screen {
+  background: linear-gradient(160deg, #1e0a30 0%, #07030e 100%);
+}
 .mancala-canvas {
   touch-action: none;
   border-radius: 12px;
