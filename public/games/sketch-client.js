@@ -338,6 +338,7 @@
   function scorePhotoAgainstShape(videoEl, shape) {
     var SIZE = 128;
 
+    // Render reference shape: black stroke on white background
     var shapeOff = document.createElement('canvas');
     shapeOff.width = shapeOff.height = SIZE;
     var sc = shapeOff.getContext('2d');
@@ -351,25 +352,43 @@
     sc.restore();
     var shapeData = sc.getImageData(0, 0, SIZE, SIZE).data;
 
+    // Capture photo frame onto white background
     var photoOff = document.createElement('canvas');
     photoOff.width = photoOff.height = SIZE;
     var pc = photoOff.getContext('2d');
     pc.fillStyle = '#fff'; pc.fillRect(0, 0, SIZE, SIZE);
     var vw = videoEl.videoWidth || 640, vh = videoEl.videoHeight || 480;
     var scale = Math.min(SIZE / vw, SIZE / vh);
-    var pw = vw*scale, ph = vh*scale;
-    pc.drawImage(videoEl, (SIZE-pw)/2, (SIZE-ph)/2, pw, ph);
+    var pw = vw * scale, ph = vh * scale;
+    pc.drawImage(videoEl, (SIZE - pw) / 2, (SIZE - ph) / 2, pw, ph);
     var photoData = pc.getImageData(0, 0, SIZE, SIZE).data;
 
-    var shapeDark = 0, matches = 0;
+    // sB < 180: captures shape strokes including anti-aliased edge pixels
+    // pB < 120: strict threshold — only clear pen/pencil marks, rejects paper shadows
+    var shapeDark = 0, photoDark = 0, inter = 0;
     for (var i = 0; i < SIZE * SIZE; i++) {
       var si = i * 4;
       var sB = (shapeData[si] + shapeData[si+1] + shapeData[si+2]) / 3;
       var pB = (photoData[si] + photoData[si+1] + photoData[si+2]) / 3;
-      if (sB < 180) { shapeDark++; if (pB < 160) matches++; }
+      if (sB < 180) { shapeDark++; if (pB < 120) inter++; }
+      if (pB < 120) photoDark++;
     }
+
     if (shapeDark === 0) return 0;
-    return Math.min(100, Math.round((matches / shapeDark) * 100));
+
+    // Intersection over Union — penalises both missed marks AND extra dark pixels in the photo.
+    // This prevents dark backgrounds / blank frames from inflating the score.
+    var union = shapeDark + photoDark - inter;
+    if (union === 0) return 0;
+    var iou = inter / union;
+
+    // sqrt-scale IoU so scores spread usefully across 0–100:
+    //   IoU 0.00 (white page / wrong shape) → 0%
+    //   IoU 0.09 (rough / dark background) → ~30%
+    //   IoU 0.25 (decent match)            → ~50%
+    //   IoU 0.49 (good match)              → ~70%
+    //   IoU 0.81 (excellent)               → ~90%
+    return Math.min(100, Math.round(Math.sqrt(iou) * 100));
   }
 
   // ── Camera ──────────────────────────────────────────────────────────────────
