@@ -1799,3 +1799,141 @@ body.game-mancala #end-screen {
   margin: 0 auto;
   box-shadow: 0 4px 24px rgba(80,10,130,0.55);
 }
+
+/* ── Sketch It theme ─────────────────────────────────────────── */
+body.game-sketch {
+  --bg-top: #0f1729; --bg-bot: #1a0a2e;
+  --text: #e8f0ff; --text-dim: rgba(180,200,255,0.5);
+  --accent: #60a5fa; --accent2: #a78bfa;
+}
+body.game-sketch .btn-primary {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  box-shadow: 0 4px 14px rgba(59,130,246,0.4);
+}
+body.game-sketch .btn-secondary { border-color: #3b4e6e; color: var(--text); }
+body.game-sketch .result-text   { color: #e0eaff; }
+body.game-sketch .result-sub    { color: #90a8d0; }
+body.game-sketch #game-screen,
+body.game-sketch #lobby-screen,
+body.game-sketch #end-screen {
+  background: linear-gradient(160deg, #0f1729 0%, #1a0a2e 100%);
+}
+
+/* Sketch layout */
+.sketch-wrap {
+  width: 100%; max-width: 480px; margin: 0 auto;
+  padding: 12px 16px;
+  display: flex; flex-direction: column; gap: 12px;
+  color: var(--text, #e8f0ff);
+  font-family: var(--font, 'Nunito', sans-serif);
+}
+.sketch-header {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 14px; font-weight: 800;
+  padding: 8px 14px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 12px;
+  border: 1px solid rgba(96,165,250,0.2);
+}
+.sketch-shape-canvas {
+  display: block; margin: 0 auto;
+  border-radius: 16px;
+  background: rgba(10,15,35,0.85);
+  border: 2px solid rgba(96,165,250,0.3);
+}
+.sk-shape-wrap { text-align: center; }
+.sk-shape-label {
+  font-size: 18px; font-weight: 800; margin-top: 8px;
+  color: var(--accent, #60a5fa);
+}
+.sk-timer-text {
+  text-align: center; font-size: 22px; font-weight: 900;
+  color: var(--accent2, #a78bfa); margin-top: 4px;
+}
+.sk-draw-instruction {
+  text-align: center; font-size: 20px; font-weight: 800;
+  padding: 24px 0 12px;
+  color: var(--text, #e8f0ff);
+}
+.sk-done-btn { width: 100%; margin-top: 12px; }
+.sketch-timer-bar-wrap {
+  width: 100%; height: 7px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 4px; overflow: hidden;
+}
+.sketch-timer-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #60a5fa, #a78bfa);
+  transition: width 0.9s linear;
+  border-radius: 4px;
+}
+.sk-camera-wrap { text-align: center; }
+.sketch-video {
+  width: 100%; max-width: 340px; display: block; margin: 0 auto 10px;
+  border-radius: 12px; border: 2px solid rgba(96,165,250,0.3);
+  background: #000;
+}
+.sk-capture-btn { width: 100%; }
+.sk-cam-status {
+  text-align: center; font-size: 13px; color: var(--text-dim, rgba(180,200,255,0.5));
+  margin-top: 8px;
+}
+.sketch-photo-row {
+  display: flex; gap: 10px; justify-content: center;
+}
+.sketch-photo-panel {
+  flex: 1; max-width: 49%;
+  border-radius: 12px; overflow: hidden;
+  border: 3px solid rgba(96,165,250,0.25);
+  background: #0a0f23; text-align: center;
+  position: relative;
+}
+.sketch-photo-panel.winner {
+  border-color: #fbbf24;
+  box-shadow: 0 0 18px rgba(251,191,36,0.45);
+}
+.sk-winner-badge {
+  background: #fbbf24; color: #000;
+  font-size: 11px; font-weight: 900;
+  padding: 3px 6px;
+}
+.sk-reveal-img {
+  width: 100%; display: block; object-fit: contain; max-height: 200px;
+}
+.sketch-missing-photo {
+  width: 100%; aspect-ratio: 4/3;
+  background: rgba(255,255,255,0.04);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: rgba(255,255,255,0.25); font-weight: 700;
+}
+.sketch-photo-label {
+  font-size: 12px; font-weight: 800;
+  padding: 4px 6px;
+  background: rgba(0,0,0,0.5);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sk-score-badge {
+  font-size: 13px; font-weight: 900;
+  padding: 4px 6px;
+  color: var(--accent2, #a78bfa);
+}
+.sketch-status {
+  text-align: center; font-size: 14px; font-weight: 700;
+  color: var(--text-dim, rgba(180,200,255,0.5)); min-height: 20px;
+}
+.sk-reveal-original {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  margin-bottom: 4px;
+}
+.sk-reveal-shape {
+  border-radius: 8px;
+  background: rgba(10,15,35,0.85);
+  border: 1px solid rgba(96,165,250,0.25);
+}
+.sk-reveal-orig-label {
+  font-size: 13px; font-weight: 800; color: var(--accent, #60a5fa);
+}
+.sk-next-msg {
+  text-align: center; font-size: 13px; font-weight: 700;
+  color: var(--text-dim, rgba(180,200,255,0.5)); padding: 4px 0;
+}

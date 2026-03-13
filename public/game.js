@@ -328,7 +328,7 @@ function showShareToast(msg) {
 }
 
 // ═══ HELP MODAL ═══
-const GAME_TO_TAB = { trash: "default", "trash-eleven": "eleven", war: "war", solitaire: "solitaire", hockey: "hockey", mancala: "mancala" };
+const GAME_TO_TAB = { trash: "default", "trash-eleven": "eleven", war: "war", solitaire: "solitaire", hockey: "hockey", mancala: "mancala", sketch: "sketch" };
 
 function openHelp() {
   // Determine current game — in-game uses local.gameType, lobby uses dropdown
@@ -478,10 +478,14 @@ $("game-select").addEventListener("change", e => {
 
 function updateLobbyForGame(game) {
   const isSolo = game === "solitaire";
+  const isSketch = game === "sketch";
   $("vs-ai-btn").textContent = isSolo ? "Play" : "Play vs AI";
+  $("vs-ai-btn").style.display = isSketch ? "none" : "";
   $("create-room-btn").style.display = isSolo ? "none" : "";
   document.querySelector(".divider").style.display = isSolo ? "none" : "";
   document.querySelector(".join-row").style.display = isSolo ? "none" : "";
+  const roundsRow = document.getElementById("sketch-rounds-row");
+  if (roundsRow) roundsRow.classList.toggle("hidden", !isSketch);
 }
 updateLobbyForGame(localStorage.getItem("game") || "trash");
 
@@ -495,7 +499,10 @@ $("vs-ai-btn").addEventListener("click", () => {
 $("create-room-btn").addEventListener("click", () => {
   const name = $("player-name").value.trim() || "Player";
   local.playerName = name;
-  socket.emit("createRoom", { playerName: name, game: $("game-select").value });
+  const selectedGame = $("game-select").value;
+  const roomPayload = { playerName: name, game: selectedGame };
+  if (selectedGame === "sketch") roomPayload.rounds = parseInt($("sketch-rounds").value) || 3;
+  socket.emit("createRoom", roomPayload);
 });
 
 $("join-room-btn").addEventListener("click", () => {
@@ -624,6 +631,7 @@ socket.on("gameOver", ({ winnerIndex, winnerName, scores, gamesPlayed }) => {
     solitaire: "Congratulations!",
     hockey: didWin ? "Purrfect victory!" : "The yarn got away...",
     mancala: window._mancalaTied ? "24 seeds each — beautifully played! 🌸" : didWin ? "A bountiful harvest! 🌸" : "The seeds slipped away...",
+    sketch: didWin ? "Your drawings were more recognizable!" : "Keep practicing your shapes!",
   };
   $("result-sub").textContent = subTexts[local.gameType] || (didWin ? "Nice job!" : "Better luck next time.");
   $("play-again-btn").disabled = false;

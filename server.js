@@ -92,6 +92,7 @@ const warGame      = require("./games/war")(io, helpers);
 const solitaireGame = require("./games/solitaire")(io, helpers);
 const hockeyGame   = require("./games/hockey")(io, helpers);
 const mancalaGame  = require("./games/mancala")(io, helpers);
+const sketchGame   = require("./games/sketch")(io, helpers);
 
 const gameModules = {
   trash: trashGame,
@@ -100,6 +101,7 @@ const gameModules = {
   solitaire: solitaireGame,
   hockey: hockeyGame,
   mancala: mancalaGame,
+  sketch: sketchGame,
 };
 
 function getGameModule(gameType) {
@@ -127,14 +129,16 @@ io.on("connection", socket => {
   solitaireGame.registerEvents(socket, rooms);
   hockeyGame.registerEvents(socket, rooms);
   mancalaGame.registerEvents(socket, rooms);
+  sketchGame.registerEvents(socket, rooms);
 
   // ── Create Room ──
-  socket.on("createRoom", ({ playerName, game }) => {
+  socket.on("createRoom", ({ playerName, game, rounds }) => {
     const roomId = generateRoomId();
     const state = {
       roomId,
       phase: "lobby",
       game: game || "trash",
+      sketchMaxRounds: (game === "sketch") ? Math.min(5, Math.max(1, parseInt(rounds) || 3)) : undefined,
       players: [{
         id: socket.id,
         name: playerName || "Player 1",
@@ -186,6 +190,10 @@ io.on("connection", socket => {
 
   // ── Play vs AI (or solo for Solitaire) ──
   socket.on("playVsAI", ({ playerName, game }) => {
+    if (game === "sketch") {
+      socket.emit("joinError", { message: "Sketch It requires two real players. Create a room and share the code!" });
+      return;
+    }
     const roomId = generateRoomId();
     const isSolo = game === "solitaire";
     const players = [

@@ -62,8 +62,18 @@
           <option value="solitaire">Solitaire</option>
           <option value="hockey">Cat Paw Hockey</option>
           <option value="mancala">Mancala</option>
+          <option value="sketch">Sketch It</option>
         </select>
       </label>
+
+      <div id="sketch-rounds-row" class="toggle-row hidden">
+        <span class="toggle-label">Rounds</span>
+        <select id="sketch-rounds" class="game-select">
+          <option value="1">1 Round</option>
+          <option value="3" selected>3 Rounds</option>
+          <option value="5">5 Rounds</option>
+        </select>
+      </div>
 
       <input id="player-name" class="text-input" type="text"
              placeholder="Your name" maxlength="20" autocomplete="off">
@@ -169,6 +179,7 @@
           <option value="solitaire">Solitaire</option>
           <option value="hockey">Cat Paw Hockey</option>
           <option value="mancala">Mancala</option>
+          <option value="sketch">Sketch It</option>
         </select>
       </label>
 
@@ -192,6 +203,7 @@
         <button class="modal-tab" data-tab="solitaire">Solitaire</button>
         <button class="modal-tab" data-tab="hockey">Hockey</button>
         <button class="modal-tab" data-tab="mancala">Mancala</button>
+        <button class="modal-tab" data-tab="sketch">Sketch It</button>
       </div>
 
       <div id="help-default" class="modal-section active">
@@ -344,6 +356,33 @@
         </div>
       </div>
 
+      <div id="help-sketch" class="modal-section">
+        <div class="modal-rule">
+          <strong>Goal</strong>
+          Draw a shape from memory and have the app score how close your drawing is to the original!
+        </div>
+        <div class="modal-rule">
+          <strong>Preview</strong>
+          You get 3 seconds to study a shape outline. Memorize it!
+        </div>
+        <div class="modal-rule">
+          <strong>Draw</strong>
+          Sketch the shape on paper in 30 seconds — no peeking at the screen! Tap "Done Drawing" if you finish early.
+        </div>
+        <div class="modal-rule">
+          <strong>Scan</strong>
+          Take a photo of your drawing with your camera. The app compares it to the original shape.
+        </div>
+        <div class="modal-rule">
+          <strong>Score</strong>
+          Each player gets a similarity percentage. The closer your drawing, the higher your score!
+        </div>
+        <div class="modal-rule">
+          <strong>Winning</strong>
+          Highest score wins the round. Win the most rounds to win the game. Choose 1, 3, or 5 rounds when creating a room.
+        </div>
+      </div>
+
       <button class="btn btn-secondary modal-close" id="help-close">Got it</button>
     </div>
   </div>
@@ -355,6 +394,7 @@
   <script src="games/solitaire-client.js"></script>
   <script src="games/hockey-client.js"></script>
   <script src="games/mancala-client.js"></script>
+  <script src="games/sketch-client.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});
