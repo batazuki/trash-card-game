@@ -5,6 +5,7 @@
 
   // ── State ───────────────────────────────────────────────────────────────────
   var myIdx, roomId, playerNames, maxRounds, currentRound, roundWins;
+  var drawTime, previewTime;
   var currentShapeKey, currentPhase;
   var cameraStream = null;
   var disposed = false;
@@ -361,9 +362,10 @@
     var el = document.getElementById('sk-round');
     if (el) el.textContent = 'Round ' + (currentRound || 0) + ' / ' + (maxRounds || 3);
     var sc = document.getElementById('sk-scores');
-    if (sc && roundWins) {
-      var myW = roundWins[myIdx] || 0, oppW = roundWins[1 - myIdx] || 0;
-      sc.textContent = 'You ' + myW + ' — Opp ' + oppW;
+    if (sc && roundWins && playerNames) {
+      sc.textContent = playerNames.map(function(name, i) {
+        return (i === myIdx ? 'You' : name) + ': ' + (roundWins[i] || 0);
+      }).join(' | ');
     }
   }
 
@@ -496,18 +498,10 @@
     stopCamera();
     inCameraPhase = false;
 
-    var playerScores = data.playerScores || [0, 0];
+    var playerScores = data.playerScores || [];
     var winnerIndex = data.winnerIndex;
     roundWins = data.roundWins || roundWins;
-    var photos = data.photos || [null, null];
-    var myScore = playerScores[myIdx];
-    var oppScore = playerScores[1 - myIdx];
-    var myPhoto = photos[myIdx];
-    var oppPhoto = photos[1 - myIdx];
-    var myName = playerNames[myIdx] || 'You';
-    var oppName = playerNames[1 - myIdx] || 'Opponent';
-    var myWon = winnerIndex === myIdx;
-    var oppWon = winnerIndex === (1 - myIdx);
+    var photos = data.photos || [];
 
     function photoHTML(photo, name, score, won) {
       var border = won ? ' winner' : '';
@@ -522,17 +516,16 @@
       '</div>';
     }
 
-    // Also show the original shape small
-    var shapeHTML = '<canvas id="sk-reveal-shape" class="sk-reveal-shape" width="80" height="80"></canvas>';
+    var panelsHTML = playerNames.map(function(name, i) {
+      return photoHTML(photos[i] || null, i === myIdx ? 'You (' + name + ')' : name, playerScores[i] || 0, i === winnerIndex);
+    }).join('');
 
+    var shapeHTML = '<canvas id="sk-reveal-shape" class="sk-reveal-shape" width="80" height="80"></canvas>';
     var nextMsg = data.round >= data.maxRounds ? 'Final results coming...' : 'Next round in 5...';
 
     setPhaseArea(
       '<div class="sk-reveal-original">' + shapeHTML + '<div class="sk-reveal-orig-label">Original: ' + (SHAPE_NAMES[data.shapeKey] || '') + '</div></div>' +
-      '<div class="sketch-photo-row">' +
-        photoHTML(myPhoto, myName, myScore, myWon) +
-        photoHTML(oppPhoto, oppName, oppScore, oppWon) +
-      '</div>' +
+      '<div class="sketch-photo-row">' + panelsHTML + '</div>' +
       '<div class="sk-next-msg">' + nextMsg + '</div>'
     );
 
@@ -543,14 +536,15 @@
     }
 
     updateHeader();
-    setStatus(myWon ? 'You won this round! 🎉' : winnerIndex === -1 ? "It's a tie!" : 'Opponent won this round');
+    var myWon = winnerIndex === myIdx;
+    setStatus(myWon ? 'You won this round! 🎉' : winnerIndex === -1 ? "It's a tie!" : playerNames[winnerIndex] + ' won this round');
   }
 
   // ── Timer ─────────────────────────────────────────────────────────────────────
 
   function onTimer(data) {
     if (disposed) return;
-    var maxes = { preview: 3, draw: 30, camera: 60 };
+    var maxes = { preview: previewTime || 3, draw: drawTime || 30, camera: 65 };
     var el = document.getElementById('sk-timer');
     if (el) el.textContent = data.timeLeft + 's';
     var bar = document.getElementById('sk-timer-bar');
@@ -604,8 +598,10 @@
     myIdx = data.myPlayerIndex;
     roomId = data.roomId;
     playerNames = data.players.map(function(p) { return p.name; });
-    maxRounds = data.sketch ? data.sketch.maxRounds : 3;
-    roundWins = data.sketch ? data.sketch.roundWins.slice() : [0, 0];
+    maxRounds    = data.sketch ? data.sketch.maxRounds   : 3;
+    drawTime     = data.sketch ? data.sketch.drawTime    : 30;
+    previewTime  = data.sketch ? data.sketch.previewTime : 3;
+    roundWins = data.sketch ? data.sketch.roundWins.slice() : new Array(data.players.length).fill(0);
     currentRound = 0;
 
     buildUI();
@@ -624,7 +620,7 @@
       currentPhase = data.sketch.phase;
       currentShapeKey = data.sketch.shapeKey;
       currentRound = data.sketch.round;
-      roundWins = data.sketch.roundWins || [0, 0];
+      roundWins = data.sketch.roundWins || new Array(playerNames.length).fill(0);
       if (data.sketch.phase === 'preview' || data.sketch.phase === 'draw') {
         showDrawPhase();
         setStatus('Reconnected — drawing phase in progress');

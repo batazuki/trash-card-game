@@ -484,8 +484,10 @@ function updateLobbyForGame(game) {
   $("create-room-btn").style.display = isSolo ? "none" : "";
   document.querySelector(".divider").style.display = isSolo ? "none" : "";
   document.querySelector(".join-row").style.display = isSolo ? "none" : "";
-  const roundsRow = document.getElementById("sketch-rounds-row");
-  if (roundsRow) roundsRow.classList.toggle("hidden", !isSketch);
+  ["sketch-rounds-row", "sketch-players-row", "sketch-preview-row", "sketch-draw-row"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle("hidden", !isSketch);
+  });
 }
 updateLobbyForGame(localStorage.getItem("game") || "trash");
 
@@ -501,7 +503,12 @@ $("create-room-btn").addEventListener("click", () => {
   local.playerName = name;
   const selectedGame = $("game-select").value;
   const roomPayload = { playerName: name, game: selectedGame };
-  if (selectedGame === "sketch") roomPayload.rounds = parseInt($("sketch-rounds").value) || 3;
+  if (selectedGame === "sketch") {
+    roomPayload.rounds = parseInt($("sketch-rounds").value) || 3;
+    roomPayload.maxPlayers = parseInt($("sketch-players").value) || 2;
+    roomPayload.drawTime = parseInt($("sketch-draw-time").value) || 30;
+    roomPayload.previewTime = parseInt($("sketch-preview-time").value) || 3;
+  }
   socket.emit("createRoom", roomPayload);
 });
 
@@ -552,10 +559,20 @@ $("back-lobby-btn").addEventListener("click", () => {
 
 // ═══ SOCKET EVENTS ═══
 
-socket.on("roomCreated", ({ roomId }) => {
+socket.on("roomCreated", ({ roomId, maxPlayers }) => {
   local.roomId = roomId;
+  local.maxPlayers = maxPlayers || 2;
   $("room-code-text").textContent = roomId;
   $("room-code-display").classList.remove("hidden");
+  const wm = $("waiting-msg");
+  if (wm) wm.textContent = local.maxPlayers > 2
+    ? `Waiting for players... (1 / ${local.maxPlayers} joined)`
+    : "Waiting for opponent...";
+});
+
+socket.on("playerJoined", ({ count, max }) => {
+  const wm = $("waiting-msg");
+  if (wm) wm.textContent = `Waiting for players... (${count} / ${max} joined)`;
 });
 
 socket.on("joinedRoom", ({ roomId, game }) => {

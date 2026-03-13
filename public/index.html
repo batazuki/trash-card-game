@@ -75,6 +75,33 @@
         </select>
       </div>
 
+      <div id="sketch-players-row" class="toggle-row hidden">
+        <span class="toggle-label">Players</span>
+        <select id="sketch-players" class="game-select">
+          <option value="2" selected>2 Players</option>
+          <option value="3">3 Players</option>
+          <option value="4">4 Players</option>
+        </select>
+      </div>
+
+      <div id="sketch-preview-row" class="toggle-row hidden">
+        <span class="toggle-label">Preview</span>
+        <select id="sketch-preview-time" class="game-select">
+          <option value="3" selected>3 seconds</option>
+          <option value="5">5 seconds</option>
+          <option value="10">10 seconds</option>
+        </select>
+      </div>
+
+      <div id="sketch-draw-row" class="toggle-row hidden">
+        <span class="toggle-label">Draw time</span>
+        <select id="sketch-draw-time" class="game-select">
+          <option value="15">15 seconds</option>
+          <option value="30" selected>30 seconds</option>
+          <option value="60">60 seconds</option>
+        </select>
+      </div>
+
       <input id="player-name" class="text-input" type="text"
              placeholder="Your name" maxlength="20" autocomplete="off">
 
@@ -89,7 +116,7 @@
           <div class="room-code" id="room-code-text"></div>
           <button class="btn btn-secondary btn-share" id="share-btn">Share</button>
         </div>
-        <p class="waiting-msg">Waiting for opponent...</p>
+        <p class="waiting-msg" id="waiting-msg">Waiting for opponent...</p>
       </div>
 
       <div class="divider">— or join —</div>
