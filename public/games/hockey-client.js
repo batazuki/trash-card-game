@@ -19,7 +19,7 @@
 
   // Constants matching server
   const BALL_R   = 0.038;
-  const PADDLE_R = 0.055;
+  const PADDLE_R = 0.070;
   const GOAL_W   = 0.35;
 
   // Paddle y bounds matching server

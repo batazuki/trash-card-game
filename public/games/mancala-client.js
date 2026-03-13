@@ -82,25 +82,33 @@
     var boardR = Math.min(bw, H) * 0.05;
 
     if (isPortrait) {
-      // ── Portrait: stores at top and bottom ──────────────────────────────
+      // ── Portrait: stores at top/bottom, pits in left/right columns ──────
       by = H * 0.11; bh = H * 0.76;
-      var storeH   = bh * 0.15;
-      var pitAreaY = by + storeH;
-      var pitAreaH = bh - 2 * storeH;
+      var storeH    = bh * 0.15;
+      var pitAreaY  = by + storeH;
+      var pitAreaH  = bh - 2 * storeH;
+      var pitSpacingV = pitAreaH / 6;
 
-      pitSpacing = bw / 6;
-      pitR     = Math.min(pitSpacing * 0.42, pitAreaH * 0.22);
-      pitHitR  = Math.max(pitR * 1.4, 22);
-      topRowCY = pitAreaY + pitAreaH * 0.28;
-      botRowCY = pitAreaY + pitAreaH * 0.72;
+      pitSpacing = pitSpacingV;
+      pitR    = Math.min(pitSpacingV * 0.44, bw * 0.09);
+      pitHitR = Math.max(pitR * 1.5, 24);
 
-      // Stores are centered horizontally at top/bottom of board
-      oppStoreCX = bx + bw / 2;
-      oppStoreCY = by + storeH / 2;
-      myStoreCX  = bx + bw / 2;
-      myStoreCY  = by + bh - storeH / 2;
-      storeRx = bw * 0.41;
-      storeRy = storeH * 0.44;
+      // Columns symmetric around board centre
+      var leftColX  = bx + bw * 0.18;
+      var rightColX = bx + bw * 0.82;
+
+      // 6 pit centres evenly distributed over pitAreaH
+      var pitCenterYs = [];
+      for (var pci = 0; pci < 6; pci++) {
+        pitCenterYs.push(pitAreaY + pitSpacingV * (pci + 0.5));
+      }
+      topRowCY = pitCenterYs[0];
+      botRowCY = pitCenterYs[5];
+
+      // Stores span full board width at top/bottom
+      oppStoreCX = bx + bw / 2; oppStoreCY = by + storeH / 2;
+      myStoreCX  = bx + bw / 2; myStoreCY  = by + bh - storeH / 2;
+      storeRx = bw * 0.41; storeRy = storeH * 0.44;
 
     } else {
       // ── Landscape: stores on left and right sides ────────────────────────
@@ -124,24 +132,45 @@
       storeRy = bh * 0.37;
     }
 
-    // Pit centres — my pits always at bottom row regardless of player
+    // Pit centres
     var pitDescs = [];
-    var pitAreaXStart = isPortrait ? bx : (bx + bw * 0.13);
+    var pitAreaXStart = bx + bw * 0.13; // landscape only
 
     if (myIdx === 0) {
-      for (var k = 0; k < 6; k++)
-        pitDescs.push({ idx: k,    cx: pitAreaXStart + k*pitSpacing + pitSpacing/2, cy: botRowCY });
-      for (var k2 = 0; k2 < 6; k2++)
-        pitDescs.push({ idx: 12-k2, cx: pitAreaXStart + k2*pitSpacing + pitSpacing/2, cy: topRowCY });
-      pitDescs.push({ idx: 13, cx: isPortrait ? oppStoreCX : (bx + bw * 0.065), cy: oppStoreCY, isStore: true, isMine: false });
-      pitDescs.push({ idx: 6,  cx: isPortrait ? myStoreCX  : (bx + bw * 0.935), cy: myStoreCY,  isStore: true, isMine: true  });
+      if (isPortrait) {
+        // Right col = my pits 0(top)→5(bottom); Left col = opp pits 7(top)→12(bottom)
+        // Seeds travel UP right col → opp store (top) → DOWN left col → my store (bottom) = clockwise
+        for (var k = 0; k < 6; k++)
+          pitDescs.push({ idx: k,     cx: rightColX, cy: pitCenterYs[k] });
+        for (var k2 = 0; k2 < 6; k2++)
+          pitDescs.push({ idx: 7+k2,  cx: leftColX,  cy: pitCenterYs[k2] });
+        pitDescs.push({ idx: 13, cx: oppStoreCX, cy: oppStoreCY, isStore: true, isMine: false });
+        pitDescs.push({ idx: 6,  cx: myStoreCX,  cy: myStoreCY,  isStore: true, isMine: true  });
+      } else {
+        for (var k = 0; k < 6; k++)
+          pitDescs.push({ idx: k,     cx: pitAreaXStart + k*pitSpacing + pitSpacing/2, cy: botRowCY });
+        for (var k2 = 0; k2 < 6; k2++)
+          pitDescs.push({ idx: 12-k2, cx: pitAreaXStart + k2*pitSpacing + pitSpacing/2, cy: topRowCY });
+        pitDescs.push({ idx: 13, cx: bx + bw * 0.065, cy: oppStoreCY, isStore: true, isMine: false });
+        pitDescs.push({ idx: 6,  cx: bx + bw * 0.935, cy: myStoreCY,  isStore: true, isMine: true  });
+      }
     } else {
-      for (var k3 = 0; k3 < 6; k3++)
-        pitDescs.push({ idx: 7+k3,  cx: pitAreaXStart + k3*pitSpacing + pitSpacing/2, cy: botRowCY });
-      for (var k4 = 0; k4 < 6; k4++)
-        pitDescs.push({ idx: 5-k4,  cx: pitAreaXStart + k4*pitSpacing + pitSpacing/2, cy: topRowCY });
-      pitDescs.push({ idx: 6,  cx: isPortrait ? oppStoreCX : (bx + bw * 0.065), cy: oppStoreCY, isStore: true, isMine: false });
-      pitDescs.push({ idx: 13, cx: isPortrait ? myStoreCX  : (bx + bw * 0.935), cy: myStoreCY,  isStore: true, isMine: true  });
+      if (isPortrait) {
+        // Right col = my pits 12(top)→7(bottom); Left col = opp pits 5(top)→0(bottom)
+        for (var k3 = 0; k3 < 6; k3++)
+          pitDescs.push({ idx: 12-k3, cx: rightColX, cy: pitCenterYs[k3] });
+        for (var k4 = 0; k4 < 6; k4++)
+          pitDescs.push({ idx: 5-k4,  cx: leftColX,  cy: pitCenterYs[k4] });
+        pitDescs.push({ idx: 6,  cx: oppStoreCX, cy: oppStoreCY, isStore: true, isMine: false });
+        pitDescs.push({ idx: 13, cx: myStoreCX,  cy: myStoreCY,  isStore: true, isMine: true  });
+      } else {
+        for (var k3 = 0; k3 < 6; k3++)
+          pitDescs.push({ idx: 7+k3,  cx: pitAreaXStart + k3*pitSpacing + pitSpacing/2, cy: botRowCY });
+        for (var k4 = 0; k4 < 6; k4++)
+          pitDescs.push({ idx: 5-k4,  cx: pitAreaXStart + k4*pitSpacing + pitSpacing/2, cy: topRowCY });
+        pitDescs.push({ idx: 6,  cx: bx + bw * 0.065, cy: oppStoreCY, isStore: true, isMine: false });
+        pitDescs.push({ idx: 13, cx: bx + bw * 0.935, cy: myStoreCY,  isStore: true, isMine: true  });
+      }
     }
 
     layout = {
@@ -150,6 +179,7 @@
       pitSpacing: pitSpacing, pitR: pitR, pitHitR: pitHitR,
       topRowCY: topRowCY, botRowCY: botRowCY,
       storeRx: storeRx, storeRy: storeRy,
+      pitAreaY: isPortrait ? pitAreaY : 0, pitAreaH: isPortrait ? pitAreaH : 0,
       pitDescs: pitDescs,
     };
   }
@@ -288,11 +318,18 @@
     ctx.strokeStyle = 'rgba(70,25,0,0.30)';
     ctx.lineWidth = 1.5;
     ctx.setLineDash([7, 5]);
-    var midY = (lyt.topRowCY + lyt.botRowCY) / 2;
-    var pitAreaXStart2 = isPortrait ? bx : (bx + bw * 0.13);
     ctx.beginPath();
-    ctx.moveTo(pitAreaXStart2 + pitR, midY);
-    ctx.lineTo(pitAreaXStart2 + lyt.pitSpacing * 6 - pitR, midY);
+    if (isPortrait) {
+      // Vertical line between left and right columns
+      var midX = bx + bw / 2;
+      ctx.moveTo(midX, lyt.pitAreaY + pitR);
+      ctx.lineTo(midX, lyt.pitAreaY + lyt.pitAreaH - pitR);
+    } else {
+      // Horizontal line between the two pit rows
+      var midY = (lyt.topRowCY + lyt.botRowCY) / 2;
+      ctx.moveTo(bx + bw * 0.13 + pitR, midY);
+      ctx.lineTo(bx + bw * 0.13 + lyt.pitSpacing * 6 - pitR, midY);
+    }
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.restore();

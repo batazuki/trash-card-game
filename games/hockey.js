@@ -5,7 +5,7 @@ module.exports = function(io, helpers) {
 
   // Physics constants (normalized 0–1 coordinate space)
   const BALL_R    = 0.038;
-  const PADDLE_R  = 0.055;
+  const PADDLE_R  = 0.070;
   const MOUSE_R   = 0.02;
   const GOAL_W    = 0.35;   // goal width centered
   const MAX_SPEED = 0.062;
