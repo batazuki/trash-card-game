@@ -132,36 +132,31 @@ io.on("connection", socket => {
   sketchGame.registerEvents(socket, rooms);
 
   // ── Create Room ──
-  socket.on("createRoom", ({ playerName, game, rounds, maxPlayers, drawTime, previewTime }) => {
+  socket.on("createRoom", ({ playerName, game, rounds, drawTime, previewTime }) => {
     const roomId = generateRoomId();
     const isSketch = game === "sketch";
+    const creator = { id: socket.id, name: playerName || "Player 1", isAI: false, board: [], wantsRematch: false };
     const state = {
       roomId,
       phase: "lobby",
       game: game || "trash",
       sketchMaxRounds:   isSketch ? Math.min(5,  Math.max(1,  parseInt(rounds)      || 3))  : undefined,
-      sketchMaxPlayers:  isSketch ? Math.min(4,  Math.max(2,  parseInt(maxPlayers)  || 2))  : undefined,
+      sketchMaxPlayers:  isSketch ? 4 : undefined,
       sketchDrawTime:    isSketch ? Math.min(20, Math.max(10, parseInt(drawTime)    || 15)) : undefined,
       sketchPreviewTime: isSketch ? Math.min(3,  Math.max(1,  parseInt(previewTime) || 3))  : undefined,
-      players: [{
-        id: socket.id,
-        name: playerName || "Player 1",
-        isAI: false,
-        board: [],
-        wantsRematch: false,
-      }],
+      players: [creator],
       deck: [],
       discardPile: [],
       currentPlayerIndex: 0,
       turnPhase: "draw",
       pendingWildcard: null,
       pendingValidSlots: null,
-      scores: [0, 0],
+      scores: [0],
       gamesPlayed: 0,
     };
     rooms.set(roomId, state);
     socket.join(roomId);
-    socket.emit("roomCreated", { roomId, maxPlayers: state.sketchMaxPlayers || 2 });
+    socket.emit("roomCreated", { roomId, players: [{ name: creator.name }] });
   });
 
   // ── Join Room ──
@@ -175,8 +170,7 @@ io.on("connection", socket => {
       socket.emit("joinError", { message: "Game already in progress." });
       return;
     }
-    const maxPlayers = state.sketchMaxPlayers || 2;
-    if (state.players.length >= maxPlayers) {
+    if (state.players.length >= 4) {
       socket.emit("joinError", { message: "Room is full." });
       return;
     }
@@ -189,12 +183,18 @@ io.on("connection", socket => {
       wantsRematch: false,
     });
     socket.join(roomId);
-    socket.emit("joinedRoom", { roomId, game: state.game });
-    if (state.players.length === maxPlayers) {
-      startGame(state, roomId);
-    } else {
-      io.to(roomId).emit("playerJoined", { count: state.players.length, max: maxPlayers });
-    }
+    const playerList = state.players.map(p => ({ name: p.name }));
+    socket.emit("joinedRoom", { roomId, game: state.game, players: playerList });
+    io.to(roomId).emit("playerJoined", { players: playerList });
+  });
+
+  // ── Sketch: Host requests game start ──
+  socket.on("sketch:start_request", ({ roomId }) => {
+    const state = rooms.get(roomId);
+    if (!state || state.phase !== "lobby") return;
+    if (state.players[0]?.id !== socket.id) return; // host only
+    if (state.players.length < 2) return;
+    startGame(state, roomId);
   });
 
   // ── Play vs AI (or solo for Solitaire) ──

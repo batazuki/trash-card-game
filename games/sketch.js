@@ -185,7 +185,9 @@ module.exports = function(io, helpers) {
       // Clear any leftover state from previous game
       if (state.sketch) clearTimers(state.sketch);
 
-      const n = state.sketchMaxPlayers || 2;
+      const n = state.players.length;
+      // Expand scores array to cover all players
+      while (state.scores.length < n) state.scores.push(0);
       const drawTime    = state.sketchDrawTime    || 15;
       const previewTime = state.sketchPreviewTime || 3;
       const recentTypes = state.sketchTypeHistory || new Set();

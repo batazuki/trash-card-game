@@ -1222,6 +1222,29 @@ body.game-trash-eleven.your-turn-flash #game-screen { animation: bg-pulse-eleven
   padding: 6px 14px;
   white-space: nowrap;
 }
+/* ═══ PRE-GAME LOBBY ═══ */
+.pregame-player-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  width: 100%;
+}
+.pregame-player-list li {
+  padding: 10px 14px;
+  margin-bottom: 6px;
+  background: rgba(255,255,255,0.08);
+  border: 1.5px solid rgba(236,72,153,0.15);
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.pregame-player-list li.empty-slot {
+  opacity: 0.35;
+  font-size: 13px;
+  font-weight: 600;
+  font-style: italic;
+}
+
 /* ═══ GEAR / SETTINGS MENU ═══ */
 .gear-wrap {
   position: absolute;

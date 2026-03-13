@@ -29,6 +29,7 @@ window._gameLocal = null;
 // ═══ LOCAL STATE ═══
 let local = {
   roomId: null,
+  isHost: false,
   myPlayerIndex: null,
   playerName: "",
   opponentName: "",
@@ -327,6 +328,55 @@ function showShareToast(msg) {
   t._timer = setTimeout(() => { t.style.opacity = "0"; }, 2000);
 }
 
+// ═══ PRE-GAME LOBBY ═══
+function showPregame(roomId, players, isHost) {
+  $("pregame-code-text").textContent = roomId;
+  updatePregamePlayers(players);
+  const startBtn = $("pregame-start-btn");
+  const statusEl = $("pregame-status");
+  if (isHost) {
+    startBtn.classList.remove("hidden");
+    startBtn.disabled = players.length < 2;
+    statusEl.textContent = players.length >= 2 ? "" : "Waiting for players to join...";
+  } else {
+    startBtn.classList.add("hidden");
+    statusEl.textContent = "Waiting for host to start...";
+  }
+  showScreen("pregame-screen");
+}
+
+function updatePregamePlayers(players) {
+  const list = $("pregame-player-list");
+  if (!list) return;
+  list.innerHTML = "";
+  players.forEach((p, i) => {
+    const li = document.createElement("li");
+    li.textContent = (i === 0 ? "👑 " : "") + p.name;
+    list.appendChild(li);
+  });
+  for (let i = players.length; i < 4; i++) {
+    const li = document.createElement("li");
+    li.textContent = "Waiting...";
+    li.classList.add("empty-slot");
+    list.appendChild(li);
+  }
+}
+
+$("pregame-start-btn").addEventListener("click", () => {
+  socket.emit("sketch:start_request", { roomId: local.roomId });
+  $("pregame-start-btn").disabled = true;
+  $("pregame-start-btn").textContent = "Starting...";
+});
+
+$("pregame-share-btn").addEventListener("click", () => shareRoomCode(local.roomId));
+
+$("pregame-cancel-btn").addEventListener("click", () => {
+  if (local.roomId) socket.emit("leaveRoom", { roomId: local.roomId });
+  local.roomId = null;
+  local.isHost = false;
+  showScreen("lobby-screen");
+});
+
 // ═══ HELP MODAL ═══
 const GAME_TO_TAB = { trash: "default", "trash-eleven": "eleven", war: "war", solitaire: "solitaire", hockey: "hockey", mancala: "mancala", sketch: "sketch" };
 
@@ -481,7 +531,7 @@ function updateLobbyForGame(game) {
   $("create-room-btn").style.display = isSolo ? "none" : "";
   document.querySelector(".divider").style.display = isSolo ? "none" : "";
   document.querySelector(".join-row").style.display = isSolo ? "none" : "";
-  ["sketch-rounds-row", "sketch-players-row", "sketch-preview-row", "sketch-draw-row"].forEach(id => {
+  ["sketch-rounds-row", "sketch-preview-row", "sketch-draw-row"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle("hidden", !isSketch);
   });
@@ -502,8 +552,7 @@ $("create-room-btn").addEventListener("click", () => {
   const roomPayload = { playerName: name, game: selectedGame };
   if (selectedGame === "sketch") {
     roomPayload.rounds = parseInt($("sketch-rounds").value) || 3;
-    roomPayload.maxPlayers = parseInt($("sketch-players").value) || 2;
-    roomPayload.drawTime = parseInt($("sketch-draw-time").value) || 30;
+    roomPayload.drawTime = parseInt($("sketch-draw-time").value) || 15;
     roomPayload.previewTime = parseInt($("sketch-preview-time").value) || 3;
   }
   socket.emit("createRoom", roomPayload);
@@ -546,6 +595,7 @@ $("back-lobby-btn").addEventListener("click", () => {
   local.roomId = null;
   local.vsAI = false;
   local.gameType = savedGame;
+  local.isHost = false;
   $("room-code-display").classList.add("hidden");
   $("room-code-text").textContent = "";
   $("score-display").classList.add("hidden");
@@ -556,30 +606,35 @@ $("back-lobby-btn").addEventListener("click", () => {
 
 // ═══ SOCKET EVENTS ═══
 
-socket.on("roomCreated", ({ roomId, maxPlayers }) => {
+socket.on("roomCreated", ({ roomId, players }) => {
   local.roomId = roomId;
-  local.maxPlayers = maxPlayers || 2;
-  $("room-code-text").textContent = roomId;
-  $("room-code-display").classList.remove("hidden");
-  const wm = $("waiting-msg");
-  if (wm) wm.textContent = local.maxPlayers > 2
-    ? `Waiting for players... (1 / ${local.maxPlayers} joined)`
-    : "Waiting for opponent...";
+  local.isHost = true;
+  showPregame(roomId, players, true);
 });
 
-socket.on("playerJoined", ({ count, max }) => {
-  const wm = $("waiting-msg");
-  if (wm) wm.textContent = `Waiting for players... (${count} / ${max} joined)`;
+socket.on("playerJoined", ({ players }) => {
+  updatePregamePlayers(players);
+  if (local.isHost) {
+    const btn = $("pregame-start-btn");
+    if (btn) {
+      btn.disabled = players.length < 2;
+      btn.textContent = "Start Game";
+    }
+    const statusEl = $("pregame-status");
+    if (statusEl) statusEl.textContent = players.length >= 2 ? "" : "Waiting for players to join...";
+  }
 });
 
-socket.on("joinedRoom", ({ roomId, game }) => {
+socket.on("joinedRoom", ({ roomId, game, players }) => {
   local.roomId = roomId;
+  local.isHost = false;
   if (game) {
     local.gameType = game;
     $("game-select").value = game;
     applyGameTheme(game);
     updateLobbyForGame(game);
   }
+  showPregame(roomId, players || [], false);
 });
 
 socket.on("joinError", ({ message }) => {
@@ -754,6 +809,7 @@ function doQuitGame() {
   const savedGame = $("game-select").value || "trash";
   applyGameTheme(savedGame);
   local.roomId = null;
+  local.isHost = false;
   local.vsAI = false;
   local.myPlayerIndex = null;
   local.gameType = savedGame;
