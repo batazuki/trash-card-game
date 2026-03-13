@@ -354,7 +354,6 @@
 
   // ── UI Helpers ───────────────────────────────────────────────────────────────
 
-  var socket = window.socket;
 
   function container() { return document.getElementById('game-container'); }
 
@@ -639,12 +638,10 @@
     disposed = true;
     inCameraPhase = false;
     stopCamera();
-    if (socket) {
-      socket.off('sketch:start_round', onStartRound);
-      socket.off('sketch:timer', onTimer);
-      socket.off('sketch:goto_camera', onGotoCamera);
-      socket.off('sketch:round_result', onRoundResult);
-    }
+    socket.off('sketch:start_round', onStartRound);
+    socket.off('sketch:timer', onTimer);
+    socket.off('sketch:goto_camera', onGotoCamera);
+    socket.off('sketch:round_result', onRoundResult);
     var c = container();
     if (c) c.innerHTML = '';
   }
