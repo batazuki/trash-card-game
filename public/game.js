@@ -389,12 +389,9 @@ function setOldiesMode(on) {
   local.oldies = on;
   localStorage.setItem("oldies", on ? "1" : "0");
   document.body.classList.toggle("mode-oldies", on);
-  $("oldies-toggle").checked = on;
   $("settings-oldies").textContent = on ? "👓 Oldies: On" : "👓 Oldies: Off";
 }
-$("oldies-toggle").checked = local.oldies;
 $("settings-oldies").textContent = local.oldies ? "👓 Oldies: On" : "👓 Oldies: Off";
-$("oldies-toggle").addEventListener("change", e => setOldiesMode(e.target.checked));
 
 // ═══ CARD SIZING & LANDSCAPE MODE ═══
 function recalcCardSizes() {

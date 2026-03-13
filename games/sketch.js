@@ -3,18 +3,50 @@
 module.exports = function(io, helpers) {
   const { endGame } = helpers;
 
-  const SHAPE_KEYS = [
-    "cat_face","house","star","heart","fish","bird","tree","sun",
-    "cloud","moon","mountain","diamond","arrow","spiral","cross",
-    "lightning","rabbit","key","crown","mushroom"
+  const SHAPE_TYPES = [
+    "star","spiral","cross","diamond","arrow","sun","moon",
+    "mountain","tree","crown","lightning",
+    "cat_face","house","heart","fish","bird","cloud","rabbit","key","mushroom"
   ];
 
-  function pickShape() {
-    return SHAPE_KEYS[Math.floor(Math.random() * SHAPE_KEYS.length)];
+  function generateParams(type) {
+    const ri  = (lo, hi, dec) => +(lo + Math.random() * (hi - lo)).toFixed(dec || 2);
+    const ri0 = (lo, hi)      => lo + Math.floor(Math.random() * (hi - lo + 1));
+    switch (type) {
+      case "star":      return { points: ri0(4, 8), innerRatio: ri(0.28, 0.55) };
+      case "spiral":    return { loops: ri0(3, 7) };
+      case "cross":     return { armLen: ri(0.30, 0.45), armThick: ri(0.10, 0.22) };
+      case "diamond":   return { widthRatio: ri(0.55, 1.4) };
+      case "arrow":     return { dir: ri0(0, 3) };
+      case "sun":       return { rays: ri0(5, 12) };
+      case "moon":      return { bite: ri(0.55, 0.80) };
+      case "mountain":  return { peaks: ri0(1, 3) };
+      case "tree":      return { layers: ri0(2, 4) };
+      case "crown":     return { points: ri0(3, 7) };
+      case "lightning": return { segments: ri0(2, 4) };
+      default:          return {};
+    }
   }
 
-  function shuffleMapping() {
-    return Math.random() < 0.5 ? [0, 1] : [1, 0];
+  function shuffleArray(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function buildTypeQueue(recentTypes) {
+    const fresh = SHAPE_TYPES.filter(t => !recentTypes.has(t));
+    const stale = SHAPE_TYPES.filter(t =>  recentTypes.has(t));
+    return [...shuffleArray(fresh), ...shuffleArray(stale)];
+  }
+
+  function popNextShape(sk) {
+    if (sk.typeQueue.length === 0) sk.typeQueue = shuffleArray(SHAPE_TYPES.slice());
+    const type = sk.typeQueue.shift();
+    return { type, params: generateParams(type) };
   }
 
   function runTimer(state, roomId, seconds, phase, onDone) {
@@ -43,14 +75,15 @@ module.exports = function(io, helpers) {
 
     const n = sk.numPlayers;
     sk.round++;
-    sk.shapeKey = pickShape();
+    sk.shape = popNextShape(sk);
+    sk.typeHistory.push(sk.shape.type);
     sk.drawDone = new Array(n).fill(false);
     sk.photos = new Array(n).fill(null);
     sk.submittedScores = new Array(n).fill(null);
     sk.phase = "preview";
 
     io.to(roomId).emit("sketch:start_round", {
-      shapeKey: sk.shapeKey,
+      shape: sk.shape,
       round: sk.round,
       maxRounds: sk.maxRounds,
       scores: sk.roundWins.slice(),
@@ -83,7 +116,7 @@ module.exports = function(io, helpers) {
     const sk = state.sketch;
     state.players.forEach((p, i) => {
       if (p.isAI) return;
-      if (sk.submittedScores[i] !== null) return; // already submitted early
+      if (sk.submittedScores[i] !== null) return;
       sk.photoTimeouts[i] = setTimeout(() => {
         if (state.phase !== "playing" || !state.sketch) return;
         if (sk.submittedScores[i] === null) {
@@ -111,13 +144,13 @@ module.exports = function(io, helpers) {
       winnerIndex,
       roundWins: sk.roundWins.slice(),
       photos: sk.photos.slice(),
-      shapeKey: sk.shapeKey,
+      shape: sk.shape,
       round: sk.round,
       maxRounds: sk.maxRounds,
     });
 
     // Free photo memory immediately after sending
-    sk.photos = [null, null];
+    sk.photos = new Array(sk.numPlayers).fill(null);
 
     const over = sk.round >= sk.maxRounds;
     setTimeout(() => {
@@ -132,6 +165,16 @@ module.exports = function(io, helpers) {
 
   function finishGame(state, roomId) {
     const sk = state.sketch;
+
+    // Merge this game's shape types into room-level history
+    if (!state.sketchTypeHistory) state.sketchTypeHistory = new Set();
+    sk.typeHistory.forEach(t => state.sketchTypeHistory.add(t));
+    // Cap at 15 so shapes cycle back after enough games
+    if (state.sketchTypeHistory.size > 15) {
+      const arr = Array.from(state.sketchTypeHistory);
+      state.sketchTypeHistory = new Set(arr.slice(arr.length - 15));
+    }
+
     let maxW = -1, winner = 0;
     sk.roundWins.forEach((w, i) => { if (w > maxW) { maxW = w; winner = i; } });
     endGame(state, roomId, winner);
@@ -143,8 +186,9 @@ module.exports = function(io, helpers) {
       if (state.sketch) clearTimers(state.sketch);
 
       const n = state.sketchMaxPlayers || 2;
-      const drawTime    = state.sketchDrawTime    || 30;
+      const drawTime    = state.sketchDrawTime    || 15;
       const previewTime = state.sketchPreviewTime || 3;
+      const recentTypes = state.sketchTypeHistory || new Set();
 
       state.sketch = {
         round: 0,
@@ -152,7 +196,9 @@ module.exports = function(io, helpers) {
         numPlayers: n,
         drawTime,
         previewTime,
-        shapeKey: null,
+        shape: null,
+        typeQueue:   buildTypeQueue(recentTypes),
+        typeHistory: [],
         drawDone: new Array(n).fill(false),
         photos: new Array(n).fill(null),
         submittedScores: new Array(n).fill(null),
@@ -195,7 +241,7 @@ module.exports = function(io, helpers) {
         state.sketch.drawDone[pi] = true;
         socket.emit("sketch:goto_camera");
 
-        // If both done early, cut the draw timer short
+        // If all done early, cut the draw timer short
         if (state.sketch.drawDone.every(Boolean)) {
           if (state.sketch.timerRef) {
             clearInterval(state.sketch.timerRef);
@@ -224,7 +270,7 @@ module.exports = function(io, helpers) {
         }
 
         if (sk.submittedScores.every(s => s !== null)) {
-          // Both submitted — cancel any remaining draw timer before resolving
+          // All submitted — cancel any remaining draw timer before resolving
           if (sk.timerRef) { clearInterval(sk.timerRef); sk.timerRef = null; }
           resolveRound(state, roomId);
         }
@@ -240,7 +286,7 @@ module.exports = function(io, helpers) {
           maxRounds: sk.maxRounds,
           roundWins: sk.roundWins.slice(),
           phase: sk.phase,
-          shapeKey: sk.shapeKey,
+          shape: sk.shape,
         },
       };
     },

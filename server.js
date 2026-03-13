@@ -141,8 +141,8 @@ io.on("connection", socket => {
       game: game || "trash",
       sketchMaxRounds:   isSketch ? Math.min(5,  Math.max(1,  parseInt(rounds)      || 3))  : undefined,
       sketchMaxPlayers:  isSketch ? Math.min(4,  Math.max(2,  parseInt(maxPlayers)  || 2))  : undefined,
-      sketchDrawTime:    isSketch ? Math.min(60, Math.max(15, parseInt(drawTime)    || 30)) : undefined,
-      sketchPreviewTime: isSketch ? Math.min(10, Math.max(3,  parseInt(previewTime) || 3))  : undefined,
+      sketchDrawTime:    isSketch ? Math.min(20, Math.max(10, parseInt(drawTime)    || 15)) : undefined,
+      sketchPreviewTime: isSketch ? Math.min(3,  Math.max(1,  parseInt(previewTime) || 3))  : undefined,
       players: [{
         id: socket.id,
         name: playerName || "Player 1",

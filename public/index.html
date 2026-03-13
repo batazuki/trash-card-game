@@ -87,18 +87,18 @@
       <div id="sketch-preview-row" class="toggle-row hidden">
         <span class="toggle-label">Preview</span>
         <select id="sketch-preview-time" class="game-select">
+          <option value="1">1 second</option>
+          <option value="2">2 seconds</option>
           <option value="3" selected>3 seconds</option>
-          <option value="5">5 seconds</option>
-          <option value="10">10 seconds</option>
         </select>
       </div>
 
       <div id="sketch-draw-row" class="toggle-row hidden">
         <span class="toggle-label">Draw time</span>
         <select id="sketch-draw-time" class="game-select">
-          <option value="15">15 seconds</option>
-          <option value="30" selected>30 seconds</option>
-          <option value="60">60 seconds</option>
+          <option value="10">10 seconds</option>
+          <option value="15" selected>15 seconds</option>
+          <option value="20">20 seconds</option>
         </select>
       </div>
 
@@ -127,14 +127,6 @@
                style="text-transform:uppercase">
         <button class="btn btn-secondary" id="join-room-btn">Join</button>
       </div>
-
-      <label class="toggle-row">
-        <span class="toggle-label">Oldies (high contrast)</span>
-        <div class="toggle-wrap">
-          <input type="checkbox" id="oldies-toggle">
-          <span class="toggle-slider"></span>
-        </div>
-      </label>
 
       <p id="lobby-error" class="error hidden"></p>
     </div>
