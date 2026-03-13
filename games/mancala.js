@@ -3,8 +3,10 @@
 module.exports = function(io, helpers) {
   const { endGame } = helpers;
 
-  // Circular distribution order (counter-clockwise from P0's perspective):
-  // P0 pits: 0-5, P0 store: 6, P1 pits: 12,11,10,9,8,7 (visual order), P1 store: 13
+  // Circular distribution order (clockwise on the portrait column layout):
+  // Right col top→bottom: P0 pits 0-5, bottom store: P0 store 6,
+  // left col bottom→top: P1 pits 12→7, top store: P1 store 13
+  // Forward traversal (pos+1) = clockwise: down right col → bottom → up left col → top
   const CIRCLE = [0, 1, 2, 3, 4, 5, 6, 12, 11, 10, 9, 8, 7, 13];
   const CIRCLE_POS = new Array(14);
   CIRCLE.forEach((v, i) => { CIRCLE_POS[v] = i; });
@@ -28,7 +30,7 @@ module.exports = function(io, helpers) {
     let pos = CIRCLE_POS[pitIdx];
     let lastIdx = pitIdx;
     while (stones > 0) {
-      pos = (pos + 13) % 14;   // clockwise — step backward around the ring
+      pos = (pos + 1) % 14;    // clockwise — step forward around the ring
       const idx = CIRCLE[pos];
       pits[idx]++;
       stones--;

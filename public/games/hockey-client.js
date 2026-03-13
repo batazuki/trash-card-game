@@ -53,9 +53,12 @@
     const pad  = 32;
     const maxW = window.innerWidth  - pad;
     const maxH = window.innerHeight - pad;
+    // Taller aspect in portrait to maximise the rink height on phones
+    const portrait = window.innerHeight > window.innerWidth;
+    const ratio = portrait ? (7 / 4) : (4 / 3);
     let w = maxW;
-    let h = w * (4 / 3);
-    if (h > maxH) { h = maxH; w = h * (3 / 4); }
+    let h = w * ratio;
+    if (h > maxH) { h = maxH; w = h / ratio; }
     w = Math.floor(w);
     h = Math.floor(h);
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
