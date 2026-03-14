@@ -17,13 +17,23 @@ module.exports = function(io, helpers) {
       case "spiral":    return { loops: ri0(3, 7) };
       case "cross":     return { armLen: ri(0.30, 0.45), armThick: ri(0.10, 0.22) };
       case "diamond":   return { widthRatio: ri(0.55, 1.4) };
-      case "arrow":     return { dir: ri0(0, 3) };
+      case "arrow":     return { dir: ri0(0, 3), shaftLen: ri(0.44, 0.72) };
       case "sun":       return { rays: ri0(5, 12) };
       case "moon":      return { bite: ri(0.55, 0.80) };
       case "mountain":  return { peaks: ri0(1, 3) };
-      case "tree":      return { layers: ri0(2, 4) };
+      case "tree":      return { layers: ri0(2, 5) };
       case "crown":     return { points: ri0(3, 7) };
       case "lightning": return { segments: ri0(2, 4) };
+      // Shapes that were previously fixed — now parameterized:
+      case "cat_face":  return { whiskers: ri0(2, 3), mouthOpen: ri0(0, 1) };
+      case "house":     return { chimney: ri0(0, 1), hasWindow: ri0(0, 1) };
+      case "heart":     return { fatness: ri(0.82, 1.18) };
+      case "fish":      return { hasTopFin: ri0(0, 1), tailFork: ri0(0, 1) };
+      case "bird":      return { flipped: ri0(0, 1) };
+      case "cloud":     return { puffs: ri0(3, 5) };
+      case "rabbit":    return { floppy: ri0(0, 1) };
+      case "key":       return { notches: ri0(1, 3) };
+      case "mushroom":  return { spots: ri0(2, 5), capWide: ri(0.80, 1.15) };
       default:          return {};
     }
   }

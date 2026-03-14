@@ -15,6 +15,7 @@
   // Fixed shapes ignore the params argument (p). Parameterized shapes use it.
 
   function drawCatFace(ctx, w, h, p) {
+    p = p || {};
     var cx = w / 2, cy = h * 0.52, r = w * 0.36;
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
     function ear(pts) {
@@ -26,18 +27,46 @@
     ear([cx + r*0.55, cy - r*0.78, cx + r*0.75, cy - r*1.28, cx + r*0.2, cy - r*0.85]);
     ctx.beginPath(); ctx.arc(cx - r*0.35, cy - r*0.18, r*0.1, 0, Math.PI*2); ctx.fill(); ctx.stroke();
     ctx.beginPath(); ctx.arc(cx + r*0.35, cy - r*0.18, r*0.1, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx - r*0.12, cy + r*0.08); ctx.lineTo(cx - r*0.85, cy); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx - r*0.12, cy + r*0.18); ctx.lineTo(cx - r*0.85, cy + r*0.25); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx + r*0.12, cy + r*0.08); ctx.lineTo(cx + r*0.85, cy); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx + r*0.12, cy + r*0.18); ctx.lineTo(cx + r*0.85, cy + r*0.25); ctx.stroke();
-    ctx.beginPath(); ctx.arc(cx, cy + r*0.28, r*0.18, 0, Math.PI); ctx.stroke();
+    // Whiskers: 2 or 3 per side
+    var n = (p.whiskers === 3) ? 3 : 2;
+    var wkY = n === 3
+      ? [cy - r*0.04, cy + r*0.10, cy + r*0.22]
+      : [cy + r*0.08, cy + r*0.22];
+    for (var i = 0; i < n; i++) {
+      ctx.beginPath(); ctx.moveTo(cx - r*0.12, wkY[i]); ctx.lineTo(cx - r*0.90, wkY[i] - r*0.07); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx + r*0.12, wkY[i]); ctx.lineTo(cx + r*0.90, wkY[i] - r*0.07); ctx.stroke();
+    }
+    // Mouth: smile arc or open/meow W-shape
+    if (p.mouthOpen) {
+      ctx.beginPath();
+      ctx.moveTo(cx - r*0.28, cy + r*0.28);
+      ctx.quadraticCurveTo(cx - r*0.1, cy + r*0.48, cx, cy + r*0.36);
+      ctx.quadraticCurveTo(cx + r*0.1, cy + r*0.48, cx + r*0.28, cy + r*0.28);
+      ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.arc(cx, cy + r*0.28, r*0.18, 0, Math.PI); ctx.stroke();
+    }
   }
 
   function drawHouse(ctx, w, h, p) {
+    p = p || {};
     var bx = w*0.15, by = h*0.45, bw = w*0.7, bh = h*0.42;
     ctx.beginPath(); ctx.rect(bx, by, bw, bh); ctx.stroke();
+    // Roof
     ctx.beginPath(); ctx.moveTo(bx - w*0.04, by); ctx.lineTo(w/2, h*0.1); ctx.lineTo(bx+bw+w*0.04, by); ctx.stroke();
+    // Door
     ctx.beginPath(); ctx.rect(w*0.41, by+bh*0.52, bw*0.18, bh*0.48); ctx.stroke();
+    // Optional window
+    if (p.hasWindow) {
+      ctx.beginPath(); ctx.rect(w*0.20, by + bh*0.14, bw*0.19, bh*0.25); ctx.stroke();
+    }
+    // Optional chimney
+    if (p.chimney) {
+      var chX = w*0.63, chW = w*0.08;
+      var roofYatCh = h*0.1 + (bx+bw+w*0.04 - chX) / (bx+bw+w*0.04 - w/2) * (h*0.1 - by) * (-1);
+      // simpler: just place chimney above the roof line at a fixed offset
+      ctx.beginPath(); ctx.rect(chX, h*0.06, chW, h*0.12); ctx.stroke();
+    }
   }
 
   function drawStar(ctx, w, h, p) {
@@ -56,30 +85,63 @@
   }
 
   function drawHeart(ctx, w, h, p) {
+    p = p || {};
+    // fatness: 0.82 (narrow) → 1.0 (normal) → 1.18 (wide/chubby)
+    var f = p.fatness || 1.0;
     var cx = w/2, top = h*0.22, bot = h*0.85;
+    var lx = cx * (2 - f), rx = w - lx; // push control points inward or outward
     ctx.beginPath();
     ctx.moveTo(cx, bot);
-    ctx.bezierCurveTo(w*0.02, h*0.58, w*0.02, top, w*0.28, top);
-    ctx.bezierCurveTo(w*0.4, top, cx, h*0.34, cx, h*0.34);
-    ctx.bezierCurveTo(cx, h*0.34, w*0.6, top, w*0.72, top);
-    ctx.bezierCurveTo(w*0.98, top, w*0.98, h*0.58, cx, bot);
+    ctx.bezierCurveTo(w*(0.02/f), h*0.58, w*(0.02/f), top, w*(0.14 + 0.14*f), top);
+    ctx.bezierCurveTo(w*(0.30 + 0.10*f), top, cx, h*0.34, cx, h*0.34);
+    ctx.bezierCurveTo(cx, h*0.34, w*(0.70 - 0.10*f), top, w*(0.86 - 0.14*f), top);
+    ctx.bezierCurveTo(w*(1 - 0.02/f), top, w*(1 - 0.02/f), h*0.58, cx, bot);
     ctx.closePath(); ctx.fill(); ctx.stroke();
   }
 
   function drawFish(ctx, w, h, p) {
+    p = p || {};
     var cx = w*0.46, cy = h/2, rx = w*0.32, ry = h*0.22;
     ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI*2); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx+rx-w*0.06, cy); ctx.lineTo(w*0.94, cy-ry*0.9); ctx.lineTo(w*0.94, cy+ry*0.9); ctx.closePath(); ctx.stroke();
+    // Tail: triangle or forked
+    var tailTip = w*0.94, tailSpread = ry*0.9;
+    if (p.tailFork) {
+      // Forked tail: two lobes with a notch
+      ctx.beginPath();
+      ctx.moveTo(cx+rx-w*0.06, cy);
+      ctx.lineTo(tailTip, cy - tailSpread);
+      ctx.lineTo(tailTip - w*0.08, cy - tailSpread*0.35);
+      ctx.lineTo(tailTip - w*0.08, cy + tailSpread*0.35);
+      ctx.lineTo(tailTip, cy + tailSpread);
+      ctx.closePath(); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.moveTo(cx+rx-w*0.06, cy); ctx.lineTo(tailTip, cy-tailSpread); ctx.lineTo(tailTip, cy+tailSpread); ctx.closePath(); ctx.stroke();
+    }
+    // Eye
     ctx.beginPath(); ctx.arc(cx-rx*0.5, cy-ry*0.25, rx*0.1, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    // Optional dorsal fin
+    if (p.hasTopFin) {
+      ctx.beginPath();
+      ctx.moveTo(cx - rx*0.1, cy - ry);
+      ctx.quadraticCurveTo(cx + rx*0.1, cy - ry*1.65, cx + rx*0.35, cy - ry);
+      ctx.stroke();
+    }
   }
 
   function drawBird(ctx, w, h, p) {
+    p = p || {};
     var cx = w/2, cy = h*0.5, r = w*0.28;
+    if (p.flipped) {
+      ctx.save();
+      ctx.translate(w, 0);
+      ctx.scale(-1, 1);
+    }
     ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI*0.25, Math.PI*1.75); ctx.stroke();
     ctx.beginPath(); ctx.arc(cx-r*0.8, cy-r*0.15, r*0.55, Math.PI*0.6, Math.PI*1.9); ctx.stroke();
     ctx.beginPath(); ctx.arc(cx+r*0.8, cy-r*0.15, r*0.55, Math.PI*1.1, Math.PI*2.4); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(cx-r*0.15, cy-r*0.55); ctx.lineTo(cx-r*0.52, cy-r*0.72); ctx.lineTo(cx-r*0.15, cy-r*0.32); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.beginPath(); ctx.arc(cx-r*0.08, cy-r*0.3, r*0.08, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    if (p.flipped) ctx.restore();
   }
 
   function drawTree(ctx, w, h, p) {
@@ -118,11 +180,22 @@
   }
 
   function drawCloud(ctx, w, h, p) {
+    p = p || {};
     var baseY = h * 0.62;
-    [[w*0.5, baseY-h*0.22, w*0.2],[w*0.3, baseY-h*0.1, w*0.16],[w*0.7, baseY-h*0.12, w*0.15],[w*0.18, baseY, w*0.12],[w*0.82, baseY, w*0.12]].forEach(function(a) {
-      ctx.beginPath(); ctx.arc(a[0], a[1], a[2], 0, Math.PI*2); ctx.stroke();
-    });
-    ctx.beginPath(); ctx.moveTo(w*0.08, baseY); ctx.lineTo(w*0.92, baseY); ctx.stroke();
+    var puffs = p.puffs || 5;
+    if (puffs <= 3) {
+      // Compact 3-puff cloud
+      [[w*0.5, baseY-h*0.20, w*0.22],[w*0.28, baseY-h*0.04, w*0.15],[w*0.72, baseY-h*0.06, w*0.15]].forEach(function(a) {
+        ctx.beginPath(); ctx.arc(a[0], a[1], a[2], 0, Math.PI*2); ctx.stroke();
+      });
+      ctx.beginPath(); ctx.moveTo(w*0.14, baseY); ctx.lineTo(w*0.86, baseY); ctx.stroke();
+    } else {
+      // Fluffy 5-puff cloud
+      [[w*0.5, baseY-h*0.22, w*0.2],[w*0.3, baseY-h*0.1, w*0.16],[w*0.7, baseY-h*0.12, w*0.15],[w*0.18, baseY, w*0.12],[w*0.82, baseY, w*0.12]].forEach(function(a) {
+        ctx.beginPath(); ctx.arc(a[0], a[1], a[2], 0, Math.PI*2); ctx.stroke();
+      });
+      ctx.beginPath(); ctx.moveTo(w*0.08, baseY); ctx.lineTo(w*0.92, baseY); ctx.stroke();
+    }
   }
 
   function drawMoon(ctx, w, h, p) {
@@ -178,16 +251,18 @@
   function drawArrow(ctx, w, h, p) {
     p = p || {};
     var dir = p.dir || 0;  // 0=right 1=left 2=up 3=down
+    var shaftLen = p.shaftLen || 0.57;  // fraction of width used for shaft
     var cx = w/2, cy = h/2;
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate([0, Math.PI, -Math.PI/2, Math.PI/2][dir] || 0);
     ctx.translate(-cx, -cy);
     var shaftY = h*0.1, tipX = w*0.88;
+    var shaftEnd = w*(1 - shaftLen + 0.08);  // right edge of shaft body
     ctx.beginPath();
-    ctx.moveTo(w*0.08, cy - shaftY*0.5); ctx.lineTo(w*0.65, cy - shaftY*0.5);
-    ctx.lineTo(w*0.65, cy - shaftY);     ctx.lineTo(tipX, cy);
-    ctx.lineTo(w*0.65, cy + shaftY);     ctx.lineTo(w*0.65, cy + shaftY*0.5);
+    ctx.moveTo(w*0.08, cy - shaftY*0.5); ctx.lineTo(shaftEnd, cy - shaftY*0.5);
+    ctx.lineTo(shaftEnd, cy - shaftY);   ctx.lineTo(tipX, cy);
+    ctx.lineTo(shaftEnd, cy + shaftY);   ctx.lineTo(shaftEnd, cy + shaftY*0.5);
     ctx.lineTo(w*0.08, cy + shaftY*0.5);
     ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.restore();
@@ -234,23 +309,39 @@
   }
 
   function drawRabbit(ctx, w, h, p) {
+    p = p || {};
     var cx = w/2, bodyY = h*0.64, headY = h*0.42;
     ctx.beginPath(); ctx.ellipse(cx, bodyY, w*0.26, h*0.24, 0, 0, Math.PI*2); ctx.stroke();
     ctx.beginPath(); ctx.ellipse(cx, headY, w*0.18, h*0.17, 0, 0, Math.PI*2); ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(cx-w*0.1, h*0.18, w*0.065, h*0.15, -0.2, 0, Math.PI*2); ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(cx+w*0.1, h*0.18, w*0.065, h*0.15, 0.2, 0, Math.PI*2); ctx.stroke();
+    // Ears: upright or floppy (one ear tilted outward)
+    if (p.floppy) {
+      // Left ear upright, right ear flopped to the side
+      ctx.beginPath(); ctx.ellipse(cx-w*0.1, h*0.18, w*0.065, h*0.15, -0.2, 0, Math.PI*2); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(cx+w*0.22, h*0.26, w*0.065, h*0.12, 1.1, 0, Math.PI*2); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.ellipse(cx-w*0.1, h*0.18, w*0.065, h*0.15, -0.2, 0, Math.PI*2); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(cx+w*0.1, h*0.18, w*0.065, h*0.15, 0.2, 0, Math.PI*2); ctx.stroke();
+    }
     ctx.beginPath(); ctx.arc(cx-w*0.06, headY-h*0.03, w*0.025, 0, Math.PI*2); ctx.fill(); ctx.stroke();
     ctx.beginPath(); ctx.arc(cx+w*0.06, headY-h*0.03, w*0.025, 0, Math.PI*2); ctx.fill(); ctx.stroke();
   }
 
   function drawKey(ctx, w, h, p) {
+    p = p || {};
     var headCX = w*0.3, headCY = h/2, headR = h*0.23;
     ctx.beginPath(); ctx.arc(headCX, headCY, headR, 0, Math.PI*2); ctx.stroke();
     ctx.beginPath(); ctx.arc(headCX, headCY, headR*0.55, 0, Math.PI*2); ctx.stroke();
     var shaftY = h*0.47, shaftH = h*0.06;
-    ctx.beginPath(); ctx.rect(headCX+headR-2, shaftY, w*0.45, shaftH); ctx.stroke();
-    ctx.beginPath(); ctx.rect(w*0.67, shaftY+shaftH, w*0.06, h*0.10); ctx.stroke();
-    ctx.beginPath(); ctx.rect(w*0.78, shaftY+shaftH, w*0.05, h*0.07); ctx.stroke();
+    var shaftStartX = headCX + headR - 2;
+    ctx.beginPath(); ctx.rect(shaftStartX, shaftY, w*0.45, shaftH); ctx.stroke();
+    // Variable notches (1-3): evenly spaced teeth below the shaft
+    var n = p.notches || 2;
+    var spacing = w * 0.45 / (n + 1);
+    var notchHeights = [h*0.10, h*0.07, h*0.10];
+    for (var i = 0; i < n; i++) {
+      var nx = shaftStartX + spacing * (i + 1) - w*0.025;
+      ctx.beginPath(); ctx.rect(nx, shaftY + shaftH, w*0.05, notchHeights[i % notchHeights.length]); ctx.stroke();
+    }
   }
 
   function drawCrown(ctx, w, h, p) {
@@ -276,13 +367,21 @@
   }
 
   function drawMushroom(ctx, w, h, p) {
+    p = p || {};
     var stemX = w*0.32, stemW = w*0.36, stemY = h*0.55, stemH = h*0.35;
-    var capCX = w/2, capCY = h*0.47, capRX = w*0.42, capRY = h*0.38;
+    var capCX = w/2, capCY = h*0.47;
+    var capWide = p.capWide || 1.0;
+    var capRX = w * 0.42 * capWide, capRY = h*0.38;
     ctx.beginPath(); ctx.ellipse(capCX, capCY, capRX, capRY, 0, Math.PI, 0); ctx.stroke();
     ctx.beginPath(); ctx.rect(stemX, stemY, stemW, stemH); ctx.stroke();
-    [[w*0.38,h*0.28],[w*0.6,h*0.22],[w*0.56,h*0.38]].forEach(function(s) {
-      ctx.beginPath(); ctx.arc(s[0], s[1], w*0.048, 0, Math.PI*2); ctx.stroke();
-    });
+    // Variable spots (2-5), arranged in a loose arc across the cap
+    var spotCount = p.spots || 3;
+    var spotPositions = [
+      [0.38,0.28],[0.60,0.22],[0.56,0.38],[0.30,0.40],[0.70,0.35]
+    ];
+    for (var i = 0; i < Math.min(spotCount, spotPositions.length); i++) {
+      ctx.beginPath(); ctx.arc(w*spotPositions[i][0], h*spotPositions[i][1], w*0.048, 0, Math.PI*2); ctx.stroke();
+    }
   }
 
   // ── Shape dispatcher ────────────────────────────────────────────────────────
@@ -310,11 +409,6 @@
 
   // ── Shape names ──────────────────────────────────────────────────────────────
 
-  var FIXED_NAMES = {
-    cat_face:'Cat Face', house:'House', heart:'Heart', fish:'Fish', bird:'Bird',
-    cloud:'Cloud', rabbit:'Rabbit', key:'Key', mushroom:'Mushroom',
-  };
-
   function computeShapeName(type, params) {
     params = params || {};
     switch (type) {
@@ -326,10 +420,19 @@
       case 'sun':       return 'Sun';
       case 'moon':      return 'Crescent Moon';
       case 'mountain':  return (params.peaks || 2) === 1 ? 'Mountain' : 'Mountains';
-      case 'tree':      return 'Tree';
+      case 'tree':      return 'Tree (' + (params.layers || 2) + ' layers)';
       case 'crown':     return 'Crown';
       case 'lightning': return 'Lightning Bolt';
-      default:          return FIXED_NAMES[type] || type;
+      case 'cat_face':  return params.mouthOpen ? 'Cat Face (meowing)' : 'Cat Face';
+      case 'house':     return params.chimney ? 'House with Chimney' : 'House';
+      case 'heart':     return (params.fatness || 1) > 1.08 ? 'Chubby Heart' : (params.fatness || 1) < 0.92 ? 'Slim Heart' : 'Heart';
+      case 'fish':      return params.hasTopFin ? 'Fish with Fin' : 'Fish';
+      case 'bird':      return 'Bird';
+      case 'cloud':     return (params.puffs || 5) <= 3 ? 'Small Cloud' : 'Fluffy Cloud';
+      case 'rabbit':    return params.floppy ? 'Rabbit (floppy ear)' : 'Rabbit';
+      case 'key':       return 'Key (' + (params.notches || 2) + ' notches)';
+      case 'mushroom':  return (params.capWide || 1) > 1.06 ? 'Wide Mushroom' : 'Mushroom';
+      default:          return type;
     }
   }
 
@@ -374,6 +477,8 @@
       if ((photoData[si] + photoData[si+1] + photoData[si+2]) < PHOTO_THRESH * 3) { rawPhotoPx[i] = 1; photoDark++; }
     }
     if (shapeDark === 0 || photoDark === 0) return 0;
+    // If more than 40% of the photo is dark it's a dark environment/table, not a drawing on paper
+    if (photoDark > SIZE * SIZE * 0.40) return 0;
 
     // ── 4. Find the bounding box of the user's dark marks ──
     // Core problem without this: the reference shape fills the full 128×128 canvas,
