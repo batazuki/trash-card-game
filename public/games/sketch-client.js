@@ -337,58 +337,102 @@
 
   function scorePhotoAgainstShape(videoEl, shape) {
     var SIZE = 128;
+    // Shape threshold: include anti-aliased stroke edges
+    var SHAPE_THRESH = 180;
+    // Photo threshold: loosened from 120 → 155 to catch pencil marks and dim lighting
+    var PHOTO_THRESH = 155;
 
-    // Render reference shape: black stroke on white background
-    var shapeOff = document.createElement('canvas');
-    shapeOff.width = shapeOff.height = SIZE;
-    var sc = shapeOff.getContext('2d');
+    // ── 1. Render reference shape: black stroke on white background ──
+    var shapeCanvas = document.createElement('canvas');
+    shapeCanvas.width = shapeCanvas.height = SIZE;
+    var sc = shapeCanvas.getContext('2d');
     sc.fillStyle = '#fff'; sc.fillRect(0, 0, SIZE, SIZE);
-    sc.save();
     sc.strokeStyle = '#000'; sc.fillStyle = 'rgba(0,0,0,0.15)';
     sc.lineWidth = Math.max(5, SIZE * 0.05);
     sc.lineCap = 'round'; sc.lineJoin = 'round';
-    var fn = SHAPE_DRAWERS[shape.type];
-    if (fn) fn(sc, SIZE, SIZE, shape.params || {});
-    sc.restore();
+    var shapeFn = SHAPE_DRAWERS[shape.type];
+    if (shapeFn) shapeFn(sc, SIZE, SIZE, shape.params || {});
     var shapeData = sc.getImageData(0, 0, SIZE, SIZE).data;
 
-    // Capture photo frame onto white background
-    var photoOff = document.createElement('canvas');
-    photoOff.width = photoOff.height = SIZE;
-    var pc = photoOff.getContext('2d');
+    // ── 2. Capture photo frame onto white background ──
+    var photoCanvas = document.createElement('canvas');
+    photoCanvas.width = photoCanvas.height = SIZE;
+    var pc = photoCanvas.getContext('2d');
     pc.fillStyle = '#fff'; pc.fillRect(0, 0, SIZE, SIZE);
     var vw = videoEl.videoWidth || 640, vh = videoEl.videoHeight || 480;
-    var scale = Math.min(SIZE / vw, SIZE / vh);
-    var pw = vw * scale, ph = vh * scale;
-    pc.drawImage(videoEl, (SIZE - pw) / 2, (SIZE - ph) / 2, pw, ph);
+    var fscl = Math.min(SIZE / vw, SIZE / vh);
+    pc.drawImage(videoEl, (SIZE - vw * fscl) / 2, (SIZE - vh * fscl) / 2, vw * fscl, vh * fscl);
     var photoData = pc.getImageData(0, 0, SIZE, SIZE).data;
 
-    // sB < 180: captures shape strokes including anti-aliased edge pixels
-    // pB < 120: strict threshold — only clear pen/pencil marks, rejects paper shadows
-    var shapeDark = 0, photoDark = 0, inter = 0;
+    // ── 3. Build binary pixel masks ──
+    var shapePx    = new Uint8Array(SIZE * SIZE);
+    var rawPhotoPx = new Uint8Array(SIZE * SIZE);
+    var shapeDark = 0, photoDark = 0;
     for (var i = 0; i < SIZE * SIZE; i++) {
       var si = i * 4;
-      var sB = (shapeData[si] + shapeData[si+1] + shapeData[si+2]) / 3;
-      var pB = (photoData[si] + photoData[si+1] + photoData[si+2]) / 3;
-      if (sB < 180) { shapeDark++; if (pB < 120) inter++; }
-      if (pB < 120) photoDark++;
+      if ((shapeData[si] + shapeData[si+1] + shapeData[si+2]) < SHAPE_THRESH * 3) { shapePx[i] = 1; shapeDark++; }
+      if ((photoData[si] + photoData[si+1] + photoData[si+2]) < PHOTO_THRESH * 3) { rawPhotoPx[i] = 1; photoDark++; }
+    }
+    if (shapeDark === 0 || photoDark === 0) return 0;
+
+    // ── 4. Find the bounding box of the user's dark marks ──
+    // Core problem without this: the reference shape fills the full 128×128 canvas,
+    // but the user's drawing on paper occupies only ~30–60px of the canvas after
+    // letterboxing the camera frame. This causes near-zero overlap even for perfect drawings.
+    var pMinX = SIZE, pMaxX = -1, pMinY = SIZE, pMaxY = -1;
+    for (var y = 0; y < SIZE; y++) {
+      for (var x = 0; x < SIZE; x++) {
+        if (!rawPhotoPx[y * SIZE + x]) continue;
+        if (x < pMinX) pMinX = x; if (x > pMaxX) pMaxX = x;
+        if (y < pMinY) pMinY = y; if (y > pMaxY) pMaxY = y;
+      }
+    }
+    var pbW = pMaxX - pMinX + 1, pbH = pMaxY - pMinY + 1;
+
+    // ── 5. Normalize: rescale the user's drawing region to fill the reference canvas ──
+    // This corrects for the user drawing at a different position/scale than the reference.
+    // Only normalize when the dark pixels form a concentrated region (not a dark background).
+    //   < 25% of canvas is dark  → not a dark-background/bad-lighting situation
+    //   bbox >= 10px across      → at least a minimal drawing was made
+    //   bbox < 85% of canvas     → marks aren't spread across the whole image
+    var photoPx = rawPhotoPx;
+    var doNorm = photoDark < SIZE * SIZE * 0.25
+              && pbW >= 10 && pbH >= 10
+              && pbW < SIZE * 0.85 && pbH < SIZE * 0.85;
+    if (doNorm) {
+      var normCanvas = document.createElement('canvas');
+      normCanvas.width = normCanvas.height = SIZE;
+      var nc = normCanvas.getContext('2d');
+      nc.fillStyle = '#fff'; nc.fillRect(0, 0, SIZE, SIZE);
+      // Stretch the photo's detected drawing region to fill the entire reference canvas.
+      // Canvas drawImage handles the interpolation, so thin strokes scale up naturally.
+      nc.drawImage(photoCanvas, pMinX, pMinY, pbW, pbH, 0, 0, SIZE, SIZE);
+      var normData = nc.getImageData(0, 0, SIZE, SIZE).data;
+      photoPx = new Uint8Array(SIZE * SIZE);
+      for (var i = 0; i < SIZE * SIZE; i++) {
+        var si = i * 4;
+        if ((normData[si] + normData[si+1] + normData[si+2]) < PHOTO_THRESH * 3) photoPx[i] = 1;
+      }
     }
 
-    if (shapeDark === 0) return 0;
-
-    // Intersection over Union — penalises both missed marks AND extra dark pixels in the photo.
-    // This prevents dark backgrounds / blank frames from inflating the score.
-    var union = shapeDark + photoDark - inter;
+    // ── 6. Intersection over Union ──
+    var inter = 0, union = 0;
+    for (var i = 0; i < SIZE * SIZE; i++) {
+      if (shapePx[i] || photoPx[i]) union++;
+      if (shapePx[i] && photoPx[i]) inter++;
+    }
     if (union === 0) return 0;
     var iou = inter / union;
 
-    // sqrt-scale IoU so scores spread usefully across 0–100:
-    //   IoU 0.00 (white page / wrong shape) → 0%
-    //   IoU 0.09 (rough / dark background) → ~30%
-    //   IoU 0.25 (decent match)            → ~50%
-    //   IoU 0.49 (good match)              → ~70%
-    //   IoU 0.81 (excellent)               → ~90%
-    return Math.min(100, Math.round(Math.sqrt(iou) * 100));
+    // Cube-root scale spreads scores more evenly across the range:
+    //   IoU 0.00 (blank / totally wrong shape) → 0%
+    //   IoU 0.05 (rough attempt)               → ~37%
+    //   IoU 0.15 (recognisable)                → ~53%
+    //   IoU 0.30 (decent match)                → ~67%
+    //   IoU 0.50 (good match)                  → ~79%
+    //   IoU 0.70 (great match)                 → ~89%
+    //   IoU 0.90 (excellent)                   → ~97%
+    return Math.min(100, Math.round(Math.cbrt(iou) * 100));
   }
 
   // ── Camera ──────────────────────────────────────────────────────────────────

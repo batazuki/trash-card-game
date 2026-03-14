@@ -329,8 +329,23 @@ function showShareToast(msg) {
 }
 
 // ═══ PRE-GAME LOBBY ═══
+const PREGAME_GAME_INFO = {
+  trash:         { icon: "♠",  name: "Trash" },
+  "trash-eleven":{ icon: "★",  name: "Eleven" },
+  war:           { icon: "⚔️", name: "War" },
+  solitaire:     { icon: "🃏", name: "Solitaire" },
+  hockey:        { icon: "🐾", name: "Cat Paw Hockey" },
+  mancala:       { icon: "🌸", name: "Mancala" },
+  sketch:        { icon: "✏️", name: "Sketch It" },
+};
+
 function showPregame(roomId, players, isHost) {
   $("pregame-code-text").textContent = roomId;
+  const pgInfo = PREGAME_GAME_INFO[local.gameType] || { icon: "♠", name: "Game" };
+  const pgIcon = $("pregame-game-icon");
+  const pgName = $("pregame-game-name");
+  if (pgIcon) pgIcon.textContent = pgInfo.icon;
+  if (pgName) pgName.textContent = pgInfo.name;
   updatePregamePlayers(players);
   const startBtn = $("pregame-start-btn");
   const statusEl = $("pregame-status");
@@ -374,6 +389,8 @@ $("pregame-cancel-btn").addEventListener("click", () => {
   if (local.roomId) socket.emit("leaveRoom", { roomId: local.roomId });
   local.roomId = null;
   local.isHost = false;
+  const currentGame = $("game-select").value || "trash";
+  if (window._syncCarousel) window._syncCarousel(currentGame);
   showScreen("lobby-screen");
 });
 
@@ -428,11 +445,11 @@ function closeViewCards() {
 function setRowOrder(on) {
   local.rowReversed = on;
   localStorage.setItem("rowReversed", on ? "1" : "0");
-  $("settings-row-order").textContent = on ? "🔄 6–10 Top: On" : "🔄 6–10 Top: Off";
+  $("settings-row-order").textContent = on ? "🔄 Flip Row: On" : "🔄 Flip Row: Off";
   const trashClient = window.gameClients.trash;
   if (trashClient && local.boards[0].length) trashClient.renderBothBoards();
 }
-$("settings-row-order").textContent = local.rowReversed ? "🔄 6–10 Top: On" : "🔄 6–10 Top: Off";
+$("settings-row-order").textContent = local.rowReversed ? "🔄 Flip Row: On" : "🔄 Flip Row: Off";
 
 // ═══ OLDIES / HIGH-CONTRAST MODE ═══
 function setOldiesMode(on) {
@@ -514,6 +531,7 @@ window._gameShared = {
 (function() {
   const saved = localStorage.getItem("game") || "trash";
   $("game-select").value = saved;
+  local.gameType = saved;
   applyGameTheme(saved);
 })();
 
@@ -526,11 +544,11 @@ $("game-select").addEventListener("change", e => {
 function updateLobbyForGame(game) {
   const isSolo = game === "solitaire";
   const isSketch = game === "sketch";
-  $("vs-ai-btn").textContent = isSolo ? "Play" : "Play vs AI";
-  $("vs-ai-btn").style.display = isSketch ? "none" : "";
-  $("create-room-btn").style.display = isSolo ? "none" : "";
-  document.querySelector(".divider").style.display = isSolo ? "none" : "";
-  document.querySelector(".join-row").style.display = isSolo ? "none" : "";
+  const vsAiBtn = $("vs-ai-btn");
+  vsAiBtn.textContent = isSolo ? "Play" : "Play vs AI";
+  vsAiBtn.classList.toggle("hidden", isSketch);
+  const friendsSection = $("friends-section");
+  if (friendsSection) friendsSection.classList.toggle("hidden", isSolo);
   ["sketch-rounds-row", "sketch-preview-row", "sketch-draw-row"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle("hidden", !isSketch);
@@ -601,6 +619,7 @@ $("back-lobby-btn").addEventListener("click", () => {
   $("score-display").classList.add("hidden");
   $("shared-reaction-bar").classList.add("hidden");
   $("end-game-switch").classList.add("hidden");
+  if (window._syncCarousel) window._syncCarousel(savedGame);
   showScreen("lobby-screen");
 });
 
@@ -609,6 +628,7 @@ $("back-lobby-btn").addEventListener("click", () => {
 socket.on("roomCreated", ({ roomId, players }) => {
   local.roomId = roomId;
   local.isHost = true;
+  local.gameType = $("game-select").value || "trash";
   showPregame(roomId, players, true);
 });
 
@@ -633,6 +653,7 @@ socket.on("joinedRoom", ({ roomId, game, players }) => {
     $("game-select").value = game;
     applyGameTheme(game);
     updateLobbyForGame(game);
+    if (window._syncCarousel) window._syncCarousel(game);
   }
   showPregame(roomId, players || [], false);
 });
@@ -814,6 +835,7 @@ function doQuitGame() {
   local.myPlayerIndex = null;
   local.gameType = savedGame;
   $("shared-reaction-bar").classList.add("hidden");
+  if (window._syncCarousel) window._syncCarousel(savedGame);
   showScreen("lobby-screen");
 }
 window._quitCurrentGame = doQuitGame;
@@ -826,6 +848,8 @@ $("settings-quit").addEventListener("click", () => {
 });
 
 $("help-btn-lobby").addEventListener("click", openHelp);
+const helpInGameBtn = $("help-in-game-btn");
+if (helpInGameBtn) helpInGameBtn.addEventListener("click", openHelp);
 $("help-close").addEventListener("click", closeHelp);
 $("help-modal").addEventListener("click", e => {
   if (e.target === $("help-modal")) closeHelp();
@@ -834,6 +858,71 @@ $("help-modal").addEventListener("click", e => {
 $("share-btn").addEventListener("click", () => shareRoomCode(local.roomId));
 
 $("see-cards-btn").addEventListener("click", viewCards);
+
+// ═══ GAME CAROUSEL ═══
+(function initGameCarousel() {
+  const carousel = $("game-carousel");
+  if (!carousel) return;
+  const select = $("game-select");
+  const GAMES = [
+    { value: "trash",         icon: "♠",  name: "Trash",          tagline: "Fill your board first",        players: "2 players",  tab: "default"   },
+    { value: "trash-eleven",  icon: "★",  name: "Eleven",         tagline: "Trash with an 11th slot",      players: "2 players",  tab: "eleven"    },
+    { value: "war",           icon: "⚔️", name: "War",            tagline: "Flip to win the deck",          players: "2 players",  tab: "war"       },
+    { value: "solitaire",     icon: "🃏", name: "Solitaire",      tagline: "Classic solo card game",        players: "Solo",       tab: "solitaire" },
+    { value: "hockey",        icon: "🐾", name: "Cat Paw Hockey", tagline: "Swipe yarn into the goal",      players: "2 players",  tab: "hockey"    },
+    { value: "mancala",       icon: "🌸", name: "Mancala",        tagline: "Collect the most seeds",        players: "2 players",  tab: "mancala"   },
+    { value: "sketch",        icon: "✏️", name: "Sketch It",      tagline: "Draw from memory & score",      players: "2+ players", tab: "sketch"    },
+  ];
+
+  const savedGame = select.value || "trash";
+  GAMES.forEach(g => {
+    const card = document.createElement("div");
+    card.className = "game-card" + (g.value === savedGame ? " selected" : "");
+    card.dataset.game = g.value;
+    card.innerHTML =
+      `<span class="game-card-icon">${g.icon}</span>` +
+      `<span class="game-card-name">${g.name}</span>` +
+      `<span class="game-card-tagline">${g.tagline}</span>` +
+      `<span class="game-card-players">${g.players}</span>` +
+      `<button class="game-card-learn" data-tab="${g.tab}">Learn to play →</button>`;
+
+    card.addEventListener("click", e => {
+      if (e.target.classList.contains("game-card-learn")) {
+        e.stopPropagation();
+        const tabKey = e.target.dataset.tab;
+        document.querySelectorAll(".modal-tab").forEach(t => t.classList.remove("active"));
+        document.querySelectorAll(".modal-section").forEach(s => s.classList.remove("active"));
+        const tab = document.querySelector(`.modal-tab[data-tab="${tabKey}"]`);
+        if (tab) tab.classList.add("active");
+        const sec = document.getElementById("help-" + tabKey);
+        if (sec) sec.classList.add("active");
+        document.querySelector(".modal-tabs").classList.remove("hidden");
+        $("help-modal").classList.remove("hidden");
+        return;
+      }
+      document.querySelectorAll(".game-card").forEach(c => c.classList.remove("selected"));
+      card.classList.add("selected");
+      select.value = g.value;
+      localStorage.setItem("game", g.value);
+      applyGameTheme(g.value);
+      updateLobbyForGame(g.value);
+      card.scrollIntoView({ behavior: "smooth", inline: "nearest", block: "nearest" });
+    });
+
+    carousel.appendChild(card);
+  });
+
+  setTimeout(() => {
+    const sel = carousel.querySelector(".game-card.selected");
+    if (sel) sel.scrollIntoView({ behavior: "instant", inline: "nearest", block: "nearest" });
+  }, 60);
+
+  window._syncCarousel = function(game) {
+    document.querySelectorAll(".game-card").forEach(c => {
+      c.classList.toggle("selected", c.dataset.game === game);
+    });
+  };
+})();
 
 // ═══ RECONNECTION ═══
 

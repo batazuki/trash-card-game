@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l /c/Users/hokie/Downloads/trash-card-game/public/games/*.js)",
+      "Bash(cd \"C:\\\\Users\\\\hokie\\\\Downloads\\\\trash-card-game\" && node --check public/game.js 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\hokie\\\\Downloads\\\\trash-card-game\" && node --check server.js 2>&1)",
+      "Bash(node --check \"C:\\\\Users\\\\hokie\\\\Downloads\\\\trash-card-game\\\\public\\\\games\\\\sketch-client.js\" 2>&1)"
+    ]
+  }
+}

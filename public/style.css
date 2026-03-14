@@ -1251,6 +1251,10 @@ body.game-trash-eleven.your-turn-flash #game-screen { animation: bg-pulse-eleven
   top: 10px;
   right: 10px;
   z-index: 200;
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  align-items: flex-start;
 }
 .gear-btn {
   background: rgba(255,255,255,0.7);
@@ -1974,3 +1978,181 @@ body.game-sketch #end-screen {
   text-align: center; font-size: 13px; font-weight: 700;
   color: var(--text-dim, rgba(180,200,255,0.72)); padding: 4px 0;
 }
+
+/* ═══════════════════════════════════════════════
+   UX IMPROVEMENTS — GAME CAROUSEL, LOBBY, END
+   ═══════════════════════════════════════════════ */
+
+/* ── Full-width button ── */
+.btn-full { width: 100%; }
+
+/* ── Ghost button (tertiary action) ── */
+.btn-ghost {
+  background: transparent;
+  color: var(--text-dim);
+  border: none;
+  box-shadow: none;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 13px 20px;
+  border-radius: 16px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: color 0.15s, background 0.15s;
+}
+.btn-ghost:hover { color: var(--text); background: rgba(255,255,255,0.35); }
+.btn-ghost:active { transform: scale(0.96); }
+
+/* ── End screen primary CTA — bigger, animated ── */
+.btn-end-primary {
+  font-size: 18px !important;
+  padding: 16px 20px !important;
+  animation: end-btn-appear 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+  animation-delay: 0.15s;
+}
+@keyframes end-btn-appear {
+  from { transform: scale(0.8); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+/* ── Game Carousel ── */
+.game-carousel-wrap {
+  width: calc(100% + 48px);
+  margin-left: -24px;
+  overflow: hidden;
+}
+.game-carousel {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 8px 24px 14px;
+}
+.game-carousel::-webkit-scrollbar { display: none; }
+
+.game-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 16px 10px 12px;
+  width: 108px;
+  min-width: 108px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.68);
+  border: 2.5px solid #fcd5e8;
+  cursor: pointer;
+  scroll-snap-align: start;
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  text-align: center;
+  user-select: none;
+  touch-action: manipulation;
+  box-shadow: 0 2px 10px rgba(236,72,153,0.08);
+  flex-shrink: 0;
+}
+.game-card:active { transform: scale(0.94); }
+.game-card.selected {
+  border-color: var(--accent);
+  background: rgba(236,72,153,0.08);
+  box-shadow: 0 4px 18px rgba(236,72,153,0.25);
+  transform: translateY(-2px);
+}
+.game-card-icon {
+  font-size: 28px;
+  line-height: 1;
+  display: block;
+}
+.game-card-name {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--text);
+  line-height: 1.2;
+  display: block;
+}
+.game-card-tagline {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-dim);
+  line-height: 1.35;
+  display: block;
+}
+.game-card-players {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+  display: block;
+}
+.game-card-learn {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent2);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font);
+  padding: 2px 0 0;
+  touch-action: manipulation;
+  user-select: none;
+}
+.game-card-learn:hover { text-decoration: underline; }
+
+/* ── Friends section ── */
+#friends-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Pre-game lobby badge ── */
+.pregame-game-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px 24px 12px;
+  background: rgba(255,255,255,0.55);
+  border: 2px solid #fcd5e8;
+  border-radius: 20px;
+  width: 100%;
+  box-shadow: 0 2px 10px rgba(236,72,153,0.08);
+}
+.pregame-game-icon {
+  font-size: 36px;
+  line-height: 1;
+  display: block;
+}
+.pregame-game-name {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--text);
+  letter-spacing: 1px;
+}
+
+/* ── Eleven theme: carousel overrides ── */
+body.game-trash-eleven .game-card {
+  background: rgba(0,0,50,0.55);
+  border-color: rgba(0,229,255,0.2);
+  box-shadow: 0 2px 10px rgba(0,229,255,0.06);
+}
+body.game-trash-eleven .game-card.selected {
+  border-color: #e50914;
+  background: rgba(229,9,20,0.12);
+  box-shadow: 0 4px 18px rgba(229,9,20,0.3);
+}
+body.game-trash-eleven .game-card-name { color: var(--text); }
+body.game-trash-eleven .game-card-tagline { color: var(--text-dim); }
+body.game-trash-eleven .game-card-players { color: #00e5ff; }
+body.game-trash-eleven .game-card-learn { color: #00b4cc; }
+body.game-trash-eleven .pregame-game-badge {
+  background: rgba(0,0,40,0.55);
+  border-color: rgba(0,229,255,0.2);
+}
+body.game-trash-eleven .pregame-game-name { color: var(--text); }
+body.game-trash-eleven .btn-ghost { color: rgba(200,200,255,0.45); }
+body.game-trash-eleven .btn-ghost:hover { background: rgba(255,255,255,0.06); color: rgba(200,200,255,0.8); }
