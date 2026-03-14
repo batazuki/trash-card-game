@@ -64,6 +64,7 @@ module.exports = function(io, helpers) {
 
   function clearTimers(sk) {
     if (sk.timerRef) { clearInterval(sk.timerRef); sk.timerRef = null; }
+    if (sk.transitionTimeout) { clearTimeout(sk.transitionTimeout); sk.transitionTimeout = null; }
     sk.photoTimeouts.forEach((t, i) => {
       if (t) { clearTimeout(t); sk.photoTimeouts[i] = null; }
     });
@@ -153,7 +154,8 @@ module.exports = function(io, helpers) {
     sk.photos = new Array(sk.numPlayers).fill(null);
 
     const over = sk.round >= sk.maxRounds;
-    setTimeout(() => {
+    sk.transitionTimeout = setTimeout(() => {
+      sk.transitionTimeout = null;
       if (state.phase !== "playing" || !state.sketch) return;
       if (over) {
         finishGame(state, roomId);
@@ -207,6 +209,7 @@ module.exports = function(io, helpers) {
         roundWins: new Array(n).fill(0),
         phase: "preview",
         timerRef: null,
+        transitionTimeout: null,
         photoTimeouts: new Array(n).fill(null),
       };
       state.phase = "playing";
@@ -279,7 +282,7 @@ module.exports = function(io, helpers) {
       });
     },
 
-    getReconnectData(state) {
+    getReconnectData(state, playerIndex) {
       if (!state.sketch) return {};
       const sk = state.sketch;
       return {
@@ -289,6 +292,7 @@ module.exports = function(io, helpers) {
           roundWins: sk.roundWins.slice(),
           phase: sk.phase,
           shape: sk.shape,
+          drawDone: sk.drawDone[playerIndex] || false,
         },
       };
     },

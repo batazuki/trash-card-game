@@ -570,7 +570,7 @@
       '<div class="sk-reveal-original">' + shapeCanvas +
         '<div class="sk-reveal-orig-label">Original: ' + computeShapeName(shape.type, shape.params) + '</div>' +
       '</div>' +
-      '<div class="sketch-photo-row">' + panelsHTML + '</div>' +
+      '<div class="sketch-photo-row" data-players="' + playerNames.length + '">' + panelsHTML + '</div>' +
       '<div class="sk-next-msg">' + nextMsg + '</div>'
     );
 
@@ -631,6 +631,13 @@
   }
 
   function onGameStart(data) {
+    // Release any lingering camera stream and de-register stale handlers
+    stopCamera();
+    socket.off('sketch:start_round', onStartRound);
+    socket.off('sketch:timer', onTimer);
+    socket.off('sketch:goto_camera', onGotoCamera);
+    socket.off('sketch:round_result', onRoundResult);
+
     disposed = false;
     inCameraPhase = false;
     myIdx = data.myPlayerIndex;
@@ -661,8 +668,12 @@
       currentRound = data.sketch.round;
       roundWins = data.sketch.roundWins || new Array(playerNames.length).fill(0);
       if (data.sketch.phase === 'preview' || data.sketch.phase === 'draw') {
-        showDrawPhase();
-        setStatus('Reconnected — drawing phase in progress');
+        if (data.sketch.drawDone) {
+          showCameraPhase();
+        } else {
+          showDrawPhase();
+          setStatus('Reconnected — drawing phase in progress');
+        }
       } else if (data.sketch.phase === 'camera') {
         showCameraPhase();
       }

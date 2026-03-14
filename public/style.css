@@ -1897,7 +1897,7 @@ body.game-sketch #end-screen {
 .sketch-timer-bar {
   height: 100%;
   background: linear-gradient(90deg, #60a5fa, #a78bfa);
-  transition: width 0.9s linear;
+  transition: width 1s linear;
   border-radius: 4px;
 }
 .sk-camera-wrap { text-align: center; }
@@ -1912,10 +1912,14 @@ body.game-sketch #end-screen {
   margin-top: 8px;
 }
 .sketch-photo-row {
-  display: flex; gap: 10px; justify-content: center;
+  display: grid; gap: 10px;
+  grid-template-columns: 1fr 1fr; /* 2-player and 4-player (2×2) */
+}
+.sketch-photo-row[data-players="3"] {
+  grid-template-columns: 1fr 1fr 1fr;
 }
 .sketch-photo-panel {
-  flex: 1; max-width: 49%;
+  min-width: 0;
   border-radius: 12px; overflow: hidden;
   border: 3px solid rgba(96,165,250,0.25);
   background: #0a0f23; text-align: center;
