@@ -4,7 +4,8 @@
       "Bash(wc -l /c/Users/hokie/Downloads/trash-card-game/public/games/*.js)",
       "Bash(cd \"C:\\\\Users\\\\hokie\\\\Downloads\\\\trash-card-game\" && node --check public/game.js 2>&1)",
       "Bash(cd \"C:\\\\Users\\\\hokie\\\\Downloads\\\\trash-card-game\" && node --check server.js 2>&1)",
-      "Bash(node --check \"C:\\\\Users\\\\hokie\\\\Downloads\\\\trash-card-game\\\\public\\\\games\\\\sketch-client.js\" 2>&1)"
+      "Bash(node --check \"C:\\\\Users\\\\hokie\\\\Downloads\\\\trash-card-game\\\\public\\\\games\\\\sketch-client.js\" 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\hokie\\\\Downloads\\\\trash-card-game\" && node --check server.js && node --check games/solitaire.js && node --check games/war.js && node --check games/hockey.js && node --check games/mancala.js && node --check public/games/sketch-client.js && echo \"ALL OK\")"
     ]
   }
 }

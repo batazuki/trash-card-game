@@ -76,7 +76,9 @@ module.exports = function(io, helpers) {
     return pits[13] - pits[6];
   }
 
-  function minimax(pits, player, depth, alpha, beta) {
+  function minimax(pits, player, depth, alpha, beta, nodes) {
+    // H4: cap total nodes to prevent blocking the event loop on deep trees
+    if (++nodes.count > 50000) return evaluate(pits);
     if (depth === 0 || isGameOver(pits)) {
       const p = pits.slice();
       if (isGameOver(p)) collectRemaining(p);
@@ -90,7 +92,7 @@ module.exports = function(io, helpers) {
     let best = maximize ? -Infinity : Infinity;
     for (const move of moves) {
       const r = applyMove(pits, move, player);
-      const score = minimax(r.pits, r.nextPlayer, depth - 1, alpha, beta);
+      const score = minimax(r.pits, r.nextPlayer, depth - 1, alpha, beta, nodes);
       if (maximize) { best = Math.max(best, score); alpha = Math.max(alpha, best); }
       else          { best = Math.min(best, score); beta  = Math.min(beta, best);  }
       if (beta <= alpha) break;
@@ -102,11 +104,12 @@ module.exports = function(io, helpers) {
     const moves = getValidMoves(pits, player);
     if (!moves.length) return null;
     const maximize = player === 1;
+    const nodes = { count: 0 }; // H4: shared counter across all minimax calls for this move
     let bestMove = moves[0];
     let bestScore = maximize ? -Infinity : Infinity;
     for (const move of moves) {
       const r = applyMove(pits, move, player);
-      const score = minimax(r.pits, r.nextPlayer, 7, -Infinity, Infinity);
+      const score = minimax(r.pits, r.nextPlayer, 7, -Infinity, Infinity, nodes);
       if (maximize ? score > bestScore : score < bestScore) {
         bestScore = score; bestMove = move;
       }

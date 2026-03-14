@@ -5,14 +5,16 @@
 
 const express = require("express");
 const http    = require("http");
+const crypto  = require("crypto");
 const { Server } = require("socket.io");
 const path    = require("path");
 
 const app    = express();
 const server = http.createServer(app);
 const io     = new Server(server, {
-  pingTimeout:  30000,
-  pingInterval: 10000,
+  pingTimeout:       30000,
+  pingInterval:      10000,
+  maxHttpBufferSize: 1e6,   // C1: cap any single socket message at 1 MB
 });
 
 app.use(express.static(path.join(__dirname, "public")));
@@ -24,6 +26,7 @@ server.listen(PORT, () => console.log(`Tiny Tiny Games running on port ${PORT}`)
 // IN-MEMORY ROOM STORE
 // ═══════════════════════════════════════════════
 const rooms = new Map(); // roomId → GameState
+const MAX_ROOMS = 500;   // L1: prevent infinite generateRoomId loop
 
 // ═══════════════════════════════════════════════
 // SHARED UTILITIES
@@ -53,16 +56,30 @@ function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// L1: bail out rather than looping forever
 function generateRoomId() {
+  if (rooms.size >= MAX_ROOMS) throw new Error("Server at capacity");
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-  let id;
+  let id, attempts = 0;
   do {
     id = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+    if (++attempts > 1000) throw new Error("Cannot generate unique room ID");
   } while (rooms.has(id));
   return id;
 }
 
+// C2: per-player session token for rejoin authentication
+function generateToken() {
+  return crypto.randomBytes(24).toString("hex");
+}
+
+// C4: strip HTML-significant chars and enforce length cap on player names
+function sanitizeName(name) {
+  return String(name || "").replace(/[<>&"'`]/g, "").trim().slice(0, 20) || "Player";
+}
+
 function endGame(state, roomId, winnerIndex) {
+  if (state.phase === "ended") return; // H1: idempotency guard — prevents double score on async races
   state.phase = "ended";
   state.scores[winnerIndex]++;
   state.gamesPlayed++;
@@ -104,8 +121,9 @@ const gameModules = {
   sketch: sketchGame,
 };
 
+// M10: return null for unknown game types — callers already guard for null
 function getGameModule(gameType) {
-  return gameModules[gameType] || trashGame;
+  return gameModules[gameType] || null;
 }
 
 // ═══════════════════════════════════════════════
@@ -113,9 +131,17 @@ function getGameModule(gameType) {
 // ═══════════════════════════════════════════════
 
 function startGame(state, roomId) {
+  // H6: cancel any pending room-delete timer before starting a new game
+  clearTimeout(state.cleanupTimer);
+  state.cleanupTimer = null;
   const mod = getGameModule(state.game);
   if (mod) mod.startGame(state, roomId);
 }
+
+// ═══════════════════════════════════════════════
+// ALLOWED REACTION EMOJIS (M1)
+// ═══════════════════════════════════════════════
+const ALLOWED_EMOJIS = new Set(["👍","😂","😮","🔥","💀","😬","🦍","6️⃣7️⃣"]);
 
 // ═══════════════════════════════════════════════
 // SOCKET EVENTS
@@ -133,13 +159,25 @@ io.on("connection", socket => {
 
   // ── Create Room ──
   socket.on("createRoom", ({ playerName, game, rounds, drawTime, previewTime }) => {
-    const roomId = generateRoomId();
-    const isSketch = game === "sketch";
-    const creator = { id: socket.id, name: playerName || "Player 1", isAI: false, board: [], wantsRematch: false };
+    let roomId;
+    try { roomId = generateRoomId(); }
+    catch(e) { socket.emit("joinError", { message: "Server is full, try again later." }); return; }
+
+    const safeGame = gameModules[game] ? game : "trash"; // only accept known game types
+    const isSketch = safeGame === "sketch";
+    const token = generateToken(); // C2
+    const creator = {
+      id: socket.id,
+      name: sanitizeName(playerName), // C4
+      isAI: false,
+      board: [],
+      wantsRematch: false,
+      token,
+    };
     const state = {
       roomId,
       phase: "lobby",
-      game: game || "trash",
+      game: safeGame,
       sketchMaxRounds:   isSketch ? Math.min(5,  Math.max(1,  parseInt(rounds)      || 3))  : undefined,
       sketchMaxPlayers:  isSketch ? 4 : undefined,
       sketchDrawTime:    isSketch ? Math.min(20, Math.max(10, parseInt(drawTime)    || 15)) : undefined,
@@ -153,10 +191,12 @@ io.on("connection", socket => {
       pendingValidSlots: null,
       scores: [0],
       gamesPlayed: 0,
+      endedTimer: null,
+      cleanupTimer: null,
     };
     rooms.set(roomId, state);
     socket.join(roomId);
-    socket.emit("roomCreated", { roomId, players: [{ name: creator.name }] });
+    socket.emit("roomCreated", { roomId, players: [{ name: creator.name }], token }); // C2: send token
   });
 
   // ── Join Room ──
@@ -175,16 +215,18 @@ io.on("connection", socket => {
       return;
     }
 
+    const token = generateToken(); // C2
     state.players.push({
       id: socket.id,
-      name: playerName || `Player ${state.players.length + 1}`,
+      name: sanitizeName(playerName), // C4
       isAI: false,
       board: [],
       wantsRematch: false,
+      token,
     });
     socket.join(roomId);
     const playerList = state.players.map(p => ({ name: p.name }));
-    socket.emit("joinedRoom", { roomId, game: state.game, players: playerList });
+    socket.emit("joinedRoom", { roomId, game: state.game, players: playerList, token }); // C2: send token
     io.to(roomId).emit("playerJoined", { players: playerList });
   });
 
@@ -203,18 +245,23 @@ io.on("connection", socket => {
       socket.emit("joinError", { message: "Sketch It requires two real players. Create a room and share the code!" });
       return;
     }
-    const roomId = generateRoomId();
-    const isSolo = game === "solitaire";
+    let roomId;
+    try { roomId = generateRoomId(); }
+    catch(e) { socket.emit("joinError", { message: "Server is full, try again later." }); return; }
+
+    const safeGame = gameModules[game] ? game : "trash";
+    const isSolo = safeGame === "solitaire";
+    const token = generateToken(); // C2
     const players = [
-      { id: socket.id, name: playerName || "Player", isAI: false, board: [], wantsRematch: false },
+      { id: socket.id, name: sanitizeName(playerName), isAI: false, board: [], wantsRematch: false, token }, // C4
     ];
     if (!isSolo) {
-      players.push({ id: "ai", name: "AI", isAI: true, board: [], wantsRematch: false });
+      players.push({ id: "ai", name: "AI", isAI: true, board: [], wantsRematch: false, token: null });
     }
     const state = {
       roomId,
       phase: "lobby",
-      game: game || "trash",
+      game: safeGame,
       players,
       deck: [],
       discardPile: [],
@@ -224,9 +271,12 @@ io.on("connection", socket => {
       pendingValidSlots: null,
       scores: isSolo ? [0] : [0, 0],
       gamesPlayed: 0,
+      endedTimer: null,
+      cleanupTimer: null,
     };
     rooms.set(roomId, state);
     socket.join(roomId);
+    socket.emit("playerToken", { token }); // C2: send token before gameStart for AI/solo games
     startGame(state, roomId);
   });
 
@@ -264,6 +314,10 @@ io.on("connection", socket => {
     const playerIndex = state.players.findIndex(p => p.id === socket.id);
     if (playerIndex === -1 || playerIndex !== state.currentPlayerIndex) return;
 
+    // M5: validate slotIndex is an integer in the valid range before passing to game logic
+    slotIndex = parseInt(slotIndex, 10);
+    if (!Number.isInteger(slotIndex) || slotIndex < 0 || slotIndex > 10) return;
+
     const mod = getGameModule(state.game);
     if (mod && mod.handlePlaceWildcard) mod.handlePlaceWildcard(state, roomId, playerIndex, slotIndex);
   });
@@ -276,7 +330,11 @@ io.on("connection", socket => {
     if (quitterIndex === -1) return;
     state.phase = "ended";
     io.to(roomId).emit("opponentQuit", { quitterIndex });
-    setTimeout(() => rooms.delete(roomId), 30000);
+    socket.leave(roomId); // L7: clean up socket membership so client needn't send leaveRoom too
+    // H6: store timer reference so a subsequent startGame (rematch) can cancel it
+    clearTimeout(state.cleanupTimer);
+    clearTimeout(state.endedTimer);
+    state.cleanupTimer = setTimeout(() => rooms.delete(roomId), 30000);
   });
 
   // ── Leave Room ──
@@ -287,8 +345,10 @@ io.on("connection", socket => {
     if (pi === -1) return;
     socket.leave(roomId);
     io.to(roomId).emit("opponentLeft");
+    // H6: store timer; cancel any existing cleanup/ended timer first
     clearTimeout(state.endedTimer);
-    setTimeout(() => rooms.delete(roomId), 5000);
+    clearTimeout(state.cleanupTimer);
+    state.cleanupTimer = setTimeout(() => rooms.delete(roomId), 5000);
   });
 
   // ── Change Game Type (from end screen) ──
@@ -296,7 +356,12 @@ io.on("connection", socket => {
     const state = rooms.get(roomId);
     if (!state || state.phase !== "ended") return;
     if (!gameModules[game]) return;
+    // M2: only room participants may change the game
+    const pi = state.players.findIndex(p => p.id === socket.id);
+    if (pi === -1) return;
     state.game = game;
+    // M2: reset rematch votes so a pre-existing "Rematch" click doesn't auto-start the new game
+    state.players.forEach(p => { p.wantsRematch = false; });
     io.to(roomId).emit("gameChanged", { game });
   });
 
@@ -304,18 +369,22 @@ io.on("connection", socket => {
   socket.on("sendReaction", ({ roomId, emoji }) => {
     const state = rooms.get(roomId);
     if (!state || state.phase === "lobby") return;
+    // M1: whitelist — reject any arbitrary string a client might send
+    if (!ALLOWED_EMOJIS.has(emoji)) return;
     const playerIndex = state.players.findIndex(p => p.id === socket.id);
     if (playerIndex === -1) return;
     io.to(roomId).emit("reaction", { playerIndex, emoji });
   });
 
   // ── Rejoin Room ──
-  socket.on("rejoinRoom", ({ roomId, playerIndex }) => {
+  socket.on("rejoinRoom", ({ roomId, playerIndex, token }) => {
     const state = rooms.get(roomId);
     if (!state || state.phase !== "playing") return;
     if (playerIndex < 0 || playerIndex >= state.players.length) return;
     const player = state.players[playerIndex];
     if (!player || !player.disconnecting) return;
+    // C2: require the session token issued at room creation / join to prevent slot hijacking
+    if (!token || token !== player.token) return;
 
     clearTimeout(player.disconnectTimer);
     player.disconnecting = false;
@@ -344,6 +413,8 @@ io.on("connection", socket => {
   // ── Disconnect ──
   socket.on("disconnect", () => {
     console.log(`Disconnected: ${socket.id}`);
+    // H5 note: linear scan is acceptable at this scale; a socketRooms reverse-index
+    // would be an optimization for servers with thousands of concurrent rooms.
     for (const [roomId, state] of rooms.entries()) {
       const idx = state.players.findIndex(p => p.id === socket.id);
       if (idx === -1) continue;
@@ -357,10 +428,14 @@ io.on("connection", socket => {
             io.to(roomId).emit("opponentDisconnected");
             state.phase = "ended";
           }
-          setTimeout(() => rooms.delete(roomId), 30000);
+          // H6: store the cleanup timer so startGame (rematch) can cancel it
+          clearTimeout(state.cleanupTimer);
+          state.cleanupTimer = setTimeout(() => rooms.delete(roomId), 30000);
         }, 15000);
       } else {
-        setTimeout(() => rooms.delete(roomId), 5000);
+        // H6: store timer reference
+        clearTimeout(state.cleanupTimer);
+        state.cleanupTimer = setTimeout(() => rooms.delete(roomId), 5000);
       }
       break;
     }

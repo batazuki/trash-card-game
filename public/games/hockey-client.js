@@ -477,6 +477,7 @@
       canvas.addEventListener("pointermove",   onPointerMove);
       canvas.addEventListener("pointerup",     onPointerUp);
       canvas.addEventListener("pointercancel", onPointerUp);
+      window.removeEventListener("resize", onResize); // M8: remove before re-adding to prevent duplicate listeners on reconnect
       window.addEventListener("resize", onResize);
 
       if (rafId) cancelAnimationFrame(rafId);

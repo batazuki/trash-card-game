@@ -255,7 +255,7 @@
 
   function drawCrown(ctx, w, h, p) {
     p = p || {};
-    var nPts = p.points || 5;
+    var nPts = Math.max(2, p.points || 5); // L8: guard against nPts=1 → division by zero in i/(nPts-1)
     var leftX = w*0.08, rightX = w*0.92;
     var baseTop = h*0.44, top = h*0.22;
 
@@ -590,6 +590,11 @@
     var photos = data.photos || [];
     var shape  = data.shape || currentShape || { type: 'star', params: {} };
 
+    // C4: escape HTML to prevent XSS from malicious playerName values
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
     function photoHTML(photo, name, score, won) {
       var border = won ? ' winner' : '';
       var badge  = won ? '<div class="sk-winner-badge">Winner! 🏆</div>' : '';
@@ -598,8 +603,8 @@
         : '<div class="sketch-missing-photo">No photo</div>';
       return '<div class="sketch-photo-panel' + border + '">' +
         badge + img +
-        '<div class="sketch-photo-label">' + name + '</div>' +
-        '<div class="sk-score-badge">' + score + '% match</div>' +
+        '<div class="sketch-photo-label">' + escHtml(name) + '</div>' +
+        '<div class="sk-score-badge">' + (score | 0) + '% match</div>' +
       '</div>';
     }
 

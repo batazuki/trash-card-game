@@ -1,7 +1,7 @@
 // games/solitaire.js — Klondike Solitaire server logic (minimal — mostly client-side)
 
 module.exports = function(io, helpers) {
-  const { createDeck, shuffle } = helpers;
+  const { createDeck, shuffle, endGame } = helpers;
 
   function dealSolitaire() {
     const deck = shuffle(createDeck());
@@ -42,14 +42,10 @@ module.exports = function(io, helpers) {
       // Client handles all move logic locally
       socket.on("solitaire:win", ({ roomId }) => {
         const state = rooms.get(roomId);
-        if (!state || state.game !== "solitaire") return;
-        state.phase = "ended";
-        io.to(roomId).emit("gameOver", {
-          winnerIndex: 0,
-          winnerName: state.players[0].name,
-          scores: state.scores,
-          gamesPlayed: state.gamesPlayed,
-        });
+        // C3: guard phase AND game type AND player membership to prevent event spam
+        if (!state || state.game !== "solitaire" || state.phase !== "playing") return;
+        if (state.players[0]?.id !== socket.id) return;
+        endGame(state, roomId, 0); // use shared helper — updates scores, gamesPlayed, TTL timer
       });
     },
 

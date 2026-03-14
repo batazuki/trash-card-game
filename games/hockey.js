@@ -347,6 +347,8 @@ module.exports = function(io, helpers) {
 
     registerEvents(socket, rooms) {
       socket.on("hockey:paddle", ({ roomId, x, y }) => {
+        // H3: reject NaN/Infinity — clamp() passes NaN through, which corrupts physics permanently
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return;
         const state = rooms.get(roomId);
         if (!state || state.phase !== "playing" || !state.hockey) return;
         const pi = state.players.findIndex(p => p.id === socket.id);

@@ -600,6 +600,7 @@ $("play-again-btn").addEventListener("click", () => {
 $("back-lobby-btn").addEventListener("click", () => {
   releaseWakeLock();
   stopElevenMusic();
+  sessionStorage.removeItem("rejoinToken"); // C2: clear token when intentionally leaving
   // Notify server we're leaving
   if (local.roomId) {
     socket.emit("leaveRoom", { roomId: local.roomId });
@@ -625,10 +626,11 @@ $("back-lobby-btn").addEventListener("click", () => {
 
 // ═══ SOCKET EVENTS ═══
 
-socket.on("roomCreated", ({ roomId, players }) => {
+socket.on("roomCreated", ({ roomId, players, token }) => {
   local.roomId = roomId;
   local.isHost = true;
   local.gameType = $("game-select").value || "trash";
+  if (token) sessionStorage.setItem("rejoinToken", token); // C2: store for rejoin auth
   showPregame(roomId, players, true);
 });
 
@@ -645,9 +647,10 @@ socket.on("playerJoined", ({ players }) => {
   }
 });
 
-socket.on("joinedRoom", ({ roomId, game, players }) => {
+socket.on("joinedRoom", ({ roomId, game, players, token }) => {
   local.roomId = roomId;
   local.isHost = false;
+  if (token) sessionStorage.setItem("rejoinToken", token); // C2: store for rejoin auth
   if (game) {
     local.gameType = game;
     $("game-select").value = game;
@@ -822,8 +825,8 @@ $("settings-help").addEventListener("click", () => {
 function doQuitGame() {
   if (!local.roomId) return;
   releaseWakeLock();
+  // L7: server's quitGame handler now calls socket.leave(), so leaveRoom is redundant here
   socket.emit("quitGame", { roomId: local.roomId });
-  socket.emit("leaveRoom", { roomId: local.roomId });
   stopElevenMusic();
   const gameClient = window.gameClients[local.gameType];
   if (gameClient && gameClient.cleanup) gameClient.cleanup();
@@ -926,13 +929,20 @@ $("see-cards-btn").addEventListener("click", viewCards);
 
 // ═══ RECONNECTION ═══
 
+// C2: store token from playVsAI/solitaire flow (roomCreated/joinedRoom handle the others)
+socket.on("playerToken", ({ token }) => {
+  if (token) sessionStorage.setItem("rejoinToken", token);
+});
+
 socket.on("disconnect", () => {
   document.title = "Reconnecting… — Tiny Tiny Games";
 });
 
 socket.on("connect", () => {
   if (local.roomId && local.myPlayerIndex !== null) {
-    socket.emit("rejoinRoom", { roomId: local.roomId, playerIndex: local.myPlayerIndex });
+    // C2: include session token so server can authenticate the rejoin
+    const token = sessionStorage.getItem("rejoinToken") || "";
+    socket.emit("rejoinRoom", { roomId: local.roomId, playerIndex: local.myPlayerIndex, token });
   }
 });
 

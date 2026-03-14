@@ -553,6 +553,7 @@
 
   // ── Socket ─────────────────────────────────────────────────────────────────
   function registerEvents() {
+    socket.off('mancala:state'); // M7: remove previous listener before re-registering (prevents duplicate listeners on rematch)
     socket.on('mancala:state', function(data) {
       pits = data.pits;
       currentPlayer = data.currentPlayer;

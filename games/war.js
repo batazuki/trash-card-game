@@ -45,8 +45,12 @@ module.exports = function(io, helpers) {
     } else {
       // Tie → War!
       if (r.depth >= 3) {
-        // Max war depth — higher suit breaks tie (arbitrary but deterministic)
-        const winnerIdx = r.faceUp[0].id > r.faceUp[1].id ? 0 : 1;
+        // Max war depth — break tie by suit rank (deterministic, not lexicographic)
+        // L3: card IDs are like "h13", "s9"; string compare "s9">"h13" is wrong — use suit index
+        const SUIT_ORDER = { h: 0, d: 1, c: 2, s: 3 };
+        const s0 = SUIT_ORDER[r.faceUp[0].id[0]] ?? 0;
+        const s1 = SUIT_ORDER[r.faceUp[1].id[0]] ?? 0;
+        const winnerIdx = s0 >= s1 ? 0 : 1;
         const pot = [...r.pot, r.faceUp[0], r.faceUp[1]];
         state.piles[winnerIdx].unshift(...shuffle(pot));
         io.to(roomId).emit("war:result", {
@@ -148,6 +152,8 @@ module.exports = function(io, helpers) {
       socket.on("war:flip", ({ roomId }) => {
         const state = rooms.get(roomId);
         if (!state || state.phase !== "playing" || state.game !== "war") return;
+        // H2: verify sender is actually a room participant
+        if (state.players.findIndex(p => p.id === socket.id) === -1) return;
         if (state.warRound) return; // already flipping
 
         // Both flip simultaneously

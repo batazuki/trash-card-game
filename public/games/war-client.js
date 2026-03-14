@@ -48,16 +48,26 @@
   }
 
   function updateCounts() {
-    const myIdx = window._gameLocal.myPlayerIndex;
-    document.getElementById("war-my-count").textContent = state.pileCounts[myIdx] + " cards";
-    document.getElementById("war-opp-count").textContent = state.pileCounts[1 - myIdx] + " cards";
+    // M6: guard against being called while a different game is active (elements won't exist)
+    const myEl  = document.getElementById("war-my-count");
+    const oppEl = document.getElementById("war-opp-count");
+    if (!myEl || !oppEl) return;
+    const myIdx = window._gameLocal && window._gameLocal.myPlayerIndex;
+    if (myIdx == null) return;
+    myEl.textContent  = state.pileCounts[myIdx]       + " cards";
+    oppEl.textContent = state.pileCounts[1 - myIdx]   + " cards";
   }
 
   function clearBattle() {
-    document.getElementById("war-battle-opp").innerHTML = "";
-    document.getElementById("war-battle-me").innerHTML = "";
-    document.getElementById("war-war-cards").innerHTML = "";
-    document.getElementById("war-message").textContent = "";
+    // M6: guard against missing DOM elements when game is not active
+    const bo = document.getElementById("war-battle-opp");
+    const bm = document.getElementById("war-battle-me");
+    const wc = document.getElementById("war-war-cards");
+    const wm = document.getElementById("war-message");
+    if (bo) bo.innerHTML = "";
+    if (bm) bm.innerHTML = "";
+    if (wc) wc.innerHTML = "";
+    if (wm) wm.textContent = "";
   }
 
   window.gameClients = window.gameClients || {};
@@ -112,6 +122,8 @@
 
   // Socket handlers
   socket.on("war:result", ({ faceUp, winnerIndex, pileCounts, warCards }) => {
+    // M6: these handlers are always registered; ignore if we're not in a war game
+    if (!window._gameLocal || window._gameLocal.gameType !== "war") return;
     const myIdx = window._gameLocal.myPlayerIndex;
     state.pileCounts = pileCounts;
 
@@ -182,6 +194,7 @@
   });
 
   socket.on("war:tie", ({ faceUp, warDown, pileCounts }) => {
+    if (!window._gameLocal || window._gameLocal.gameType !== "war") return; // M6
     const myIdx = window._gameLocal.myPlayerIndex;
     state.pileCounts = pileCounts;
 
