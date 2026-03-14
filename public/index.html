@@ -171,7 +171,7 @@
       <button id="help-in-game-btn" class="gear-btn" aria-label="How to Play">?</button>
       <button id="gear-btn" class="gear-btn" aria-label="Settings">⚙</button>
       <div id="settings-panel" class="settings-panel hidden">
-        <button id="settings-music" class="settings-item">🔊 Music</button>
+        <button id="settings-music" class="settings-item">🔊 Sound</button>
         <button id="settings-oldies" class="settings-item">👓 Oldies: Off</button>
         <button id="settings-row-order" class="settings-item">🔄 Flip Row: Off</button>
         <button id="settings-landscape" class="settings-item">↔ Landscape: Off</button>
@@ -400,7 +400,7 @@
         </div>
         <div class="modal-rule">
           <strong>Draw</strong>
-          Sketch the shape on paper in 30 seconds — no peeking at the screen! Tap "Done Drawing" if you finish early.
+          Sketch the shape on paper within the time limit — no peeking at the screen! Tap "Done Drawing" if you finish early.
         </div>
         <div class="modal-rule">
           <strong>Scan</strong>
@@ -419,6 +419,27 @@
       <button class="btn btn-secondary modal-close" id="help-close">Got it</button>
     </div>
   </div>
+
+  <!-- ═══ QUIT CONFIRMATION MODAL ═══ -->
+  <div id="quit-modal" class="modal-overlay hidden">
+    <div class="modal-box quit-modal-box">
+      <div class="quit-modal-emoji">🚪</div>
+      <h2 class="modal-title">Quit game?</h2>
+      <p class="quit-modal-sub">Your opponent will be notified.</p>
+      <div class="quit-modal-btns">
+        <button class="btn btn-primary" id="quit-cancel-btn">Keep Playing</button>
+        <button class="btn btn-ghost" id="quit-confirm-btn">Quit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ OPPONENT DISCONNECTED BANNER ═══ -->
+  <div id="opp-disconnected-banner" class="opp-disconnected-banner hidden">
+    ⏳ Opponent disconnected — waiting for reconnect…
+  </div>
+
+  <!-- ═══ SHARE TOAST ═══ -->
+  <div id="share-toast" class="share-toast"></div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="game.js"></script>

@@ -230,8 +230,8 @@ io.on("connection", socket => {
     io.to(roomId).emit("playerJoined", { players: playerList });
   });
 
-  // ── Sketch: Host requests game start ──
-  socket.on("sketch:start_request", ({ roomId }) => {
+  // ── Host requests game start (from pre-game lobby) ──
+  socket.on("hostStartGame", ({ roomId }) => {
     const state = rooms.get(roomId);
     if (!state || state.phase !== "lobby") return;
     if (state.players[0]?.id !== socket.id) return; // host only

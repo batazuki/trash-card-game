@@ -274,7 +274,7 @@ function toggleMusic() {
   musicMuted = !musicMuted;
   if (musicMasterGain) musicMasterGain.gain.setTargetAtTime(musicMuted ? 0 : 0.55, musicCtx.currentTime, 0.1);
   const btn = $("settings-music");
-  if (btn) btn.textContent = musicMuted ? "🔇 Music" : "🔊 Music";
+  if (btn) btn.textContent = musicMuted ? "🔇 Sound" : "🔊 Sound";
 }
 
 // ═══ SOUND EFFECTS ═══
@@ -315,17 +315,12 @@ async function shareRoomCode(roomId) {
   } catch(e) { showShareToast(roomId); }
 }
 function showShareToast(msg) {
-  let t = document.getElementById("share-toast");
-  if (!t) {
-    t = document.createElement("div");
-    t.id = "share-toast";
-    t.style.cssText = "position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.75);color:#fff;padding:8px 18px;border-radius:20px;font-family:var(--font);font-size:13px;font-weight:800;z-index:400;pointer-events:none;";
-    document.body.appendChild(t);
-  }
+  const t = document.getElementById("share-toast");
+  if (!t) return;
   t.textContent = msg;
-  t.style.opacity = "1";
+  t.classList.add("share-toast-visible");
   clearTimeout(t._timer);
-  t._timer = setTimeout(() => { t.style.opacity = "0"; }, 2000);
+  t._timer = setTimeout(() => t.classList.remove("share-toast-visible"), 2000);
 }
 
 // ═══ PRE-GAME LOBBY ═══
@@ -378,7 +373,7 @@ function updatePregamePlayers(players) {
 }
 
 $("pregame-start-btn").addEventListener("click", () => {
-  socket.emit("sketch:start_request", { roomId: local.roomId });
+  socket.emit("hostStartGame", { roomId: local.roomId });
   $("pregame-start-btn").disabled = true;
   $("pregame-start-btn").textContent = "Starting...";
 });
@@ -391,6 +386,7 @@ $("pregame-cancel-btn").addEventListener("click", () => {
   local.isHost = false;
   const currentGame = $("game-select").value || "trash";
   if (window._syncCarousel) window._syncCarousel(currentGame);
+  setLobbyBusy(false);
   showScreen("lobby-screen");
 });
 
@@ -556,10 +552,17 @@ function updateLobbyForGame(game) {
 }
 updateLobbyForGame(localStorage.getItem("game") || "trash");
 
+function setLobbyBusy(busy) {
+  [$("vs-ai-btn"), $("create-room-btn"), $("join-room-btn")].forEach(btn => {
+    if (btn) btn.disabled = busy;
+  });
+}
+
 $("vs-ai-btn").addEventListener("click", () => {
   const name = $("player-name").value.trim() || "Player";
   local.playerName = name;
   local.vsAI = true;
+  setLobbyBusy(true);
   socket.emit("playVsAI", { playerName: name, game: $("game-select").value });
 });
 
@@ -573,6 +576,7 @@ $("create-room-btn").addEventListener("click", () => {
     roomPayload.drawTime = parseInt($("sketch-draw-time").value) || 15;
     roomPayload.previewTime = parseInt($("sketch-preview-time").value) || 3;
   }
+  setLobbyBusy(true);
   socket.emit("createRoom", roomPayload);
 });
 
@@ -581,6 +585,7 @@ $("join-room-btn").addEventListener("click", () => {
   const code = $("join-code").value.trim().toUpperCase();
   if (!code || code.length !== 4) { showError("Enter a 4-letter room code"); return; }
   local.playerName = name;
+  setLobbyBusy(true);
   socket.emit("joinRoom", { roomId: code, playerName: name });
 });
 
@@ -621,6 +626,7 @@ $("back-lobby-btn").addEventListener("click", () => {
   $("shared-reaction-bar").classList.add("hidden");
   $("end-game-switch").classList.add("hidden");
   if (window._syncCarousel) window._syncCarousel(savedGame);
+  setLobbyBusy(false);
   showScreen("lobby-screen");
 });
 
@@ -663,6 +669,7 @@ socket.on("joinedRoom", ({ roomId, game, players, token }) => {
 
 socket.on("joinError", ({ message }) => {
   showError(message);
+  setLobbyBusy(false);
 });
 
 socket.on("gameStart", (data) => {
@@ -679,11 +686,15 @@ socket.on("gameStart", (data) => {
 
   window._gameLocal = local;
 
+  window._mancalaTied = false; // clear stale tie flag from any previous mancala game
+
   applyGameTheme(local.gameType);
   if (local.gameType === "trash-eleven") startElevenMusic();
   else stopElevenMusic();
 
   $("settings-row-order").classList.toggle("hidden", !local.gameType.startsWith("trash"));
+  const CANVAS_GAMES = ["hockey", "mancala", "sketch"];
+  $("settings-oldies").classList.toggle("hidden", CANVAS_GAMES.includes(local.gameType));
 
   const isTrash = local.gameType.startsWith("trash");
   const gameClient = window.gameClients[local.gameType];
@@ -695,6 +706,8 @@ socket.on("gameStart", (data) => {
   // Show shared reaction bar for non-trash multiplayer games (not solitaire, not hockey)
   const showSharedReactions = !isTrash && local.gameType !== "solitaire" && local.gameType !== "hockey";
   $("shared-reaction-bar").classList.toggle("hidden", !showSharedReactions);
+
+  $("opp-disconnected-banner").classList.add("hidden"); // clear any leftover banner from previous game
 
   if (gameClient) {
     gameClient.onGameStart(data);
@@ -729,7 +742,7 @@ socket.on("gameOver", ({ winnerIndex, winnerName, scores, gamesPlayed }) => {
   $("result-sub").textContent = subTexts[local.gameType] || (didWin ? "Nice job!" : "Better luck next time.");
   $("play-again-btn").disabled = false;
   $("play-again-btn").textContent = (local.vsAI || local.gameType === "solitaire") ? "Play Again" : "Rematch";
-  $("see-cards-btn").style.display = local.gameType.startsWith("trash") ? "" : "none";
+  $("see-cards-btn").classList.toggle("hidden", !local.gameType.startsWith("trash"));
   // Hide hockey from physics cleanup (already handled by clearInterval on server)
 
 
@@ -773,8 +786,8 @@ socket.on("reaction", ({ playerIndex, emoji }) => {
 });
 
 socket.on("opponentLeft", () => {
-  $("play-again-btn").disabled = true;
-  $("play-again-btn").textContent = "Opponent Left";
+  $("play-again-btn").disabled = false;
+  $("play-again-btn").textContent = "Play Again";
   $("end-game-switch").classList.add("hidden");
   $("result-sub").textContent = "Opponent left the room.";
 });
@@ -825,6 +838,7 @@ $("settings-help").addEventListener("click", () => {
 function doQuitGame() {
   if (!local.roomId) return;
   releaseWakeLock();
+  $("opp-disconnected-banner").classList.add("hidden");
   // L7: server's quitGame handler now calls socket.leave(), so leaveRoom is redundant here
   socket.emit("quitGame", { roomId: local.roomId });
   stopElevenMusic();
@@ -846,8 +860,19 @@ window._quitCurrentGame = doQuitGame;
 $("settings-quit").addEventListener("click", () => {
   $("settings-panel").classList.add("hidden");
   if (!local.roomId) return;
-  if (!confirm("Quit game? Your opponent will be notified.")) return;
+  $("quit-modal").classList.remove("hidden");
+});
+
+$("quit-cancel-btn").addEventListener("click", () => {
+  $("quit-modal").classList.add("hidden");
+});
+$("quit-confirm-btn").addEventListener("click", () => {
+  $("quit-modal").classList.add("hidden");
   doQuitGame();
+});
+// Close on backdrop click
+$("quit-modal").addEventListener("click", e => {
+  if (e.target === $("quit-modal")) $("quit-modal").classList.add("hidden");
 });
 
 $("help-btn-lobby").addEventListener("click", openHelp);
@@ -966,9 +991,13 @@ socket.on("gameRejoined", (data) => {
 
   $("trash-ui").classList.toggle("hidden", !isTrash);
   $("game-container").classList.toggle("hidden", isTrash);
+  $("settings-row-order").classList.toggle("hidden", !isTrash);
+  $("settings-oldies").classList.toggle("hidden", ["hockey", "mancala", "sketch"].includes(local.gameType));
 
-  const showSharedReactions = !isTrash && local.gameType !== "solitaire";
+  const showSharedReactions = !isTrash && local.gameType !== "solitaire" && local.gameType !== "hockey";
   $("shared-reaction-bar").classList.toggle("hidden", !showSharedReactions);
+
+  $("opp-disconnected-banner").classList.add("hidden");
 
   if (gameClient && gameClient.onReconnect) {
     gameClient.onReconnect(data);
@@ -979,11 +1008,13 @@ socket.on("gameRejoined", (data) => {
 });
 
 socket.on("opponentDisconnecting", () => {
-  // Generic message — Trash's updateTurnIndicator is now in trash-client
+  const banner = $("opp-disconnected-banner");
+  if (banner) banner.classList.remove("hidden");
 });
 
 socket.on("opponentReconnected", () => {
-  // Game-specific handlers will update their own UI
+  const banner = $("opp-disconnected-banner");
+  if (banner) banner.classList.add("hidden");
 });
 
 socket.on("opponentQuit", ({ quitterIndex }) => {

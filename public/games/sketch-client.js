@@ -477,8 +477,10 @@
       if ((photoData[si] + photoData[si+1] + photoData[si+2]) < PHOTO_THRESH * 3) { rawPhotoPx[i] = 1; photoDark++; }
     }
     if (shapeDark === 0 || photoDark === 0) return 0;
-    // If more than 40% of the photo is dark it's a dark environment/table, not a drawing on paper
-    if (photoDark > SIZE * SIZE * 0.40) return 0;
+    // If more than 55% of the photo is dark it's a dark environment/covered lens/table.
+    // 40% was too aggressive — dim indoor lighting can push a valid drawing to 40–50% dark.
+    // A pitch-black surface (the original bug) is ~100%, well above this threshold.
+    if (photoDark > SIZE * SIZE * 0.55) return 0;
 
     // ── 4. Find the bounding box of the user's dark marks ──
     // Core problem without this: the reference shape fills the full 128×128 canvas,
@@ -614,12 +616,15 @@
     setStatus('No peeking at the screen!');
 
     var btn = document.getElementById('sk-done-btn');
-    if (btn) btn.addEventListener('click', function() {
-      btn.disabled = true;
-      btn.textContent = 'Submitted!';
-      socket.emit('sketch:draw_done', { roomId: roomId });
-      showCameraPhase();
-    });
+    if (btn) {
+      btn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      btn.addEventListener('click', function() {
+        btn.disabled = true;
+        btn.textContent = 'Submitted!';
+        socket.emit('sketch:draw_done', { roomId: roomId });
+        showCameraPhase();
+      });
+    }
   }
 
   // ── Phase: Camera ────────────────────────────────────────────────────────────
@@ -634,21 +639,60 @@
         '<video id="sk-video" class="sketch-video" autoplay playsinline muted></video>' +
       '</div>' +
       '<button class="btn btn-primary sk-capture-btn" id="sk-capture-btn">📸 Capture Drawing</button>' +
-      '<div id="sk-cam-status" class="sk-cam-status">Point camera at your drawing</div>'
+      '<div id="sk-cam-status" class="sk-cam-status">Point camera at your drawing</div>' +
+      '<div id="sk-cam-timer" class="sk-cam-timer">60s</div>'
     );
     setStatus('Time to scan your drawing!');
+
+    // Client-side 60-second countdown matching the server's 65s timeout (5s buffer for latency)
+    var camSecsLeft = 60;
+    var camTimerEl = document.getElementById('sk-cam-timer');
+    var camInterval = setInterval(function() {
+      if (disposed || !document.getElementById('sk-cam-timer')) {
+        clearInterval(camInterval);
+        return;
+      }
+      camSecsLeft--;
+      if (camTimerEl) {
+        camTimerEl.textContent = camSecsLeft + 's';
+        if (camSecsLeft <= 10) camTimerEl.classList.add('sk-cam-timer-urgent');
+      }
+      if (camSecsLeft <= 0) clearInterval(camInterval);
+    }, 1000);
 
     var videoEl = document.getElementById('sk-video');
     var captureBtn = document.getElementById('sk-capture-btn');
     var camStatus = document.getElementById('sk-cam-status');
+
+    // Keep Capture disabled until the video frame is actually live.
+    // If tapped before the stream plays, videoWidth is 0 → score would always be 0
+    // and the saved photo would be a blank canvas.
+    if (captureBtn) {
+      captureBtn.disabled = true;
+      captureBtn.textContent = '⏳ Camera loading…';
+    }
+
+    function enableCapture() {
+      if (disposed || !captureBtn || !document.getElementById('sk-capture-btn')) return;
+      captureBtn.disabled = false;
+      captureBtn.textContent = '📸 Capture Drawing';
+    }
+
+    // Fallback: enable after 6 seconds in case the 'playing' event never fires
+    var enableFallback = setTimeout(enableCapture, 6000);
 
     navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 640 } } })
       .then(function(stream) {
         if (disposed) { stream.getTracks().forEach(function(t) { t.stop(); }); return; }
         cameraStream = stream;
         videoEl.srcObject = stream;
+        videoEl.addEventListener('playing', function() {
+          clearTimeout(enableFallback);
+          enableCapture();
+        }, { once: true });
       })
       .catch(function() {
+        clearTimeout(enableFallback);
         if (camStatus) camStatus.textContent = 'Camera unavailable — submitting score of 0';
         if (captureBtn) captureBtn.style.display = 'none';
         submitScore(0, null);
@@ -745,6 +789,9 @@
     if (el) el.textContent = data.timeLeft + 's';
     var bar = document.getElementById('sk-timer-bar');
     if (bar) bar.style.width = (data.timeLeft / (maxes[data.phase] || 15) * 100) + '%';
+    if (data.phase === 'preview' && data.timeLeft <= 1) {
+      setStatus('Shape disappearing…');
+    }
     if (data.phase === 'draw' && currentPhase === 'preview') showDrawPhase();
   }
 
@@ -821,7 +868,10 @@
       currentShape = data.sketch.shape || null;
       currentRound = data.sketch.round;
       roundWins = data.sketch.roundWins || new Array(playerNames.length).fill(0);
-      if (data.sketch.phase === 'preview' || data.sketch.phase === 'draw') {
+      if (data.sketch.phase === 'preview') {
+        showPreviewPhase(currentShape);
+        setStatus('Reconnected — memorize the shape!');
+      } else if (data.sketch.phase === 'draw') {
         if (data.sketch.drawDone) {
           showCameraPhase();
         } else {
