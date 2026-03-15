@@ -719,7 +719,7 @@ socket.on("gameStart", (data) => {
   else document.title = "Tiny Tiny Games";
 });
 
-socket.on("gameOver", ({ winnerIndex, winnerName, scores, gamesPlayed }) => {
+socket.on("gameOver", ({ winnerIndex, winnerName, scores, gamesPlayed, playerNames }) => {
   releaseWakeLock();
   if (winnerIndex === local.myPlayerIndex) playWinFanfare();
   const didWin = winnerIndex === local.myPlayerIndex;
@@ -753,9 +753,15 @@ socket.on("gameOver", ({ winnerIndex, winnerName, scores, gamesPlayed }) => {
 
   const scoreEl = $("score-display");
   if (scores && gamesPlayed > 1) {
-    const myScore = scores[local.myPlayerIndex];
-    const oppScore = scores[1 - local.myPlayerIndex];
-    scoreEl.textContent = `You ${myScore} — ${local.opponentName || "Opponent"} ${oppScore}`;
+    if (scores.length <= 2) {
+      const myScore = scores[local.myPlayerIndex];
+      const oppScore = scores[1 - local.myPlayerIndex];
+      scoreEl.textContent = `You ${myScore} — ${local.opponentName || "Opponent"} ${oppScore}`;
+    } else {
+      // 3-4 player game (Sketch)
+      const names = playerNames || scores.map((_, i) => i === local.myPlayerIndex ? "You" : `P${i + 1}`);
+      scoreEl.textContent = scores.map((s, i) => `${i === local.myPlayerIndex ? "You" : names[i]} ${s}`).join(" — ");
+    }
     scoreEl.classList.remove("hidden");
   } else {
     scoreEl.classList.add("hidden");
@@ -972,7 +978,7 @@ socket.on("connect", () => {
 });
 
 socket.on("gameRejoined", (data) => {
-  const { roomId, myPlayerIndex, players, game } = data;
+  const { roomId, myPlayerIndex, players, game, scores, gamesPlayed, opponentConnected } = data;
   local.roomId = roomId;
   local.myPlayerIndex = myPlayerIndex;
   local.gameType = game || "trash";
@@ -997,7 +1003,19 @@ socket.on("gameRejoined", (data) => {
   const showSharedReactions = !isTrash && local.gameType !== "solitaire" && local.gameType !== "hockey";
   $("shared-reaction-bar").classList.toggle("hidden", !showSharedReactions);
 
-  $("opp-disconnected-banner").classList.add("hidden");
+  // Only hide the banner if the opponent is actually connected; leave it up if they're still offline
+  if (opponentConnected) $("opp-disconnected-banner").classList.add("hidden");
+
+  // Restore cross-game win tally if there have been multiple games
+  const scoreEl = $("score-display");
+  if (scores && gamesPlayed > 1 && scores.length <= 2) {
+    const myScore = scores[myPlayerIndex];
+    const oppScore = scores[1 - myPlayerIndex];
+    scoreEl.textContent = `You ${myScore} — ${local.opponentName || "Opponent"} ${oppScore}`;
+    scoreEl.classList.remove("hidden");
+  } else {
+    scoreEl.classList.add("hidden");
+  }
 
   if (gameClient && gameClient.onReconnect) {
     gameClient.onReconnect(data);

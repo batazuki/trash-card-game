@@ -88,6 +88,7 @@ function endGame(state, roomId, winnerIndex) {
     winnerName: state.players[winnerIndex].name,
     scores: state.scores,
     gamesPlayed: state.gamesPlayed,
+    playerNames: state.players.map(p => p.name),
   });
   // Auto-cleanup room after 5 minutes if no rematch
   clearTimeout(state.endedTimer);
@@ -134,6 +135,8 @@ function startGame(state, roomId) {
   // H6: cancel any pending room-delete timer before starting a new game
   clearTimeout(state.cleanupTimer);
   state.cleanupTimer = null;
+  // Ensure scores array has a slot for every player (joinRoom doesn't add one)
+  while (state.scores.length < state.players.length) state.scores.push(0);
   const mod = getGameModule(state.game);
   if (mod) mod.startGame(state, roomId);
 }
@@ -149,6 +152,8 @@ const ALLOWED_EMOJIS = new Set(["👍","😂","😮","🔥","💀","😬","🦍"
 
 io.on("connection", socket => {
   console.log(`Connected: ${socket.id}`);
+  // Per-socket reaction rate-limit bucket (max 5 per 15 s)
+  const reactionTimestamps = [];
 
   // Register game-specific socket events
   warGame.registerEvents(socket, rooms);
@@ -373,6 +378,11 @@ io.on("connection", socket => {
     if (!ALLOWED_EMOJIS.has(emoji)) return;
     const playerIndex = state.players.findIndex(p => p.id === socket.id);
     if (playerIndex === -1) return;
+    // Server-side rate limit: max 5 reactions per 15 seconds per socket
+    const now = Date.now(), cutoff = now - 15000;
+    while (reactionTimestamps.length && reactionTimestamps[0] < cutoff) reactionTimestamps.shift();
+    if (reactionTimestamps.length >= 5) return;
+    reactionTimestamps.push(now);
     io.to(roomId).emit("reaction", { playerIndex, emoji });
   });
 
@@ -399,6 +409,7 @@ io.on("connection", socket => {
       ? mod.getReconnectData(state, playerIndex)
       : {};
 
+    const opponentConnected = !state.players.some((p, i) => i !== playerIndex && p.disconnecting);
     socket.emit("gameRejoined", {
       roomId,
       myPlayerIndex: playerIndex,
@@ -406,6 +417,9 @@ io.on("connection", socket => {
       players: state.players.map(p => ({ name: p.name, isAI: p.isAI })),
       deckCount: state.deck.length,
       game: state.game,
+      scores: state.scores,
+      gamesPlayed: state.gamesPlayed,
+      opponentConnected,
       ...gameData,
     });
   });

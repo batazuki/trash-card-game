@@ -11,6 +11,10 @@
   var disposed = false;
   var inCameraPhase = false;
 
+  // Stop camera if the tab is closed mid-game (stream would otherwise stay live)
+  function onBeforeUnload() { stopCamera(); }
+  window.addEventListener('beforeunload', onBeforeUnload);
+
   // ── Shape Drawing Functions ─────────────────────────────────────────────────
   // Fixed shapes ignore the params argument (p). Parameterized shapes use it.
 
@@ -739,7 +743,7 @@
       case 'wizard_hat': return params.leaning ? 'Tilted Wizard Hat' : 'Wizard Hat';
       case 'eyeball':   return params.hasLashes ? 'Eyeball with Lashes' : 'Eyeball';
       case 'toilet':    return 'Toilet';
-      default:          return type;
+      default:          return type.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
     }
   }
 
@@ -1195,6 +1199,7 @@
     disposed = true;
     inCameraPhase = false;
     stopCamera();
+    window.removeEventListener('beforeunload', onBeforeUnload);
     socket.off('sketch:start_round', onStartRound);
     socket.off('sketch:timer', onTimer);
     socket.off('sketch:goto_camera', onGotoCamera);
