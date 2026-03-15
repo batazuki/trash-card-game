@@ -46,6 +46,10 @@
     } else {
       ctx.beginPath(); ctx.arc(cx, cy + r*0.28, r*0.18, 0, Math.PI); ctx.stroke();
     }
+    // Optional third eye in forehead
+    if (p.thirdEye) {
+      ctx.beginPath(); ctx.arc(cx, cy - r*0.55, r*0.09, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    }
   }
 
   function drawHouse(ctx, w, h, p) {
@@ -176,6 +180,11 @@
       ctx.moveTo(cx + Math.cos(a)*(r+5), cy + Math.sin(a)*(r+5));
       ctx.lineTo(cx + Math.cos(a)*(r+rayLen), cy + Math.sin(a)*(r+rayLen));
       ctx.stroke();
+    }
+    if (p.hasFace) {
+      ctx.beginPath(); ctx.arc(cx - r*0.30, cy - r*0.14, r*0.09, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx + r*0.30, cy - r*0.14, r*0.09, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy + r*0.10, r*0.22, 0.1, Math.PI - 0.1); ctx.stroke();
     }
   }
 
@@ -384,6 +393,286 @@
     }
   }
 
+  // ── Silly shapes ─────────────────────────────────────────────────────────────
+
+  function drawGhost(ctx, w, h, p) {
+    p = p || {};
+    var cx = w / 2, arcR = w * 0.32, arcCY = h * 0.40;
+    var bodyRight = cx + arcR, bodyLeft = cx - arcR, waveBase = h * 0.76;
+    var scallops = p.scallops || 3;
+    ctx.beginPath();
+    ctx.arc(cx, arcCY, arcR, Math.PI, 0, true); // dome top
+    ctx.lineTo(bodyRight, waveBase);
+    var ww = (arcR * 2) / scallops;
+    for (var i = 0; i < scallops; i++) {
+      var dir = (i % 2 === 0) ? 1 : -1;
+      ctx.quadraticCurveTo(bodyRight - (i + 0.5) * ww, waveBase + dir * h * 0.09,
+                           bodyRight - (i + 1) * ww, waveBase);
+    }
+    ctx.closePath(); ctx.stroke();
+    var eyeY = arcCY + arcR * 0.08;
+    if (p.happy) {
+      ctx.beginPath(); ctx.arc(cx - arcR * 0.36, eyeY, arcR * 0.12, 0, Math.PI, true); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx + arcR * 0.36, eyeY, arcR * 0.12, 0, Math.PI, true); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, eyeY + arcR * 0.36, arcR * 0.18, 0, Math.PI); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.ellipse(cx - arcR * 0.36, eyeY, arcR * 0.13, arcR * 0.17, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(cx + arcR * 0.36, eyeY, arcR * 0.13, arcR * 0.17, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, eyeY + arcR * 0.40, arcR * 0.09, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+
+  function drawPoop(ctx, w, h, p) {
+    p = p || {};
+    var cx = w / 2, swirls = p.swirls || 2;
+    ctx.beginPath(); ctx.ellipse(cx, h * 0.82, w * 0.33, h * 0.11, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(cx + w * 0.04, h * 0.67, w * 0.22, h * 0.09, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(cx - w * 0.02, h * 0.53, w * 0.14, h * 0.08, 0, 0, Math.PI * 2); ctx.stroke();
+    if (swirls >= 3) {
+      ctx.beginPath(); ctx.ellipse(cx + w * 0.03, h * 0.41, w * 0.09, h * 0.06, 0, 0, Math.PI * 2); ctx.stroke();
+    }
+    var tipY = swirls >= 3 ? h * 0.35 : h * 0.43;
+    ctx.beginPath();
+    ctx.moveTo(cx - w * 0.04, tipY);
+    ctx.quadraticCurveTo(cx + w * 0.16, h * 0.22, cx + w * 0.02, tipY - h * 0.06);
+    ctx.stroke();
+    if (p.hasFace) {
+      ctx.beginPath(); ctx.arc(cx - w * 0.08, h * 0.66, w * 0.03, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx + w * 0.10, h * 0.66, w * 0.03, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx + w * 0.01, h * 0.73, w * 0.06, 0, Math.PI); ctx.stroke();
+    }
+  }
+
+  function drawAlienFace(ctx, w, h, p) {
+    p = p || {};
+    var cx = w / 2, headRX = w * 0.34, headRY = h * 0.37, headCY = h * 0.55;
+    ctx.beginPath(); ctx.ellipse(cx, headCY, headRX, headRY, 0, 0, Math.PI * 2); ctx.stroke();
+    var antBase = headCY - headRY;
+    if (p.forkedAntenna) {
+      ctx.beginPath();
+      ctx.moveTo(cx, antBase); ctx.lineTo(cx - w * 0.13, h * 0.08);
+      ctx.moveTo(cx, antBase); ctx.lineTo(cx + w * 0.13, h * 0.08);
+      ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx - w * 0.13, h * 0.07, w * 0.04, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx + w * 0.13, h * 0.07, w * 0.04, 0, Math.PI * 2); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.moveTo(cx, antBase); ctx.lineTo(cx + w * 0.07, h * 0.08); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx + w * 0.07, h * 0.07, w * 0.05, 0, Math.PI * 2); ctx.stroke();
+    }
+    var eyeY = headCY - headRY * 0.18;
+    var lrx = w * 0.10, rrx = p.lopsidedEyes ? w * 0.06 : w * 0.10;
+    ctx.beginPath(); ctx.ellipse(cx - headRX * 0.44, eyeY, lrx, h * 0.10, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx - headRX * 0.44, eyeY, w * 0.04, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(cx + headRX * 0.44, eyeY, rrx, h * 0.10, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx + headRX * 0.44, eyeY, w * 0.04, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    var mY = headCY + headRY * 0.44;
+    if (p.zigzagMouth) {
+      ctx.beginPath();
+      ctx.moveTo(cx - headRX * 0.38, mY);
+      ctx.lineTo(cx - headRX * 0.14, mY - h * 0.05);
+      ctx.lineTo(cx + headRX * 0.10, mY + h * 0.04);
+      ctx.lineTo(cx + headRX * 0.38, mY - h * 0.04);
+      ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.moveTo(cx - headRX * 0.36, mY); ctx.lineTo(cx + headRX * 0.36, mY); ctx.stroke();
+    }
+  }
+
+  function drawSnail(ctx, w, h, p) {
+    p = p || {};
+    var bodyBase = h * 0.74, headCX = w * 0.22, headCY = h * 0.64;
+    ctx.beginPath(); ctx.ellipse(w * 0.55, bodyBase, w * 0.38, h * 0.12, 0.15, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(headCX, headCY, w * 0.10, h * 0.10, 0, 0, Math.PI * 2); ctx.stroke();
+    var stalkLen = p.longStalks ? h * 0.16 : h * 0.11;
+    ctx.beginPath(); ctx.moveTo(headCX - w * 0.04, headCY - h * 0.07); ctx.lineTo(headCX - w * 0.07, headCY - h * 0.07 - stalkLen); ctx.stroke();
+    ctx.beginPath(); ctx.arc(headCX - w * 0.07, headCY - h * 0.07 - stalkLen, w * 0.035, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(headCX + w * 0.03, headCY - h * 0.08); ctx.lineTo(headCX + w * 0.03, headCY - h * 0.08 - stalkLen); ctx.stroke();
+    ctx.beginPath(); ctx.arc(headCX + w * 0.03, headCY - h * 0.08 - stalkLen, w * 0.035, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    var sCX = w * 0.60, sCY = h * 0.52, loops = p.loops || 2;
+    ctx.beginPath(); ctx.ellipse(sCX, sCY, w * 0.24, h * 0.20, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath();
+    for (var i = 0; i <= 120; i++) {
+      var t = i / 120, angle = t * Math.PI * 2 * loops, r = (1 - t) * w * 0.20;
+      var sx = sCX + Math.cos(angle) * r, sy = sCY + Math.sin(angle) * r * 0.80;
+      i === 0 ? ctx.moveTo(sx, sy) : ctx.lineTo(sx, sy);
+    }
+    ctx.stroke();
+  }
+
+  function drawUfo(ctx, w, h, p) {
+    p = p || {};
+    var cx = w / 2, domeCY = h * 0.40, domeRX = w * 0.22, domeRY = h * 0.17;
+    var diskCY = h * 0.50, diskRX = w * 0.44, diskRY = h * 0.10;
+    ctx.beginPath(); ctx.ellipse(cx, domeCY, domeRX, domeRY, 0, Math.PI, 0, true); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(cx, diskCY, diskRX, diskRY, 0, 0, Math.PI * 2); ctx.stroke();
+    var wins = p.windows || 3;
+    for (var i = 0; i < wins; i++) {
+      var angle = ((i / wins) - 0.5) * Math.PI * 0.9;
+      ctx.beginPath(); ctx.arc(cx + Math.cos(angle) * diskRX * 0.58, diskCY + Math.sin(angle) * diskRY * 0.4, w * 0.04, 0, Math.PI * 2); ctx.stroke();
+    }
+    if (p.hasBeam) {
+      ctx.beginPath();
+      ctx.moveTo(cx - diskRX * 0.30, diskCY + diskRY);
+      ctx.lineTo(cx - diskRX * 0.55, h * 0.90);
+      ctx.lineTo(cx + diskRX * 0.55, h * 0.90);
+      ctx.lineTo(cx + diskRX * 0.30, diskCY + diskRY);
+      ctx.closePath(); ctx.stroke();
+    }
+  }
+
+  function drawCactus(ctx, w, h, p) {
+    p = p || {};
+    var cx = w / 2, trunkW = w * 0.14, trunkLeft = cx - trunkW / 2;
+    var trunkTop = h * 0.14, trunkBot = h * 0.88;
+    ctx.beginPath(); ctx.rect(trunkLeft, trunkTop, trunkW, trunkBot - trunkTop); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(cx, trunkTop, trunkW / 2, h * 0.04, 0, Math.PI, 0, true); ctx.stroke();
+    var arms = p.arms || 2;
+    var armCfg = [[-1, 0.38], [1, 0.52], [-1, 0.64]];
+    for (var i = 0; i < Math.min(arms, 3); i++) {
+      var side = armCfg[i][0], jY = trunkTop + (trunkBot - trunkTop) * armCfg[i][1];
+      var armEndX = cx + side * (trunkW / 2 + w * 0.20), armTopY = jY - h * 0.14;
+      ctx.beginPath();
+      ctx.moveTo(cx + side * trunkW / 2, jY);
+      ctx.lineTo(armEndX, jY);
+      ctx.lineTo(armEndX, armTopY);
+      ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(armEndX, armTopY, trunkW * 0.35, h * 0.03, 0, Math.PI, 0, true); ctx.stroke();
+    }
+  }
+
+  function drawIceCream(ctx, w, h, p) {
+    p = p || {};
+    var cx = w / 2, scoops = p.scoops || 2;
+    var coneTop = h * 0.68, coneBase = h * 0.90;
+    ctx.beginPath(); ctx.moveTo(cx, coneBase); ctx.lineTo(cx - w * 0.22, coneTop); ctx.lineTo(cx + w * 0.22, coneTop); ctx.closePath(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx - w * 0.12, coneTop + (coneBase - coneTop) * 0.38); ctx.lineTo(cx + w * 0.12, coneTop + (coneBase - coneTop) * 0.38); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx - w * 0.18, coneTop + (coneBase - coneTop) * 0.68); ctx.lineTo(cx + w * 0.18, coneTop + (coneBase - coneTop) * 0.68); ctx.stroke();
+    var scoopData = [
+      [[cx, h * 0.60]],
+      [[cx, h * 0.62], [cx + w * 0.05, h * 0.42]],
+      [[cx, h * 0.65], [cx + w * 0.06, h * 0.47], [cx - w * 0.04, h * 0.30]]
+    ];
+    var positions = scoopData[(scoops || 2) - 1];
+    var baseR = [w * 0.22, w * 0.19, w * 0.16][scoops - 1] || w * 0.19;
+    for (var i = 0; i < positions.length; i++) {
+      ctx.beginPath(); ctx.arc(positions[i][0], positions[i][1], baseR * (1 - i * 0.08), 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+
+  function drawDonut(ctx, w, h, p) {
+    p = p || {};
+    var cx = w / 2, cy = h / 2;
+    ctx.beginPath(); ctx.arc(cx, cy, w * 0.40, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, w * 0.17, 0, Math.PI * 2); ctx.stroke();
+    var sprinkles = p.sprinkles || 6;
+    for (var i = 0; i < sprinkles; i++) {
+      var ang = (i / sprinkles) * Math.PI * 2 + 0.4;
+      var r = w * 0.28, sa = ang + Math.PI * 0.35;
+      var sx = cx + Math.cos(ang) * r, sy = cy + Math.sin(ang) * r;
+      ctx.beginPath();
+      ctx.moveTo(sx - Math.cos(sa) * w * 0.05, sy - Math.sin(sa) * w * 0.05);
+      ctx.lineTo(sx + Math.cos(sa) * w * 0.05, sy + Math.sin(sa) * w * 0.05);
+      ctx.stroke();
+    }
+  }
+
+  function drawRobotFace(ctx, w, h, p) {
+    p = p || {};
+    var cx = w / 2, headL = w * 0.14, headT = h * 0.14, headW = w * 0.72, headH = h * 0.60;
+    ctx.beginPath(); ctx.rect(headL, headT, headW, headH); ctx.stroke();
+    if (p.antennaOn) {
+      ctx.beginPath(); ctx.moveTo(cx, headT); ctx.lineTo(cx + w * 0.05, h * 0.05); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx + w * 0.05, h * 0.04, w * 0.04, 0, Math.PI * 2); ctx.stroke();
+    }
+    if (p.roundEyes) {
+      ctx.beginPath(); ctx.arc(cx - headW * 0.24, headT + headH * 0.32, headW * 0.14, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx + headW * 0.24, headT + headH * 0.32, headW * 0.14, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx - headW * 0.24, headT + headH * 0.32, headW * 0.05, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx + headW * 0.24, headT + headH * 0.32, headW * 0.05, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.rect(cx - headW * 0.38, headT + headH * 0.18, headW * 0.28, headH * 0.26); ctx.stroke();
+      ctx.beginPath(); ctx.rect(cx + headW * 0.10, headT + headH * 0.18, headW * 0.28, headH * 0.26); ctx.stroke();
+    }
+    var mY = headT + headH * 0.70, cols = p.mouthDots || 4;
+    for (var i = 0; i < cols; i++) {
+      ctx.beginPath(); ctx.arc(headL + headW * (0.15 + (i / (cols - 1)) * 0.70), mY, w * 0.03, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+    ctx.beginPath(); ctx.arc(headL - w * 0.04, headT + headH * 0.44, w * 0.05, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(headL + headW + w * 0.04, headT + headH * 0.44, w * 0.05, 0, Math.PI * 2); ctx.stroke();
+  }
+
+  function drawBanana(ctx, w, h, p) {
+    p = p || {};
+    var flip = p.flipped ? -1 : 1;
+    var aTopX = w * (0.5 + flip * 0.10), aTopY = h * 0.08;
+    var aBotX = w * (0.5 - flip * 0.10), aBotY = h * 0.88;
+    var c1X = w * (0.5 + flip * 0.52), c2X = w * (0.5 + flip * 0.18);
+    ctx.beginPath();
+    ctx.moveTo(aTopX, aTopY);
+    ctx.bezierCurveTo(c1X, h * 0.28, c1X, h * 0.66, aBotX, aBotY);
+    ctx.bezierCurveTo(c2X, h * 0.64, c2X, h * 0.30, aTopX, aTopY);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+
+  function drawWizardHat(ctx, w, h, p) {
+    p = p || {};
+    var cx = w / 2, brimCY = h * 0.76, brimRX = w * 0.44, brimRY = h * 0.09;
+    var tipX = cx + w * (p.leaning ? 0.10 : 0), tipY = h * 0.06;
+    ctx.beginPath(); ctx.ellipse(cx, brimCY, brimRX, brimRY, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx - brimRX, brimCY); ctx.lineTo(tipX, tipY); ctx.lineTo(cx + brimRX, brimCY); ctx.stroke();
+    var stars = p.stars || 2;
+    var starPos = [[0.44, 0.40], [0.58, 0.56], [0.38, 0.60]];
+    for (var i = 0; i < Math.min(stars, starPos.length); i++) {
+      var sx = w * starPos[i][0], sy = h * starPos[i][1];
+      ctx.beginPath();
+      for (var j = 0; j < 10; j++) {
+        var sr = j % 2 === 0 ? w * 0.055 : w * 0.024;
+        var sa = (Math.PI / 5) * j - Math.PI / 2;
+        var px = sx + Math.cos(sa) * sr, py = sy + Math.sin(sa) * sr;
+        j === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+  }
+
+  function drawEyeball(ctx, w, h, p) {
+    p = p || {};
+    var cx = w / 2, cy = h / 2, r = w * 0.38, irisR = r * 0.50;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, irisR, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, irisR * 0.44, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    var veins = p.veins || 3;
+    for (var i = 0; i < veins; i++) {
+      var ang = (i / veins) * Math.PI * 2 + 0.9;
+      var x0 = cx + Math.cos(ang) * r * 0.84, y0 = cy + Math.sin(ang) * r * 0.84;
+      var x1 = cx + Math.cos(ang) * irisR * 1.12, y1 = cy + Math.sin(ang) * irisR * 1.12;
+      var xm = (x0 + x1) / 2 + Math.cos(ang + Math.PI / 2) * w * 0.04;
+      var ym = (y0 + y1) / 2 + Math.sin(ang + Math.PI / 2) * w * 0.04;
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(xm, ym); ctx.lineTo(x1, y1); ctx.stroke();
+    }
+    if (p.hasLashes) {
+      [-0.30, -0.15, 0, 0.15, 0.30].forEach(function(offset) {
+        var la = offset - Math.PI / 2;
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(la) * r, cy + Math.sin(la) * r);
+        ctx.lineTo(cx + Math.cos(la) * (r + w * 0.07), cy + Math.sin(la) * (r + w * 0.07));
+        ctx.stroke();
+      });
+    }
+  }
+
+  function drawToilet(ctx, w, h, p) {
+    p = p || {};
+    var cx = w / 2;
+    ctx.beginPath(); ctx.rect(cx - w * 0.28, h * 0.10, w * 0.56, h * 0.26); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(cx, h * 0.46, w * 0.38, h * 0.07, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(cx, h * 0.64, w * 0.32, h * 0.19, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx - w * 0.22, h * 0.80); ctx.lineTo(cx - w * 0.28, h * 0.90); ctx.lineTo(cx + w * 0.28, h * 0.90); ctx.lineTo(cx + w * 0.22, h * 0.80); ctx.stroke();
+    if (p.hasHandle) {
+      ctx.beginPath(); ctx.rect(cx + w * 0.22, h * 0.14, w * 0.08, h * 0.10); ctx.stroke();
+    }
+  }
+
   // ── Shape dispatcher ────────────────────────────────────────────────────────
 
   var SHAPE_DRAWERS = {
@@ -392,6 +681,10 @@
     cloud: drawCloud, moon: drawMoon, mountain: drawMountain, diamond: drawDiamond,
     arrow: drawArrow, spiral: drawSpiral, cross: drawCross, lightning: drawLightning,
     rabbit: drawRabbit, key: drawKey, crown: drawCrown, mushroom: drawMushroom,
+    ghost: drawGhost, poop: drawPoop, alien_face: drawAlienFace, snail: drawSnail,
+    ufo: drawUfo, cactus: drawCactus, ice_cream: drawIceCream, donut: drawDonut,
+    robot_face: drawRobotFace, banana: drawBanana, wizard_hat: drawWizardHat,
+    eyeball: drawEyeball, toilet: drawToilet,
   };
 
   function drawShape(ctx, type, params, w, h) {
@@ -423,7 +716,7 @@
       case 'tree':      return 'Tree (' + (params.layers || 2) + ' layers)';
       case 'crown':     return 'Crown';
       case 'lightning': return 'Lightning Bolt';
-      case 'cat_face':  return params.mouthOpen ? 'Cat Face (meowing)' : 'Cat Face';
+      case 'cat_face':  return params.thirdEye ? 'Three-Eyed Cat' : params.mouthOpen ? 'Cat Face (meowing)' : 'Cat Face';
       case 'house':     return params.chimney ? 'House with Chimney' : 'House';
       case 'heart':     return (params.fatness || 1) > 1.08 ? 'Chubby Heart' : (params.fatness || 1) < 0.92 ? 'Slim Heart' : 'Heart';
       case 'fish':      return params.hasTopFin ? 'Fish with Fin' : 'Fish';
@@ -431,7 +724,21 @@
       case 'cloud':     return (params.puffs || 5) <= 3 ? 'Small Cloud' : 'Fluffy Cloud';
       case 'rabbit':    return params.floppy ? 'Rabbit (floppy ear)' : 'Rabbit';
       case 'key':       return 'Key (' + (params.notches || 2) + ' notches)';
-      case 'mushroom':  return (params.capWide || 1) > 1.06 ? 'Wide Mushroom' : 'Mushroom';
+      case 'mushroom':  return (params.capWide || 1) > 1.10 ? 'Wide Mushroom' : 'Mushroom';
+      case 'sun':       return params.hasFace ? 'Sun with Face' : 'Sun';
+      case 'ghost':     return params.happy ? 'Happy Ghost' : 'Scared Ghost';
+      case 'poop':      return params.hasFace ? 'Poop Emoji' : 'Poop';
+      case 'alien_face': return 'Alien Face';
+      case 'snail':     return 'Snail';
+      case 'ufo':       return params.hasBeam ? 'UFO with Beam' : 'UFO';
+      case 'cactus':    return 'Cactus';
+      case 'ice_cream': return (params.scoops || 2) === 1 ? 'Ice Cream Cone' : (params.scoops || 2) + '-Scoop Ice Cream';
+      case 'donut':     return 'Donut';
+      case 'robot_face': return params.antennaOn ? 'Robot (with antenna)' : 'Robot Face';
+      case 'banana':    return 'Banana';
+      case 'wizard_hat': return params.leaning ? 'Tilted Wizard Hat' : 'Wizard Hat';
+      case 'eyeball':   return params.hasLashes ? 'Eyeball with Lashes' : 'Eyeball';
+      case 'toilet':    return 'Toilet';
       default:          return type;
     }
   }

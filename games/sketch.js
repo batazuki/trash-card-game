@@ -6,26 +6,28 @@ module.exports = function(io, helpers) {
   const SHAPE_TYPES = [
     "star","spiral","cross","diamond","arrow","sun","moon",
     "mountain","tree","crown","lightning",
-    "cat_face","house","heart","fish","bird","cloud","rabbit","key","mushroom"
+    "cat_face","house","heart","fish","bird","cloud","rabbit","key","mushroom",
+    "ghost","poop","alien_face","snail","ufo","cactus","ice_cream","donut",
+    "robot_face","banana","wizard_hat","eyeball","toilet"
   ];
 
   function generateParams(type) {
     const ri  = (lo, hi, dec) => +(lo + Math.random() * (hi - lo)).toFixed(dec || 2);
     const ri0 = (lo, hi)      => lo + Math.floor(Math.random() * (hi - lo + 1));
     switch (type) {
-      case "star":      return { points: ri0(4, 8), innerRatio: ri(0.28, 0.55) };
+      case "star":      return { points: ri0(4, 12), innerRatio: ri(0.12, 0.60) };
       case "spiral":    return { loops: ri0(3, 7) };
       case "cross":     return { armLen: ri(0.30, 0.45), armThick: ri(0.10, 0.22) };
       case "diamond":   return { widthRatio: ri(0.55, 1.4) };
       case "arrow":     return { dir: ri0(0, 3), shaftLen: ri(0.44, 0.72) };
-      case "sun":       return { rays: ri0(5, 12) };
+      case "sun":       return { rays: ri0(5, 12), hasFace: ri0(0, 1) };
       case "moon":      return { bite: ri(0.55, 0.80) };
       case "mountain":  return { peaks: ri0(1, 3) };
       case "tree":      return { layers: ri0(2, 5) };
       case "crown":     return { points: ri0(3, 7) };
       case "lightning": return { segments: ri0(2, 4) };
       // Shapes that were previously fixed — now parameterized:
-      case "cat_face":  return { whiskers: ri0(2, 3), mouthOpen: ri0(0, 1) };
+      case "cat_face":  return { whiskers: ri0(2, 3), mouthOpen: ri0(0, 1), thirdEye: ri0(0, 1) };
       case "house":     return { chimney: ri0(0, 1), hasWindow: ri0(0, 1) };
       case "heart":     return { fatness: ri(0.82, 1.18) };
       case "fish":      return { hasTopFin: ri0(0, 1), tailFork: ri0(0, 1) };
@@ -33,7 +35,20 @@ module.exports = function(io, helpers) {
       case "cloud":     return { puffs: ri0(3, 5) };
       case "rabbit":    return { floppy: ri0(0, 1) };
       case "key":       return { notches: ri0(1, 3) };
-      case "mushroom":  return { spots: ri0(2, 5), capWide: ri(0.80, 1.15) };
+      case "mushroom":  return { spots: ri0(2, 5), capWide: ri(0.65, 1.40) };
+      case "ghost":      return { scallops: ri0(2, 4), happy: ri0(0, 1) };
+      case "poop":       return { swirls: ri0(2, 3), hasFace: ri0(0, 1) };
+      case "alien_face": return { forkedAntenna: ri0(0, 1), lopsidedEyes: ri0(0, 1), zigzagMouth: ri0(0, 1) };
+      case "snail":      return { loops: ri0(2, 3), longStalks: ri0(0, 1) };
+      case "ufo":        return { windows: ri0(2, 4), hasBeam: ri0(0, 1) };
+      case "cactus":     return { arms: ri0(1, 3) };
+      case "ice_cream":  return { scoops: ri0(1, 3) };
+      case "donut":      return { sprinkles: ri0(4, 9) };
+      case "robot_face": return { roundEyes: ri0(0, 1), mouthDots: ri0(3, 5), antennaOn: ri0(0, 1) };
+      case "banana":     return { flipped: ri0(0, 1) };
+      case "wizard_hat": return { leaning: ri0(0, 1), stars: ri0(2, 3) };
+      case "eyeball":    return { veins: ri0(2, 5), hasLashes: ri0(0, 1) };
+      case "toilet":     return { hasHandle: ri0(0, 1) };
       default:          return {};
     }
   }
