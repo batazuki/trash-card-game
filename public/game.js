@@ -548,6 +548,18 @@ $("game-select").addEventListener("change", e => {
   updateLobbyForGame(e.target.value);
 });
 
+// ── Ghost avatar definitions (must be declared before updateLobbyForGame is called) ──
+const GHOST_AVATAR_DEFS = [
+  { name: 'Detective', body: '#2c3e6b', emoji: '🎩' },
+  { name: 'Witch',     body: '#3d1f5a', emoji: '🧙' },
+  { name: 'Explorer',  body: '#b85e28', emoji: '🌿' },
+  { name: 'Hunter',    body: '#1e4a52', emoji: '⚡' },
+  { name: 'Scientist', body: '#d8e8f0', emoji: '🔬' },
+  { name: 'Kid',       body: '#cc2222', emoji: '🧢' },
+];
+let _ghostAvatar = Math.max(0, Math.min(GHOST_AVATAR_DEFS.length - 1, parseInt(localStorage.getItem("ghostAvatar") || "0") || 0));
+window._ghostAvatarSelection = _ghostAvatar;
+
 function updateLobbyForGame(game) {
   const isSolo = game === "solitaire";
   const isGhost = game === "ghost";
@@ -606,17 +618,6 @@ function getSelectedGhostArea() {
 }
 
 // ── Ghost avatar picker ────────────────────────────────────────────────────
-const GHOST_AVATAR_DEFS = [
-  { name: 'Detective', body: '#2c3e6b', emoji: '🎩' },
-  { name: 'Witch',     body: '#3d1f5a', emoji: '🧙' },
-  { name: 'Explorer',  body: '#b85e28', emoji: '🌿' },
-  { name: 'Hunter',    body: '#1e4a52', emoji: '⚡' },
-  { name: 'Scientist', body: '#d8e8f0', emoji: '🔬' },
-  { name: 'Kid',       body: '#cc2222', emoji: '🧢' },
-];
-let _ghostAvatar = Math.max(0, Math.min(GHOST_AVATAR_DEFS.length - 1, parseInt(localStorage.getItem("ghostAvatar") || "0") || 0));
-window._ghostAvatarSelection = _ghostAvatar;
-
 function buildGhostAvatarPicker() {
   const grid = $("ghost-avatar-grid");
   if (!grid || grid.dataset.built === "1") return;
