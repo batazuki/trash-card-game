@@ -142,7 +142,7 @@ module.exports = function(io, helpers) {
         { x: 1600, y: 256,  w: 512, h: 512 },
         { x: 256,  y: 1280, w: 512, h: 640 },
       ],
-      playerStart: { x: 1600, y: 1120 },
+      playerStart: { x: 1120, y: 1120 },
     },
     house: {
       label: 'Old House',
@@ -573,7 +573,7 @@ module.exports = function(io, helpers) {
   function registerEvents(socket, rooms) {
 
     // Player movement
-    socket.on('ghost:move', ({ roomId, x, y, facing }) => {
+    socket.on('ghost:move', ({ roomId, x, y, facing, avatar }) => {
       const state = rooms.get(roomId);
       if (!state || !state.ghost || state.phase !== 'playing') return;
       const areaData = AREAS[state.ghost.area];
@@ -583,7 +583,12 @@ module.exports = function(io, helpers) {
       const cy = clamp(y, 0, areaData.areaHeight);
       state.players[playerIndex].ghostPos    = { x: cx, y: cy };
       state.players[playerIndex].ghostFacing = facing || 0;
-      socket.to(roomId).emit('ghost:player_pos', { playerIndex, x: cx, y: cy });
+      if (avatar !== undefined) state.players[playerIndex].ghostAvatar = avatar;
+      socket.to(roomId).emit('ghost:player_pos', {
+        playerIndex, x: cx, y: cy,
+        facing: facing || 0,
+        avatar: state.players[playerIndex].ghostAvatar || 0,
+      });
     });
 
     // Place ouija board
@@ -601,26 +606,10 @@ module.exports = function(io, helpers) {
       // Broadcast claim so all clients can hide the "Place Board" button
       io.to(roomId).emit('ghost:claimed', { ghostId });
 
-      const cfg      = PCONFIG[ghost.personality];
       const sequence = buildOuijaSequence(ghost.name.toUpperCase(), ghost.personality);
-      let timeLeft   = cfg.ouijaTime;
-
-      const timer = setInterval(() => {
-        timeLeft--;
-        socket.emit('ghost:ouija_tick', { ghostId, timeLeft });
-        if (timeLeft <= 0) {
-          clearInterval(gs.ouijaTimers[ghostId]);
-          delete gs.ouijaTimers[ghostId];
-          ghost.claimedBy = null;
-          socket.emit('ghost:ouija_timeout', { ghostId });
-          io.to(roomId).emit('ghost:released', { ghostId });
-        }
-      }, 1000);
-
-      gs.ouijaTimers[ghostId] = timer;
 
       socket.emit('ghost:ouija_start', {
-        ghostId, sequence, timeLimit: cfg.ouijaTime,
+        ghostId, sequence,
         personality: ghost.personality, attemptsLeft: 3 - ghost.ouijaAttempts,
       });
     });
@@ -638,7 +627,6 @@ module.exports = function(io, helpers) {
       if ((name || '').trim().toLowerCase() === ghost.name.toLowerCase()) {
         ghost.identified = true;
         ghost.claimedBy  = null;
-        if (gs.ouijaTimers[ghostId]) { clearInterval(gs.ouijaTimers[ghostId]); delete gs.ouijaTimers[ghostId]; }
         gs.identifiedCount++;
         const cfg = PCONFIG[ghost.personality];
         io.to(roomId).emit('ghost:identified', {
@@ -652,7 +640,6 @@ module.exports = function(io, helpers) {
       } else {
         // Wrong guess: immediately release claim, increment counter
         ghost.claimedBy = null;
-        if (gs.ouijaTimers[ghostId]) { clearInterval(gs.ouijaTimers[ghostId]); delete gs.ouijaTimers[ghostId]; }
         ghost.ouijaAttempts++;
         io.to(roomId).emit('ghost:released', { ghostId });
 
@@ -679,7 +666,6 @@ module.exports = function(io, helpers) {
       const ghost = gs.ghosts[ghostId];
       if (!ghost) return;
       ghost.claimedBy = null;
-      if (gs.ouijaTimers[ghostId]) { clearInterval(gs.ouijaTimers[ghostId]); delete gs.ouijaTimers[ghostId]; }
       io.to(roomId).emit('ghost:released', { ghostId });
     });
   }

@@ -11,6 +11,16 @@
   const POS_SEND_MS   = 60;
   const T             = 32;    // tile size
 
+  // ── Avatar definitions ──────────────────────────────────────────────────
+  const AVATARS = [
+    { name:'Detective', body:'#2c3e6b', hat:'#5c3a1e', acc:'#c8a060' },
+    { name:'Witch',     body:'#3d1f5a', hat:'#1a0a2e', acc:'#c47ed0' },
+    { name:'Explorer',  body:'#b85e28', hat:'#7a3a10', acc:'#f5c842' },
+    { name:'Hunter',    body:'#1e4a52', hat:'#0d2830', acc:'#2ec4d6' },
+    { name:'Scientist', body:'#d8e8f0', hat:'#8aaabb', acc:'#5b9bd5' },
+    { name:'Kid',       body:'#cc2222', hat:'#cc2222', acc:'#f0f0f0' },
+  ];
+
   // ── Area definitions (obstacle arrays must be identical to ghost.js) ─────
   function rect(tx, ty, tw, th, type) {
     return { x: tx*T, y: ty*T, w: tw*T, h: th*T, type };
@@ -144,7 +154,7 @@
     },
     garden: {
       areaWidth: 3200, areaHeight: 2240, bgColor: '#2d4a1e', label: 'Garden',
-      playerStart: { x:1600, y:1120 }, obstacles: buildGardenObs(),
+      playerStart: { x:1120, y:1120 }, obstacles: buildGardenObs(),
       obsColors: { hedge:'#1a4010', flower:'#8b3a6a', tree:'#3a2510', stone:'#7a7a5a',
                    bench:'#8b6a40', lamp:'#c0a850', statue:'#a09080', birdbath:'#7090a0',
                    pillar:'#c8b878', default:'#2a5018' },
@@ -421,6 +431,9 @@
   // Virtual joystick
   const joy = { active: false, id: null, bx: 0, by: 0, dx: 0, dy: 0, angle: 0, mag: 0 };
 
+  // Walk animation phase (increments with distance moved)
+  let walkPhase = 0;
+
   // Suppress synthetic click events that follow touchstart on mobile
   let _lastTouchEndMs = 0;
 
@@ -581,6 +594,7 @@
       S.me.x = Math.max(PLAYER_R, Math.min(area.areaWidth  - PLAYER_R, S.me.x));
       S.me.y = Math.max(PLAYER_R, Math.min(area.areaHeight - PLAYER_R, S.me.y));
       S.me.facing = joy.angle;
+      walkPhase += spd * dt * 0.12;
     }
 
     // Camera (smooth follow)
@@ -623,11 +637,148 @@
     posSendAccum += dt * 1000;
     if (posSendAccum >= POS_SEND_MS) {
       posSendAccum = 0;
-      socket.emit('ghost:move', { roomId: S.roomId, x: S.me.x, y: S.me.y, facing: S.me.facing });
+      socket.emit('ghost:move', { roomId: S.roomId, x: S.me.x, y: S.me.y, facing: S.me.facing, avatar: S.me.avatar });
     }
 
     // Drive signal-reactive audio (EMF buzz / sound rumble)
     gaSignals(S.signals, S.activeTool);
+  }
+
+  // ── Avatar sprites ────────────────────────────────────────────────────────
+  function facingToDir(angle) {
+    const a = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    if (a < Math.PI * 0.25 || a >= Math.PI * 1.75) return 'right';
+    if (a < Math.PI * 0.75) return 'down';
+    if (a < Math.PI * 1.25) return 'left';
+    return 'up';
+  }
+
+  function drawAvatarHat(ctx, idx, av, dir) {
+    switch (idx) {
+      case 0: { // Detective - fedora
+        ctx.fillStyle = av.hat;
+        ctx.beginPath(); ctx.ellipse(0, -3, 9, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(0, -7, 5.5, Math.PI, Math.PI * 2); ctx.fill();
+        ctx.fillRect(-5.5, -7, 11, 4.5);
+        ctx.strokeStyle = av.acc; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(-5.5, -5); ctx.lineTo(5.5, -5); ctx.stroke();
+        break;
+      }
+      case 1: { // Witch - tall pointy hat
+        ctx.fillStyle = av.hat;
+        ctx.beginPath(); ctx.ellipse(0, -3.5, 8.5, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(-5, -4); ctx.lineTo(1, -18); ctx.lineTo(5.5, -4); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = av.acc; ctx.fillRect(-5, -7, 10, 1.8);
+        // Star on cone
+        ctx.fillStyle = '#ffe066'; ctx.save(); ctx.translate(1, -13);
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+          const a1 = (i * 2 / 5 - 0.5) * Math.PI;
+          const a2 = ((i * 2 + 1) / 5 - 0.5) * Math.PI;
+          if (i === 0) ctx.moveTo(Math.cos(a1) * 2.8, Math.sin(a1) * 2.8);
+          else ctx.lineTo(Math.cos(a1) * 2.8, Math.sin(a1) * 2.8);
+          ctx.lineTo(Math.cos(a2) * 1.1, Math.sin(a2) * 1.1);
+        }
+        ctx.closePath(); ctx.fill(); ctx.restore();
+        break;
+      }
+      case 2: { // Explorer - wide safari hat
+        ctx.fillStyle = av.hat;
+        ctx.beginPath(); ctx.ellipse(0, -3.5, 11, 3, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = av.acc;
+        ctx.beginPath(); ctx.ellipse(0, -6.5, 7, 4, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = av.hat; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(0, -5.5, 7, Math.PI * 0.1, Math.PI * 0.9); ctx.stroke();
+        break;
+      }
+      case 3: { // Ghost Hunter - tactical helmet
+        ctx.fillStyle = av.hat;
+        ctx.beginPath(); ctx.arc(0, -5.5, 7, Math.PI, Math.PI * 2); ctx.fill();
+        ctx.fillRect(-7, -5.5, 14, 2.5);
+        ctx.fillStyle = av.acc; ctx.globalAlpha = 0.75;
+        ctx.beginPath(); ctx.ellipse(0, -6.5, 5, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+        break;
+      }
+      case 4: { // Scientist - goggles + messy hair
+        ctx.fillStyle = '#3a2010';
+        ctx.beginPath(); ctx.arc(-3, -6.5, 3.5, Math.PI * 1.1, Math.PI * 1.9); ctx.fill();
+        ctx.beginPath(); ctx.arc(3, -6.5, 3.5, Math.PI * 1.1, Math.PI * 1.9); ctx.fill();
+        ctx.beginPath(); ctx.arc(0, -7.5, 3.2, Math.PI, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = av.hat; ctx.lineWidth = 2;
+        ctx.fillStyle = av.acc; ctx.globalAlpha = 0.6;
+        ctx.beginPath(); ctx.arc(-2.5, -1.5, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(2.5, -1.5, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.beginPath(); ctx.arc(-2.5, -1.5, 3, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(2.5, -1.5, 3, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-8, -1.5); ctx.lineTo(-5.5, -1.5); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(5.5, -1.5); ctx.lineTo(8, -1.5); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-0.5, -1.5); ctx.lineTo(0.5, -1.5); ctx.stroke();
+        break;
+      }
+      case 5: { // Kid - baseball cap
+        const billDir = (dir === 'left') ? -1 : 1;
+        ctx.fillStyle = av.hat;
+        ctx.beginPath(); ctx.arc(0, -6, 7, Math.PI, Math.PI * 2); ctx.fill();
+        ctx.fillRect(-7, -6, 14, 3);
+        ctx.beginPath(); ctx.ellipse(billDir * 6, -4, 5, 2, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = av.acc;
+        ctx.beginPath(); ctx.arc(0, -8.5, 1.5, 0, Math.PI * 2); ctx.fill();
+        break;
+      }
+    }
+  }
+
+  function drawAvatar(ctx, cx, cy, dir, wPhase, bob, avatarIdx, isMe) {
+    const av = AVATARS[avatarIdx % AVATARS.length];
+    const walkBob = Math.abs(Math.sin(wPhase * Math.PI * 2)) * 1.5;
+    const totalBob = walkBob + bob;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    // Shadow (fixed to ground — does not bob with character)
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.ellipse(0, 13, 10, 3.5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+
+    ctx.save();
+    ctx.translate(0, totalBob);
+
+    // Body circle
+    ctx.fillStyle = av.body;
+    ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = isMe ? '#ffffff' : 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = isMe ? 2.5 : 1.5;
+    ctx.stroke();
+
+    // Head offset per direction
+    let hx = 0, hy = -8;
+    if (dir === 'right') { hx = 4; hy = -7; }
+    else if (dir === 'left') { hx = -4; hy = -7; }
+    else if (dir === 'up') { hx = 0; hy = -11; }
+
+    // Head (skin)
+    ctx.fillStyle = '#f0c080';
+    ctx.beginPath(); ctx.arc(hx, hy, 5.5, 0, Math.PI * 2); ctx.fill();
+
+    // Eyes (not shown when facing up)
+    if (dir !== 'up') {
+      ctx.fillStyle = '#1a1020';
+      const eo = dir === 'right' ? 1 : dir === 'left' ? -1 : 0;
+      ctx.beginPath(); ctx.arc(hx - 1.5 + eo, hy - 1.5, 1.3, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(hx + 1.5 + eo, hy - 1.5, 1.3, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // Hat
+    ctx.save(); ctx.translate(hx, hy);
+    drawAvatarHat(ctx, avatarIdx % AVATARS.length, av, dir);
+    ctx.restore();
+
+    ctx.restore(); // un-bob
+    ctx.restore(); // un-translate
   }
 
   // ── Render ───────────────────────────────────────────────────────────────
@@ -974,24 +1125,19 @@
       }
     }
 
+    // Shared idle bob (time-driven)
+    const nowSec = Date.now() / 1000;
+    const idleBob = Math.sin(nowSec * 1.8) * 1.2;
+    const meMoving = joy.active && joy.mag > 0.05;
+
     // Other players
-    const pColors = ['#60a5fa','#f97316','#a855f7','#10b981'];
-    for (const [piStr, p] of Object.entries(S.otherPlayers)) {
-      const col = pColors[parseInt(piStr) % pColors.length];
-      ctx.fillStyle = col;
-      ctx.beginPath(); ctx.arc(p.x, p.y, PLAYER_R, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = 'white';
-      ctx.beginPath(); ctx.arc(p.x+Math.cos(p.facing||0)*(PLAYER_R+5), p.y+Math.sin(p.facing||0)*(PLAYER_R+5), 4, 0, Math.PI*2); ctx.fill();
+    for (const [, p] of Object.entries(S.otherPlayers)) {
+      const pBob = Math.sin(nowSec * 1.8 + (p.walkPhase || 0) * 0.5) * 1.2;
+      drawAvatar(ctx, p.x, p.y, facingToDir(p.facing || 0), p.walkPhase || 0, pBob, p.avatar || 0, false);
     }
 
     // Player (self)
-    ctx.fillStyle = '#22c55e';
-    ctx.beginPath(); ctx.arc(S.me.x, S.me.y, PLAYER_R, 0, Math.PI*2); ctx.fill();
-    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = 'white';
-    ctx.beginPath();
-    ctx.arc(S.me.x+Math.cos(S.me.facing)*(PLAYER_R+6), S.me.y+Math.sin(S.me.facing)*(PLAYER_R+6), 4, 0, Math.PI*2);
-    ctx.fill();
+    drawAvatar(ctx, S.me.x, S.me.y, facingToDir(S.me.facing), walkPhase, meMoving ? 0 : idleBob, S.me.avatar || 0, true);
   }
 
   function applyDarkness(cw, ch) {
@@ -1175,7 +1321,7 @@
   }
 
   // ── Ouija board ──────────────────────────────────────────────────────────
-  function openOuija(ghostId, sequence, timeLimit, personality) {
+  function openOuija(ghostId, sequence, personality) {
     const pcfg = PCFG[personality] || PCFG.confused;
     S.ouija = {
       ghostId, sequence, personality, pcfg,
@@ -1183,16 +1329,15 @@
       planchette: { x: 0.5, y: 0.5, vx: 0, vy: 0 },
       dwellTimer: 0,
       collected: [],
-      timeLeft: timeLimit,
       phase: 'playing',   // 'playing' | 'submitting'
-      submitName: '',
       alpha: 0,
     };
   }
 
   function closeOuija(reason) {
     if (!S || !S.ouija) return;
-    if (reason === 'cancel' || reason === 'timeout') {
+    closeNameInput();
+    if (reason === 'cancel') {
       socket.emit('ghost:close_board', { roomId: S.roomId, ghostId: S.ouija.ghostId });
     }
     S.ouija = null;
@@ -1281,29 +1426,17 @@
       ctx.fillText(lstr, bx+bw/2, by-22);
     }
 
-    // Timer + blank slots (below board)
-    const tColor = ou.timeLeft < 8 ? '#ef4444' : '#e2e8f0';
-    ctx.fillStyle = tColor; ctx.font = '15px monospace';
-    ctx.fillText(`⏱ ${ou.timeLeft}s`, bx+bw/2, by+bh+22);
+    // Blank slots hint (below board)
     const gh = S.ghosts[ou.ghostId];
     if (gh) {
       ctx.fillStyle = 'rgba(160,130,255,0.8)'; ctx.font = '13px monospace';
-      ctx.fillText('_ '.repeat(gh.nameLength).trim(), bx+bw/2, by+bh+44);
+      ctx.fillText('_ '.repeat(gh.nameLength).trim(), bx+bw/2, by+bh+26);
     }
 
-    // Submit phase overlay
+    // Submitting phase: prompt to type
     if (ou.phase === 'submitting') {
-      const ow = bw-40, oh = 120;
-      const ox = bx+20, oy = by+bh/2-60;
-      ctx.fillStyle = 'rgba(0,0,0,0.75)'; rrect(ctx, ox, oy, ow, oh, 12); ctx.fill();
-      ctx.strokeStyle = '#8060d0'; ctx.lineWidth = 2; rrect(ctx, ox, oy, ow, oh, 12); ctx.stroke();
-      ctx.fillStyle = '#d0c8ff'; ctx.font = '13px monospace';
-      ctx.fillText('Name revealed:', bx+bw/2, oy+28);
-      ctx.fillStyle = '#d4a840'; ctx.font = `bold 22px monospace`;
-      ctx.fillText(ou.submitName, bx+bw/2, oy+60);
-      ctx.fillStyle = 'rgba(90,40,180,0.9)'; rrect(ctx, bx+bw/2-70, oy+78, 140, 36, 10); ctx.fill();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 15px monospace';
-      ctx.fillText('Identify!', bx+bw/2, oy+102);
+      ctx.fillStyle = '#a090d8'; ctx.font = '13px monospace';
+      ctx.fillText('Unscramble the letters — type the name below', bx+bw/2, by+bh+48);
     }
 
     // Cancel button
@@ -1320,7 +1453,10 @@
 
   function stepOuijaPlanchette(dt) {
     const ou = S.ouija;
-    if (ou.seqIdx >= ou.sequence.length) { ou.phase = 'submitting'; ou.submitName = ou.collected.join(''); return; }
+    if (ou.seqIdx >= ou.sequence.length) {
+      if (ou.phase === 'playing') { ou.phase = 'submitting'; openNameInput(ou.ghostId); }
+      return;
+    }
 
     const target = ou.sequence[ou.seqIdx];
     const p = ou.planchette, c = ou.pcfg;
@@ -1367,14 +1503,60 @@
     if (tx >= bx+bw-58 && tx <= bx+bw-8 && ty >= by-42 && ty <= by-14) {
       closeOuija('cancel'); return;
     }
-    // Submit
-    if (ou.phase === 'submitting') {
-      const sx = bx+bw/2, sy = by+bh/2+18;
-      if (tx >= sx-70 && tx <= sx+70 && ty >= sy && ty <= sy+36) {
-        socket.emit('ghost:submit_name', { roomId: S.roomId, ghostId: ou.ghostId, name: ou.submitName });
-        closeOuija('submit');
-      }
+  }
+
+  // ── Ouija name input overlay ─────────────────────────────────────────────
+  function openNameInput(ghostId) {
+    closeNameInput();
+    const wrap = document.createElement('div');
+    wrap.id = 'ouija-name-input';
+    wrap.style.cssText = [
+      'position:fixed;bottom:10%;left:50%;transform:translateX(-50%)',
+      'z-index:9500;display:flex;gap:8px;align-items:center',
+      'background:rgba(10,5,25,0.92);padding:10px 14px;border-radius:12px',
+      'border:2px solid #7040c0',
+    ].join(';');
+
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.placeholder = "Ghost's name…";
+    inp.maxLength = 24;
+    inp.autocomplete = 'off';
+    inp.autocapitalize = 'off';
+    inp.spellcheck = false;
+    inp.style.cssText = [
+      'font-family:monospace;font-size:17px;padding:7px 10px',
+      'background:rgba(30,15,60,0.95);color:#d4a840',
+      'border:1px solid #6040a0;border-radius:8px;outline:none;width:150px',
+    ].join(';');
+
+    const btn = document.createElement('button');
+    btn.textContent = 'Identify!';
+    btn.style.cssText = [
+      'font-family:monospace;font-size:14px;font-weight:bold;padding:7px 14px',
+      'background:linear-gradient(135deg,#6030b0,#3a1870);color:#fff',
+      'border:none;border-radius:8px;cursor:pointer;white-space:nowrap',
+    ].join(';');
+
+    function doSubmit() {
+      const name = inp.value.trim();
+      if (!name) { inp.focus(); return; }
+      socket.emit('ghost:submit_name', { roomId: S.roomId, ghostId, name });
+      closeOuija('submit');
     }
+
+    btn.addEventListener('click', doSubmit);
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') doSubmit(); });
+
+    wrap.appendChild(inp);
+    wrap.appendChild(btn);
+    document.body.appendChild(wrap);
+    setTimeout(() => inp.focus(), 80);
+  }
+
+  function closeNameInput() {
+    const el = document.getElementById('ouija-name-input');
+    if (el) el.remove();
   }
 
   // ── Ghost reveal animation ────────────────────────────────────────────────
@@ -1667,23 +1849,20 @@
       gh.x = x; gh.y = y;
     });
 
-    socket.on('ghost:player_pos', ({ playerIndex, x, y }) => {
+    socket.on('ghost:player_pos', ({ playerIndex, x, y, facing, avatar }) => {
       if (!S) return;
-      if (!S.otherPlayers[playerIndex]) S.otherPlayers[playerIndex] = { x, y, facing:0 };
-      S.otherPlayers[playerIndex].x = x; S.otherPlayers[playerIndex].y = y;
+      if (!S.otherPlayers[playerIndex]) S.otherPlayers[playerIndex] = { x, y, facing: 0, avatar: 0, walkPhase: 0 };
+      const p = S.otherPlayers[playerIndex];
+      const dist = Math.hypot(x - p.x, y - p.y);
+      p.walkPhase = (p.walkPhase || 0) + dist * 0.12;
+      p.x = x; p.y = y;
+      if (facing !== undefined) p.facing = facing;
+      if (avatar !== undefined) p.avatar = avatar;
     });
 
-    socket.on('ghost:ouija_start', ({ ghostId, sequence, timeLimit, personality }) => {
+    socket.on('ghost:ouija_start', ({ ghostId, sequence, personality }) => {
       if (!S) return;
-      openOuija(ghostId, sequence, timeLimit, personality);
-    });
-
-    socket.on('ghost:ouija_tick', ({ timeLeft }) => {
-      if (S && S.ouija) S.ouija.timeLeft = timeLeft;
-    });
-
-    socket.on('ghost:ouija_timeout', ({ ghostId }) => {
-      if (S && S.ouija && S.ouija.ghostId === ghostId) closeOuija('timeout');
+      openOuija(ghostId, sequence, personality);
     });
 
     socket.on('ghost:identified', ({ ghostId, name, personality, color, description, identifiedBy }) => {
@@ -1739,7 +1918,7 @@
 
   function unbindSocketEvents() {
     ['ghost:signals','ghost:found','ghost:position','ghost:player_pos',
-     'ghost:ouija_start','ghost:ouija_tick','ghost:ouija_timeout',
+     'ghost:ouija_start',
      'ghost:identified','ghost:wrong_name','ghost:claimed','ghost:released',
      'ghost:respawn'].forEach(ev => socket.off(ev));
   }
@@ -1752,12 +1931,13 @@
 
     cleanup();
     setupCanvas();
+    walkPhase = 0;
 
     S = {
       roomId:       data.roomId,
       myPlayerIndex: data.myPlayerIndex,
       area:         gd.area || 'graveyard',
-      me:           { x: start.x, y: start.y, facing: 0 },
+      me:           { x: start.x, y: start.y, facing: 0, avatar: (window._ghostAvatarSelection || 0) },
       cam:          null,
       ghosts:       {},
       otherPlayers: {},
@@ -1799,6 +1979,7 @@
   function cleanup() {
     if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
     if (S) { clearTimeout(S.attemptsMsgTimer); S.ouija = null; }
+    closeNameInput();
     const caseFile = document.getElementById('ghost-case-file');
     if (caseFile) caseFile.remove();
     gaStop();

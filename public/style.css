@@ -2034,22 +2034,17 @@ body.game-ghost #end-screen {
   to   { transform: scale(1);   opacity: 1; }
 }
 
-/* ── Game Carousel ── */
+/* ── Game Grid (was Carousel) ── */
 .game-carousel-wrap {
-  width: calc(100% + 48px);
-  margin-left: -24px;
-  overflow: hidden;
+  width: 100%;
+  overflow: visible;
 }
 .game-carousel {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 10px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  padding: 8px 24px 14px;
+  padding: 0;
 }
-.game-carousel::-webkit-scrollbar { display: none; }
 
 .game-card {
   display: flex;
@@ -2057,27 +2052,17 @@ body.game-ghost #end-screen {
   align-items: center;
   gap: 5px;
   padding: 16px 10px 12px;
-  width: 108px;
-  min-width: 108px;
   border-radius: 20px;
   background: rgba(255,255,255,0.68);
   border: 2.5px solid #fcd5e8;
   cursor: pointer;
-  scroll-snap-align: start;
   transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s, background 0.15s;
   text-align: center;
   user-select: none;
   touch-action: manipulation;
   box-shadow: 0 2px 10px rgba(236,72,153,0.08);
-  flex-shrink: 0;
 }
 .game-card:active { transform: scale(0.94); }
-.game-card.selected {
-  border-color: var(--accent);
-  background: rgba(236,72,153,0.08);
-  box-shadow: 0 4px 18px rgba(236,72,153,0.25);
-  transform: translateY(-2px);
-}
 .game-card-icon {
   font-size: 28px;
   line-height: 1;
@@ -2270,3 +2255,304 @@ body.game-hockey .gear-btn {
 body.game-hockey .gear-btn:hover {
   background: rgba(0, 0, 0, 0.75);
 }
+
+/* ═══════════════════════════════════════════════
+   LOBBY REDESIGN — MENU & GAME SELECTION
+   ═══════════════════════════════════════════════ */
+
+/* ── View transition animations ── */
+@keyframes viewSlideInRight {
+  from { opacity: 0; transform: translateX(32px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes viewSlideInLeft {
+  from { opacity: 0; transform: translateX(-24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes lobbyFadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+#lobby-main-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+}
+#lobby-game-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+#lobby-main-view:not(.hidden) {
+  animation: viewSlideInLeft 0.28s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+#lobby-game-view:not(.hidden) {
+  animation: viewSlideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* ── Game view header (back + title) ── */
+.game-view-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 2px;
+}
+.btn-back {
+  background: none;
+  border: none;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 6px 8px 6px 2px;
+  border-radius: 10px;
+  touch-action: manipulation;
+  user-select: none;
+  transition: color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+.btn-back:hover  { color: var(--text); background: rgba(255,255,255,0.5); }
+.btn-back:active { transform: scale(0.95); }
+
+.game-view-title {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  flex: 1;
+  text-align: right;
+}
+
+/* ── Game card: position for accent bar ── */
+.game-card {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Colored top accent bar per game */
+.game-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: var(--gc, var(--accent));
+  border-radius: 18px 18px 0 0;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.game-card:hover::before,
+.game-card.selected::before { opacity: 1; }
+
+/* Per-game accent colors */
+.game-card[data-game="trash"]        { --gc: #ec4899; }
+.game-card[data-game="trash-eleven"] { --gc: #dc2626; }
+.game-card[data-game="war"]          { --gc: #f97316; }
+.game-card[data-game="solitaire"]    { --gc: #10b981; }
+.game-card[data-game="hockey"]       { --gc: #3b82f6; }
+.game-card[data-game="sketch"]       { --gc: #f59e0b; }
+.game-card[data-game="ghost"]        { --gc: #8b5cf6; }
+
+/* Selected state picks up the game's own color */
+.game-card.selected {
+  border-color: var(--gc, var(--accent));
+  background: color-mix(in srgb, var(--gc, var(--accent)) 10%, rgba(255,255,255,0.8));
+  box-shadow: 0 4px 22px color-mix(in srgb, var(--gc, var(--accent)) 30%, transparent);
+  transform: translateY(-2px);
+}
+
+/* card-body: wraps all text content */
+.game-card-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+/* Ghost Detective (7th/odd last card) spans full width */
+.game-card:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 18px;
+  display: flex;
+  text-align: left;
+}
+.game-card:last-child:nth-child(odd) .game-card-icon { font-size: 32px; flex-shrink: 0; }
+.game-card:last-child:nth-child(odd) .game-card-name { font-size: 15px; }
+.game-card:last-child:nth-child(odd) .game-card-body {
+  flex: 1;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+/* ── Main view: join card ── */
+.lobby-join-card {
+  width: 100%;
+  background: rgba(255,255,255,0.5);
+  border: 2px solid #fcd5e8;
+  border-radius: 20px;
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 2px 10px rgba(236,72,153,0.06);
+}
+.lobby-join-label {
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+/* ── Game-specific option row (ghost area) ── */
+.game-option-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+/* ── Ghost location buttons: 2×2 pill grid ── */
+.ghost-area-btns {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 7px;
+  justify-content: unset;
+  flex-wrap: unset;
+}
+.ghost-area-btn {
+  padding: 9px 8px;
+  border-radius: 14px;
+  border: 2px solid #fcd5e8;
+  background: rgba(255,255,255,0.65);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s;
+  touch-action: manipulation;
+  user-select: none;
+  text-align: center;
+}
+.ghost-area-btn:active { transform: scale(0.94); }
+.ghost-area-btn.active {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 3px 12px rgba(236,72,153,0.32);
+}
+.ghost-area-btn:hover:not(.active) {
+  border-color: var(--accent);
+  background: rgba(255,255,255,0.9);
+}
+
+/* ── Ghost avatar picker ── */
+.ghost-avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  width: 100%;
+}
+
+.ghost-avatar-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 4px 7px;
+  background: rgba(255,255,255,0.06);
+  border: 2px solid rgba(255,255,255,0.15);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: border-color 0.18s, background 0.18s, transform 0.12s;
+}
+.ghost-avatar-btn canvas {
+  border-radius: 50%;
+  display: block;
+}
+.ghost-avatar-name {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: rgba(255,255,255,0.55);
+  transition: color 0.18s;
+  white-space: nowrap;
+}
+.ghost-avatar-btn:hover:not(.active) {
+  border-color: rgba(255,255,255,0.35);
+  background: rgba(255,255,255,0.1);
+}
+.ghost-avatar-btn:active { transform: scale(0.93); }
+.ghost-avatar-btn.active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, rgba(255,255,255,0.08));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.ghost-avatar-btn.active .ghost-avatar-name {
+  color: var(--accent);
+}
+
+/* ── Action bar (play buttons + room code) ── */
+.lobby-action-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  width: 100%;
+  padding-top: 14px;
+  border-top: 1.5px solid rgba(252,213,232,0.7);
+  margin-top: 2px;
+}
+
+/* ── Room code pop-in animation ── */
+@keyframes roomCodePop {
+  from { opacity: 0; transform: scale(0.9) translateY(6px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+#room-code-display:not(.hidden) {
+  animation: roomCodePop 0.38s cubic-bezier(0.34, 1.45, 0.64, 1) both;
+  background: color-mix(in srgb, var(--accent) 6%, rgba(255,255,255,0.6));
+  border: 2px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  border-radius: 18px;
+  padding: 14px 16px;
+  text-align: center;
+}
+
+/* ── Play Game button entry stagger on main view ── */
+#lobby-main-view:not(.hidden) #play-game-btn {
+  animation: lobbyFadeUp 0.35s cubic-bezier(0.4, 0, 0.2, 1) 0.05s both;
+}
+#lobby-main-view:not(.hidden) .lobby-join-card {
+  animation: lobbyFadeUp 0.35s cubic-bezier(0.4, 0, 0.2, 1) 0.12s both;
+}
+
+/* ── Game grid entry stagger ── */
+#lobby-game-view:not(.hidden) .game-card {
+  animation: lobbyFadeUp 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+#lobby-game-view:not(.hidden) .game-card:nth-child(1) { animation-delay: 0.04s; }
+#lobby-game-view:not(.hidden) .game-card:nth-child(2) { animation-delay: 0.08s; }
+#lobby-game-view:not(.hidden) .game-card:nth-child(3) { animation-delay: 0.12s; }
+#lobby-game-view:not(.hidden) .game-card:nth-child(4) { animation-delay: 0.16s; }
+#lobby-game-view:not(.hidden) .game-card:nth-child(5) { animation-delay: 0.20s; }
+#lobby-game-view:not(.hidden) .game-card:nth-child(6) { animation-delay: 0.24s; }
+#lobby-game-view:not(.hidden) .game-card:nth-child(7) { animation-delay: 0.28s; }
+
+/* ── lobby-inner: remove fixed gap when game view is active ── */
+#lobby-screen .lobby-inner {
+  gap: 0;
+}
+#lobby-top-row, .lobby-top-row { margin-bottom: 14px; }

@@ -565,6 +565,11 @@ function updateLobbyForGame(game) {
   });
   const ghostAreaRow = document.getElementById("ghost-area-row");
   if (ghostAreaRow) ghostAreaRow.classList.toggle("hidden", !isGhost);
+  const ghostAvatarRow = document.getElementById("ghost-avatar-row");
+  if (ghostAvatarRow) {
+    ghostAvatarRow.classList.toggle("hidden", !isGhost);
+    if (isGhost) buildGhostAvatarPicker();
+  }
 }
 updateLobbyForGame(localStorage.getItem("game") || "trash");
 
@@ -598,6 +603,59 @@ function getSelectedGhostArea() {
   const active = document.querySelector(".ghost-area-btn.active");
   const area = active ? active.dataset.area : "random";
   return area === "random" ? null : area;
+}
+
+// ── Ghost avatar picker ────────────────────────────────────────────────────
+const GHOST_AVATAR_DEFS = [
+  { name: 'Detective', body: '#2c3e6b', emoji: '🎩' },
+  { name: 'Witch',     body: '#3d1f5a', emoji: '🧙' },
+  { name: 'Explorer',  body: '#b85e28', emoji: '🌿' },
+  { name: 'Hunter',    body: '#1e4a52', emoji: '⚡' },
+  { name: 'Scientist', body: '#d8e8f0', emoji: '🔬' },
+  { name: 'Kid',       body: '#cc2222', emoji: '🧢' },
+];
+let _ghostAvatar = Math.max(0, Math.min(GHOST_AVATAR_DEFS.length - 1, parseInt(localStorage.getItem("ghostAvatar") || "0") || 0));
+window._ghostAvatarSelection = _ghostAvatar;
+
+function buildGhostAvatarPicker() {
+  const grid = $("ghost-avatar-grid");
+  if (!grid || grid.dataset.built === "1") return;
+  grid.dataset.built = "1";
+  GHOST_AVATAR_DEFS.forEach((av, idx) => {
+    const btn = document.createElement("button");
+    btn.className = "ghost-avatar-btn" + (idx === _ghostAvatar ? " active" : "");
+    btn.setAttribute("aria-label", av.name);
+
+    const cvs = document.createElement("canvas");
+    cvs.width = 44; cvs.height = 48;
+    const c = cvs.getContext("2d");
+    // Body circle
+    c.fillStyle = av.body;
+    c.beginPath(); c.arc(22, 28, 16, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = "rgba(255,255,255,0.3)"; c.lineWidth = 1.5; c.stroke();
+    // Avatar emoji
+    c.font = "18px sans-serif"; c.textAlign = "center"; c.textBaseline = "middle";
+    c.fillText(av.emoji, 22, 20);
+
+    const label = document.createElement("span");
+    label.className = "ghost-avatar-name";
+    label.textContent = av.name;
+
+    btn.appendChild(cvs);
+    btn.appendChild(label);
+    btn.addEventListener("click", () => {
+      _ghostAvatar = idx;
+      window._ghostAvatarSelection = idx;
+      localStorage.setItem("ghostAvatar", idx);
+      grid.querySelectorAll(".ghost-avatar-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+    });
+    grid.appendChild(btn);
+  });
+}
+
+function getSelectedGhostAvatar() {
+  return _ghostAvatar;
 }
 
 $("vs-ai-btn").addEventListener("click", () => {
@@ -957,10 +1015,12 @@ $("see-cards-btn").addEventListener("click", viewCards);
     card.dataset.game = g.value;
     card.innerHTML =
       `<span class="game-card-icon">${g.icon}</span>` +
-      `<span class="game-card-name">${g.name}</span>` +
-      `<span class="game-card-tagline">${g.tagline}</span>` +
-      `<span class="game-card-players">${g.players}</span>` +
-      `<button class="game-card-learn" data-tab="${g.tab}">Learn to play →</button>`;
+      `<div class="game-card-body">` +
+        `<span class="game-card-name">${g.name}</span>` +
+        `<span class="game-card-tagline">${g.tagline}</span>` +
+        `<span class="game-card-players">${g.players}</span>` +
+        `<button class="game-card-learn" data-tab="${g.tab}">Learn to play →</button>` +
+      `</div>`;
 
     card.addEventListener("click", e => {
       if (e.target.classList.contains("game-card-learn")) {
@@ -982,16 +1042,10 @@ $("see-cards-btn").addEventListener("click", viewCards);
       localStorage.setItem("game", g.value);
       applyGameTheme(g.value);
       updateLobbyForGame(g.value);
-      card.scrollIntoView({ behavior: "smooth", inline: "nearest", block: "nearest" });
     });
 
     carousel.appendChild(card);
   });
-
-  setTimeout(() => {
-    const sel = carousel.querySelector(".game-card.selected");
-    if (sel) sel.scrollIntoView({ behavior: "instant", inline: "nearest", block: "nearest" });
-  }, 60);
 
   window._syncCarousel = function(game) {
     document.querySelectorAll(".game-card").forEach(c => {
