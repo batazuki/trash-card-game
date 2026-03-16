@@ -452,9 +452,10 @@
   }
 
   function resizeCanvas() {
-    dpr   = window.devicePixelRatio || 1;
-    cssW  = window.innerWidth;
-    cssH  = window.innerHeight;
+    dpr  = window.devicePixelRatio || 1;
+    const c = canvas.parentElement;
+    cssW = c.clientWidth  || window.innerWidth;
+    cssH = c.clientHeight || window.innerHeight;
     canvas.width      = Math.round(cssW * dpr);
     canvas.height     = Math.round(cssH * dpr);
     darkCanvas.width  = canvas.width;
