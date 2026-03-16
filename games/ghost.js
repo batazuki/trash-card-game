@@ -27,10 +27,45 @@ module.exports = function(io, helpers) {
     confused: { speed: 80,  ouijaTime: 45, diversions: [2,4], fleeRange: 0,   color: '#b8f5a3', description: 'Wandering aimlessly — not sure where, or when, they are' },
   };
 
+  const POI_POOLS = {
+    graveyard: [
+      { title: 'Elias Morrow, 1869',       text: 'Beloved innkeeper of Dunhallow. Died counting coins — found without a single one.' },
+      { title: 'Agnes Fitch, 1901',         text: 'She brewed the finest tea in the county. Some say the kettle still whistles on cold nights.' },
+      { title: 'Constance Hale, 1887',      text: 'Schoolteacher. Forty years of perfect attendance. Her students rarely agreed.' },
+      { title: 'Reginald Pools, 1923',      text: 'He argued the church clock ran fast. The clock outlasted him by 80 years.' },
+      { title: 'Muriel Cray, 1855',         text: 'Our lady of the loom. Wove twelve quilts in her final year. The thirteenth was unfinished.' },
+      { title: 'Orphaned Stone, ???',       text: 'Name worn away by weather. Someone still leaves fresh flowers here every Sunday.' },
+      { title: 'Tobias Wren, 1912',         text: 'Postmaster. Never opened a single letter addressed to himself. There were many.' },
+      { title: 'The Dunhallow Children',    text: 'Five brothers: Arthur, George, Henry, Edmund, and little Poll. They all went ice skating. The ice did not hold.' },
+    ],
+    garden: [
+      { title: 'Founders Plaque, 1784',     text: 'These grounds were laid by Countess Ashwood. She lost the estate in a card game in 1786.' },
+      { title: 'The Weeping Elm',           text: 'Planted by a heartbroken suitor. The one he loved married another — and planted the elm next door.' },
+      { title: 'Bench, In Memoriam',        text: 'In memory of Gerald, who sat here every morning. Gerald was a dog.' },
+      { title: 'Sundial Inscription',       text: '"I count only the hours of sunshine." The shadow runs backward. The gardener says it always has.' },
+      { title: 'Garden Labyrinth Notice',   text: 'Three visitors became lost in 1891. Two found their way out. The third found something else entirely.' },
+      { title: 'Birdbath Dedication',       text: 'Donated by Mrs. Harlow, who believed birds were the souls of gossips. The birds seem unsettled here.' },
+      { title: 'The Faceless Statue',       text: 'This figure once had a face. The groundskeeper removed it in 1952. He refuses to explain why.' },
+      { title: 'Sealed Well Notice, 1903',  text: 'A surveyor heard voices from inside. The official report cites "echo effects from underground chambers."' },
+    ],
+    house: [
+      { title: 'Faded Letter',              text: '"Do not go into the east wing after sundown. We did not ask why. Now we know." — Unsigned.' },
+      { title: 'Guest Register',            text: 'Last entry: "Room 4, party of 3, checking out Monday." Monday was a Wednesday that year. They never checked out.' },
+      { title: 'The Stopped Clock',         text: 'The family wound it daily for thirty years. It stopped again. Always at 3:17.' },
+      { title: 'Dusty Portrait',            text: 'The subject has been painted over three times. Each layer reveals the same expression.' },
+      { title: 'Recipe Card',               text: "Aunt Delphine's famous roast. One ingredient is listed only as 'the usual thing.' No one remembers what it was." },
+      { title: "Child's Drawing",           text: 'A crayon drawing of a family. Seven people are labeled. The family only had six members.' },
+      { title: 'Bookshelf Note',            text: '"Count the windows from outside, then from inside. Tell me which number is right."' },
+      { title: 'Fireplace Carving',         text: 'Names carved since 1840. The most recent was added three years ago. The house has been empty for fifteen.' },
+    ],
+  };
+
   const FLASH_RANGE = 280;
-  const FLASH_ANGLE = Math.PI / 2.8;
+  const FLASH_ANGLE = Math.PI / 4.5;
   const EMF_RANGE   = 450;
   const SOUND_RANGE = 350;
+  const PLAYER_SPEED = 180;
+  const PICKUP_RANGE = 48;
 
   // ─── Area Definitions ─────────────────────────────────────────────────────
   // All obstacle coords in pixels. T = 32px tile.
@@ -243,7 +278,7 @@ module.exports = function(io, helpers) {
   }
 
   // ─── Ghost AI ─────────────────────────────────────────────────────────────
-  function updateGhost(ghost, dt, areaData, playerPositions) {
+  function updateGhost(ghost, dt, areaData, playerPositions, litIntensity) {
     if (ghost.identified || ghost.claimedBy !== null) return;
 
     const { areaWidth, areaHeight, obstacles } = areaData;
@@ -349,6 +384,8 @@ module.exports = function(io, helpers) {
       let spd = cfg.speed;
       if (ghost.personality === 'dramatic' && ghost.sprintActive) spd *= 2;
       if (ghost.personality === 'regal') spd *= 0.7;
+      // Flashlight illumination causes ghost to flee faster, capped at player speed
+      if (litIntensity > 0.1) spd = Math.min(PLAYER_SPEED, spd * (1 + litIntensity * 2.5));
       const step = Math.min(spd * dt / 1000, dist);
       const nx = ghost.x + (dx / dist) * step;
       const ny = ghost.y + (dy / dist) * step;
@@ -359,11 +396,11 @@ module.exports = function(io, helpers) {
   }
 
   // ─── Signal Computation ───────────────────────────────────────────────────
-  function computeSignals(ghost, playerPos, facing) {
+  function computeSignals(ghost, playerPos, facing, emfRange) {
     const dx = ghost.x - playerPos.x;
     const dy = ghost.y - playerPos.y;
     const dist = Math.hypot(dx, dy);
-    const emf   = Math.max(0, 1 - dist / EMF_RANGE);
+    const emf   = Math.max(0, 1 - dist / (emfRange || EMF_RANGE));
     const sound  = Math.max(0, 1 - dist / SOUND_RANGE);
     let flashlight = 0;
     if (dist < FLASH_RANGE) {
@@ -435,10 +472,43 @@ module.exports = function(io, helpers) {
       // Collect player positions
       const playerPositions = state.players.map(p => p.ghostPos || null);
 
+      // Track max flashlight intensity per ghost from any player
+      const ghostLitIntensity = {};
+      for (const ghost of ghosts) ghostLitIntensity[ghost.id] = 0;
+      for (const player of state.players) {
+        if (player.isAI || !player.ghostPos) continue;
+        const facing = player.ghostFacing || 0;
+        for (const ghost of ghosts) {
+          if (ghost.identified) continue;
+          const sig = computeSignals(ghost, player.ghostPos, facing, EMF_RANGE);
+          if (sig.flashlight > (ghostLitIntensity[ghost.id] || 0)) {
+            ghostLitIntensity[ghost.id] = sig.flashlight;
+          }
+        }
+      }
+
       // Update each active ghost AI
       for (const ghost of ghosts) {
         if (!ghost.identified && ghost.claimedBy === null) {
-          updateGhost(ghost, dt, areaData, playerPositions);
+          updateGhost(ghost, dt, areaData, playerPositions, ghostLitIntensity[ghost.id] || 0);
+        }
+      }
+
+      // Pickup detection
+      for (let pi2 = 0; pi2 < state.players.length; pi2++) {
+        const player2 = state.players[pi2];
+        if (player2.isAI || !player2.ghostPos) continue;
+        const pos2 = player2.ghostPos;
+        if (gs.keyAvailable && Math.hypot(pos2.x - gs.keyPos.x, pos2.y - gs.keyPos.y) < PICKUP_RANGE) {
+          gs.keyAvailable = false;
+          gs.keyHolder = pi2;
+          io.to(roomId).emit('ghost:key_taken', { playerIndex: pi2 });
+        }
+        if (gs.powerupAvailable && gs.keyHolder === pi2 &&
+            Math.hypot(pos2.x - gs.powerupPos.x, pos2.y - gs.powerupPos.y) < PICKUP_RANGE) {
+          gs.powerupAvailable = false;
+          gs.emfUpgradedPlayers.add(pi2);
+          io.to(roomId).emit('ghost:powerup_taken', { playerIndex: pi2 });
         }
       }
 
@@ -455,7 +525,7 @@ module.exports = function(io, helpers) {
         let emfDir = null, sndDir = null, maxEmf = 0, maxSnd = 0;
         for (const ghost of ghosts) {
           if (ghost.identified) continue;
-          const sig = computeSignals(ghost, playerPos, facing);
+          const sig = computeSignals(ghost, playerPos, facing, gs.emfUpgradedPlayers && gs.emfUpgradedPlayers.has(pi) ? EMF_RANGE * 2 : EMF_RANGE);
           signals.push({ ghostId: ghost.id, ...sig });
 
           // Track strongest signal direction for arrow indicator
@@ -514,6 +584,39 @@ module.exports = function(io, helpers) {
     }
   }
 
+  // ─── POI Generation ───────────────────────────────────────────────────────
+  function generatePOIs(areaKey, areaData) {
+    const pool = (POI_POOLS[areaKey] || POI_POOLS.graveyard).slice();
+    // Shuffle
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    const selected = pool.slice(0, 5);
+    const zones = areaData.spawnZones;
+    return selected.map((p, i) => {
+      const zone = zones[i % zones.length];
+      // Scatter within zone
+      const x = Math.round(zone.x + randomBetween(zone.w * 0.1, zone.w * 0.9));
+      const y = Math.round(zone.y + randomBetween(zone.h * 0.1, zone.h * 0.9));
+      return { id: i, x, y, title: p.title, text: p.text };
+    });
+  }
+
+  function randomPickupPos(areaData, excludePos, minExcludeDist) {
+    const zones = areaData.spawnZones;
+    for (let attempt = 0; attempt < 30; attempt++) {
+      const zone = zones[Math.floor(Math.random() * zones.length)];
+      const x = Math.round(zone.x + randomBetween(zone.w * 0.15, zone.w * 0.85));
+      const y = Math.round(zone.y + randomBetween(zone.h * 0.15, zone.h * 0.85));
+      if (!excludePos || Math.hypot(x - excludePos.x, y - excludePos.y) > minExcludeDist) {
+        return { x, y };
+      }
+    }
+    const z0 = zones[0];
+    return { x: Math.round(z0.x + z0.w / 2), y: Math.round(z0.y + z0.h / 2) };
+  }
+
   // ─── startGame ────────────────────────────────────────────────────────────
   function startGame(state, roomId) {
     // Clear any existing state
@@ -528,6 +631,11 @@ module.exports = function(io, helpers) {
     // Spawn ghosts
     const ghosts = spawnGhosts(areaData);
 
+    // Generate POIs and pickup positions
+    const pois = generatePOIs(areaKey, areaData);
+    const keyPos = randomPickupPos(areaData, areaData.playerStart, 500);
+    const powerupPos = randomPickupPos(areaData, keyPos, 300);
+
     // Build state
     state.ghost = {
       area:           areaKey,
@@ -536,6 +644,13 @@ module.exports = function(io, helpers) {
       tickRef:        null,
       identifiedCount: 0,
       totalGhosts:    3,
+      pois,
+      keyPos,
+      powerupPos,
+      keyAvailable:   true,
+      keyHolder:      null,
+      powerupAvailable: true,
+      emfUpgradedPlayers: new Set(),
     };
     state.phase = 'playing';
 
@@ -562,6 +677,9 @@ module.exports = function(io, helpers) {
           ghostCount:  3,
           bgColor:     areaData.bgColor,
           label:       areaData.label,
+          pois,
+          keyPos,
+          powerupPos,
         },
       });
     });
@@ -658,6 +776,17 @@ module.exports = function(io, helpers) {
       }
     });
 
+    // Player signal ("Come here!")
+    socket.on('ghost:signal', ({ roomId }) => {
+      const state = rooms.get(roomId);
+      if (!state || !state.ghost || state.phase !== 'playing') return;
+      const playerIndex = state.players.findIndex(p => p.id === socket.id);
+      if (playerIndex === -1) return;
+      const pos = state.players[playerIndex].ghostPos;
+      if (!pos) return;
+      socket.to(roomId).emit('ghost:signal_broadcast', { playerIndex, x: pos.x, y: pos.y });
+    });
+
     // Close board
     socket.on('ghost:close_board', ({ roomId, ghostId }) => {
       const state = rooms.get(roomId);
@@ -694,6 +823,13 @@ module.exports = function(io, helpers) {
           id: g.id, x: g.x, y: g.y, personality: g.personality,
           color: g.color, nameLength: g.name.length, identified: g.identified,
         })),
+        pois:            gs.pois,
+        keyPos:          gs.keyPos,
+        powerupPos:      gs.powerupPos,
+        keyAvailable:    gs.keyAvailable,
+        powerupAvailable: gs.powerupAvailable,
+        hasKey:          gs.keyHolder === playerIndex,
+        hasEMFUpgrade:   gs.emfUpgradedPlayers ? gs.emfUpgradedPlayers.has(playerIndex) : false,
       },
     };
   }

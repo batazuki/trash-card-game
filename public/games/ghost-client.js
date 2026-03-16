@@ -6,7 +6,7 @@
   const PLAYER_SPEED  = 180;   // px/s
   const PLAYER_R      = 14;
   const FLASH_RANGE   = 280;
-  const FLASH_ANGLE   = Math.PI / 2.8;
+  const FLASH_ANGLE   = Math.PI / 4.5;
   const BOARD_RANGE   = 90;    // px from ghost to place board
   const POS_SEND_MS   = 60;
   const T             = 32;    // tile size
@@ -531,6 +531,20 @@
 
     if (S.ouija) { handleOuijaTap(tx, ty, cw, ch); return; }
 
+    // Signal button
+    const sbX2 = 128, sbY2 = 8, sbW2 = 52, sbH2 = 32;
+    if (tx >= sbX2 && tx <= sbX2+sbW2 && ty >= sbY2 && ty <= sbY2+sbH2) {
+      if (!S.signalCooldown || S.signalCooldown <= 0) {
+        socket.emit('ghost:signal', { roomId: S.roomId });
+        S.signalCooldown = 12000;
+        // Show a brief flash on your own screen
+        S.attemptsMsg = '📣 Signal sent!';
+        clearTimeout(S.attemptsMsgTimer);
+        S.attemptsMsgTimer = setTimeout(() => { if (S) S.attemptsMsg = null; }, 1500);
+      }
+      return;
+    }
+
     // Journal button (top-right)
     const jbX = cw - 44, jbY = 8, jbW = 36, jbH = 32;
     if (tx >= jbX && tx <= jbX+jbW && ty >= jbY && ty <= jbY+jbH) {
@@ -610,8 +624,9 @@
 
     // Update fog-of-war grid
     if (fogGrid) {
+      const emfReveal = S.hasEMFUpgrade ? 900 : 450;
       const revR = S.activeTool === 'flashlight' ? FLASH_RANGE :
-                   S.activeTool === 'emf' ? 250 : 350;
+                   S.activeTool === 'emf' ? emfReveal : 350;
       const markCircle = (wx, wy, r) => {
         const gcx = Math.floor(wx / FOG_CELL), gcy = Math.floor(wy / FOG_CELL);
         const gcr = Math.ceil(r / FOG_CELL) + 1;
@@ -644,6 +659,19 @@
 
     // Drive signal-reactive audio (EMF buzz / sound rumble)
     gaSignals(S.signals, S.activeTool);
+
+    // Tick signal cooldown
+    if (S.signalCooldown > 0) S.signalCooldown = Math.max(0, S.signalCooldown - dt * 1000);
+
+    // Check POI proximity
+    S.activePoi = null;
+    for (const poi of (S.pois || [])) {
+      if (Math.hypot(poi.x - S.me.x, poi.y - S.me.y) < 65) {
+        S.activePoi = poi;
+        poi.read = true;
+        break;
+      }
+    }
   }
 
   // ── Avatar sprites ────────────────────────────────────────────────────────
@@ -801,6 +829,8 @@
 
     applyDarkness(cw, ch);
     drawHUD(cw, ch);
+    drawPOIPanel(cw, ch);
+    drawPlayerSignals(cw, ch);
     drawJoystick(cw, ch);
     if (S.reveal) drawReveal(cw, ch);
   }
@@ -818,6 +848,75 @@
 
     for (const ob of area.obstacles) {
       drawObstacle(ob, area, now);
+    }
+    drawPOIs();
+    drawPickups();
+  }
+
+  function drawPOIs() {
+    if (!S.pois) return;
+    const now = Date.now();
+    for (const poi of S.pois) {
+      const sx = poi.x;   // already in world space (inside ctx.translate)
+      const sy = poi.y;
+      const pulse = 0.6 + 0.4 * Math.sin(now * 0.0025 + poi.id * 1.3);
+      const alpha = poi.read ? 0.35 : pulse;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      // Glow ring
+      const glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, 18);
+      glow.addColorStop(0, 'rgba(200,160,255,0.6)');
+      glow.addColorStop(1, 'rgba(200,160,255,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(sx, sy, 18, 0, Math.PI * 2); ctx.fill();
+      // Symbol
+      ctx.fillStyle = poi.read ? '#9070b0' : '#d4a0ff';
+      ctx.font = `bold ${14}px Georgia,serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText('?', sx, sy + 5);
+      ctx.restore();
+    }
+  }
+
+  function drawPickups() {
+    if (!S.cam) return;
+    const now = Date.now();
+    const pulse = 0.5 + 0.5 * Math.sin(now * 0.004);
+
+    if (S.keyAvailable && S.keyPos) {
+      const kx = S.keyPos.x;   // already in world space
+      const ky = S.keyPos.y;
+      ctx.save();
+      const g = ctx.createRadialGradient(kx, ky, 0, kx, ky, 22 + pulse * 8);
+      g.addColorStop(0, `rgba(255,215,0,${0.55 + pulse * 0.3})`);
+      g.addColorStop(1, 'rgba(255,215,0,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(kx, ky, 22 + pulse * 8, 0, Math.PI * 2); ctx.fill();
+      ctx.font = '16px serif'; ctx.textAlign = 'center';
+      ctx.fillText('🗝', kx, ky + 6);
+      ctx.restore();
+    }
+
+    if (S.powerupAvailable && S.powerupPos) {
+      const px = S.powerupPos.x;   // already in world space
+      const py = S.powerupPos.y;
+      const hasK = S.hasKey;
+      ctx.save();
+      ctx.globalAlpha = hasK ? 1 : 0.4;
+      const g2 = ctx.createRadialGradient(px, py, 0, px, py, 24 + pulse * 10);
+      g2.addColorStop(0, `rgba(0,255,136,${0.55 + pulse * 0.3})`);
+      g2.addColorStop(1, 'rgba(0,255,136,0)');
+      ctx.fillStyle = g2;
+      ctx.beginPath(); ctx.arc(px, py, 24 + pulse * 10, 0, Math.PI * 2); ctx.fill();
+      ctx.font = '15px serif'; ctx.textAlign = 'center';
+      ctx.fillText('⚡', px, py + 5);
+      // Lock icon if no key
+      if (!hasK) {
+        ctx.font = '10px serif';
+        ctx.fillStyle = '#aaa'; ctx.globalAlpha = 0.7;
+        ctx.fillText('🔒', px + 14, py - 8);
+      }
+      ctx.restore();
     }
   }
 
@@ -1248,6 +1347,10 @@
         // EMF label
         ctx.fillStyle = active ? '#00ff88' : '#44bb77'; ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center';
         ctx.fillText('EMF', bx+bw/2, barY+13);
+        if (S.hasEMFUpgrade) {
+          ctx.fillStyle = '#ffdd00'; ctx.font = 'bold 8px monospace';
+          ctx.fillText('2×', bx + bw - 10, barY + 11);
+        }
         // 5 segmented bars
         const nbars = 5, barH = [6,8,10,12,14];
         const litBars = Math.round((sig / 100) * nbars);
@@ -1289,6 +1392,18 @@
     ctx.fillStyle = 'rgba(0,0,0,0.55)'; rrect(ctx, 10, 10, 110, 32, 8); ctx.fill();
     ctx.fillStyle = '#e2e8f0'; ctx.font = '13px monospace'; ctx.textAlign = 'left';
     ctx.fillText(`👻 ${S.identified}/${S.totalGhosts}`, 20, 31);
+
+    // Signal button (top-left, beside ghost counter)
+    const sigCool = S.signalCooldown > 0;
+    const sbX = 128, sbY = 8, sbW = 52, sbH = 32;
+    ctx.fillStyle = sigCool ? 'rgba(20,20,30,0.78)' : 'rgba(160,50,10,0.90)';
+    rrect(ctx, sbX, sbY, sbW, sbH, 8); ctx.fill();
+    if (!sigCool) { ctx.strokeStyle = '#ff8040'; ctx.lineWidth = 1.5; rrect(ctx, sbX, sbY, sbW, sbH, 8); ctx.stroke(); }
+    ctx.font = '14px serif'; ctx.textAlign = 'center';
+    ctx.fillText('📣', sbX + sbW/2, sbY + 13);
+    ctx.fillStyle = sigCool ? '#555' : '#ffaa60'; ctx.font = '9px monospace';
+    ctx.fillText(sigCool ? `${Math.ceil(S.signalCooldown/1000)}s` : 'SIGNAL', sbX + sbW/2, sbY + 27);
+    ctx.textAlign = 'left';
 
     // Area label
     ctx.fillStyle = 'rgba(0,0,0,0.55)'; rrect(ctx, cw/2-70, 10, 140, 30, 8); ctx.fill();
@@ -1339,6 +1454,62 @@
     drawMinimap(cw, ch);
     // Evidence journal overlay
     drawJournal(cw, ch);
+  }
+
+  function drawPOIPanel(cw, ch) {
+    if (!S.activePoi) return;
+    const poi = S.activePoi;
+    const pw = Math.min(cw - 32, 290), ph = 92;
+    const px = (cw - pw) / 2;
+    const barH = 52, gap = 8;
+    const barW = 3 * 70 + 2 * gap;
+    const barY = ch - barH - 10;
+    const py = barY - ph - 10;
+    ctx.fillStyle = 'rgba(8,4,18,0.93)';
+    rrect(ctx, px, py, pw, ph, 12); ctx.fill();
+    ctx.strokeStyle = '#8855cc'; ctx.lineWidth = 1.5;
+    rrect(ctx, px, py, pw, ph, 12); ctx.stroke();
+    ctx.fillStyle = '#d4a840'; ctx.font = 'bold 11px Georgia,serif'; ctx.textAlign = 'center';
+    ctx.fillText(poi.title, px + pw / 2, py + 18);
+    ctx.fillStyle = '#c0b8d8'; ctx.font = '10px sans-serif';
+    wrapText(poi.text, px + pw / 2, py + 34, pw - 24, 13);
+  }
+
+  function drawPlayerSignals(cw, ch) {
+    const now = Date.now();
+    for (const [piStr, sig] of Object.entries(S.playerSignals)) {
+      const age = now - sig.ts;
+      if (age > 5000) { delete S.playerSignals[piStr]; continue; }
+      const alpha = Math.max(0, 1 - age / 5000);
+      const pulse = 0.5 + 0.5 * Math.sin(now * 0.008);
+      const dx = sig.x - S.me.x;
+      const dy = sig.y - S.me.y;
+      const dir = Math.atan2(dy, dx);
+      const cxS = cw / 2, cyS = ch / 2;
+      const margin = 55;
+      const cosD = Math.cos(dir), sinD = Math.sin(dir);
+      let t = Infinity;
+      if (cosD > 0.001)  t = Math.min(t, (cw - cxS - margin) / cosD);
+      else if (cosD < -0.001) t = Math.min(t, (cxS - margin) / (-cosD));
+      if (sinD > 0.001)  t = Math.min(t, (ch - cyS - margin) / sinD);
+      else if (sinD < -0.001) t = Math.min(t, (cyS - margin) / (-sinD));
+      const ax = cxS + cosD * t, ay = cyS + sinD * t;
+      ctx.save();
+      ctx.globalAlpha = alpha * (0.75 + pulse * 0.25);
+      ctx.translate(ax, ay);
+      ctx.rotate(dir);
+      ctx.fillStyle = '#ff5533';
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(18, 0); ctx.lineTo(-10, -10); ctx.lineTo(-6, 0); ctx.lineTo(-10, 10);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 8px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('HERE!', 0, -14);
+      ctx.restore();
+    }
   }
 
   function drawJoystick(cw, ch) {
@@ -1957,13 +2128,40 @@
       clearTimeout(S.attemptsMsgTimer);
       S.attemptsMsgTimer = setTimeout(() => { if (S) S.attemptsMsg = null; }, 2500);
     });
+
+    socket.on('ghost:signal_broadcast', ({ playerIndex, x, y }) => {
+      if (!S) return;
+      S.playerSignals[playerIndex] = { x, y, ts: Date.now() };
+    });
+
+    socket.on('ghost:key_taken', ({ playerIndex }) => {
+      if (!S) return;
+      S.keyAvailable = false;
+      if (playerIndex === S.myPlayerIndex) {
+        S.hasKey = true;
+        S.attemptsMsg = '🗝 Found a key! Locate the EMF upgrade.';
+        clearTimeout(S.attemptsMsgTimer);
+        S.attemptsMsgTimer = setTimeout(() => { if (S) S.attemptsMsg = null; }, 3500);
+      }
+    });
+
+    socket.on('ghost:powerup_taken', ({ playerIndex }) => {
+      if (!S) return;
+      S.powerupAvailable = false;
+      if (playerIndex === S.myPlayerIndex) {
+        S.hasEMFUpgrade = true;
+        S.attemptsMsg = '⚡ EMF Upgraded — range doubled!';
+        clearTimeout(S.attemptsMsgTimer);
+        S.attemptsMsgTimer = setTimeout(() => { if (S) S.attemptsMsg = null; }, 3500);
+      }
+    });
   }
 
   function unbindSocketEvents() {
     ['ghost:signals','ghost:found','ghost:position','ghost:player_pos',
      'ghost:ouija_start',
      'ghost:identified','ghost:wrong_name','ghost:claimed','ghost:released',
-     'ghost:respawn'].forEach(ev => socket.off(ev));
+     'ghost:respawn','ghost:signal_broadcast','ghost:key_taken','ghost:powerup_taken'].forEach(ev => socket.off(ev));
   }
 
   // ── Init / cleanup ────────────────────────────────────────────────────────
@@ -1999,6 +2197,16 @@
       attemptsMsgTimer: null,
       journal:      false,
       identifiedGhosts: {},
+      pois:          (gd.pois || []).map(p => ({ ...p, read: false })),
+      activePoi:     null,
+      keyPos:        gd.keyPos || null,
+      powerupPos:    gd.powerupPos || null,
+      keyAvailable:  gd.keyAvailable !== false,
+      powerupAvailable: gd.powerupAvailable !== false,
+      hasKey:        gd.hasKey || false,
+      hasEMFUpgrade: gd.hasEMFUpgrade || false,
+      playerSignals: {},
+      signalCooldown: 0,
     };
 
     // Init fog grid

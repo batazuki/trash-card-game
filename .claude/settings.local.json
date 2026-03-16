@@ -9,7 +9,8 @@
       "Bash(node --check \"C:\\\\Users\\\\hokie\\\\Downloads\\\\trash-card-game\\\\public\\\\games\\\\sketch-client.js\" 2>&1 && echo \"OK\")",
       "Bash(node --check \"C:\\\\Users\\\\hokie\\\\Downloads\\\\trash-card-game\\\\public\\\\game.js\" 2>&1 && echo \"OK\")",
       "Bash(node --check \"C:\\\\Users\\\\hokie\\\\Downloads\\\\trash-card-game\\\\public\\\\game.js\" && node --check \"C:\\\\Users\\\\hokie\\\\Downloads\\\\trash-card-game\\\\server.js\" && node --check \"C:\\\\Users\\\\hokie\\\\Downloads\\\\trash-card-game\\\\public\\\\games\\\\sketch-client.js\" && echo \"ALL OK\")",
-      "Bash(node --check \"C:\\\\Users\\\\hokie\\\\Downloads\\\\trash-card-game\\\\public\\\\games\\\\sketch-client.js\" && echo \"OK\")"
+      "Bash(node --check \"C:\\\\Users\\\\hokie\\\\Downloads\\\\trash-card-game\\\\public\\\\games\\\\sketch-client.js\" && echo \"OK\")",
+      "Bash(node:*)"
     ]
   }
 }
