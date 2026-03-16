@@ -29,7 +29,7 @@ module.exports = function(io, helpers) {
 
   const FLASH_RANGE = 280;
   const FLASH_ANGLE = Math.PI / 2.8;
-  const EMF_RANGE   = 250;
+  const EMF_RANGE   = 450;
   const SOUND_RANGE = 350;
 
   // ─── Area Definitions ─────────────────────────────────────────────────────
@@ -665,6 +665,9 @@ module.exports = function(io, helpers) {
       const gs    = state.ghost;
       const ghost = gs.ghosts[ghostId];
       if (!ghost) return;
+      const playerIndex = state.players.findIndex(p => p.id === socket.id);
+      // Only the player who claimed the board (or a disconnected player) can release it
+      if (ghost.claimedBy !== null && ghost.claimedBy !== playerIndex) return;
       ghost.claimedBy = null;
       io.to(roomId).emit('ghost:released', { ghostId });
     });

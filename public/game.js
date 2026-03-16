@@ -1133,6 +1133,8 @@ socket.on("opponentReconnected", () => {
 });
 
 socket.on("opponentQuit", ({ quitterIndex }) => {
+  // If we already quit (roomId cleared), don't show the end screen
+  if (!local.roomId) return;
   if (quitterIndex === local.myPlayerIndex) return;
   releaseWakeLock();
   stopElevenMusic();

@@ -189,13 +189,15 @@
   })();
 
   // Personality → planchette feel
+  // speed: how fast it chases the target (0 = frozen, 0.15 = snappy)
+  // momentum: fraction of velocity kept each frame (higher = overshoots more)
   const PCFG = {
-    shy:      { stiffness: 5,  damping: 0.15, dwellMs: 1300 },
-    dramatic: { stiffness: 7,  damping: 0.12, dwellMs: 1000 },
-    goofy:    { stiffness: 10, damping: 0.07, dwellMs: 750  },
-    grumpy:   { stiffness: 9,  damping: 0.18, dwellMs: 600  },
-    regal:    { stiffness: 3,  damping: 0.22, dwellMs: 1600 },
-    confused: { stiffness: 12, damping: 0.04, dwellMs: 900  },
+    shy:      { speed: 0.04,  momentum: 0.55, dwellMs: 1300 },
+    dramatic: { speed: 0.06,  momentum: 0.50, dwellMs: 1000 },
+    goofy:    { speed: 0.10,  momentum: 0.35, dwellMs: 750  },
+    grumpy:   { speed: 0.09,  momentum: 0.45, dwellMs: 600  },
+    regal:    { speed: 0.025, momentum: 0.60, dwellMs: 1600 },
+    confused: { speed: 0.12,  momentum: 0.20, dwellMs: 900  },
   };
 
   // ── Module state ─────────────────────────────────────────────────────────
@@ -1236,17 +1238,51 @@
     tools.forEach((t, i) => {
       const bx = barX + i*(bw+gap);
       const active = S.activeTool === t;
-      ctx.fillStyle = active ? 'rgba(96,165,250,0.85)' : 'rgba(20,20,30,0.78)';
-      rrect(ctx, bx, barY, bw, bh, 10); ctx.fill();
-      if (active) { ctx.strokeStyle = '#60a5fa'; ctx.lineWidth = 2; rrect(ctx, bx, barY, bw, bh, 10); ctx.stroke(); }
-      ctx.font = '22px serif'; ctx.textAlign = 'center';
-      ctx.fillText(icons[t], bx+bw/2, barY+26);
-      // Signal bar
       const sig = S.signals[t] || 0;
-      ctx.fillStyle = 'rgba(255,255,255,0.18)';
-      ctx.fillRect(bx+6, barY+bh-9, bw-12, 4);
-      ctx.fillStyle = sig > 70 ? '#ef4444' : sig > 40 ? '#f97316' : sig > 15 ? '#eab308' : '#4ade80';
-      ctx.fillRect(bx+6, barY+bh-9, (bw-12)*(sig/100), 4);
+
+      if (t === 'emf') {
+        // EMF gets a distinct look: dark green background, segmented bars indicator
+        ctx.fillStyle = active ? 'rgba(0,80,30,0.92)' : 'rgba(0,30,10,0.82)';
+        rrect(ctx, bx, barY, bw, bh, 10); ctx.fill();
+        if (active) { ctx.strokeStyle = '#00ff88'; ctx.lineWidth = 2; rrect(ctx, bx, barY, bw, bh, 10); ctx.stroke(); }
+        // EMF label
+        ctx.fillStyle = active ? '#00ff88' : '#44bb77'; ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center';
+        ctx.fillText('EMF', bx+bw/2, barY+13);
+        // 5 segmented bars
+        const nbars = 5, barH = [6,8,10,12,14];
+        const litBars = Math.round((sig / 100) * nbars);
+        const segW = 8, segGap = 3;
+        const totalW = nbars * segW + (nbars-1) * segGap;
+        const startX = bx + (bw - totalW) / 2;
+        const baseY = barY + bh - 5;
+        for (let b = 0; b < nbars; b++) {
+          const sx = startX + b * (segW + segGap);
+          const sh = barH[b];
+          const lit = b < litBars;
+          const barColor = b >= 4 ? '#ff2244' : b >= 3 ? '#ff8800' : b >= 2 ? '#ffdd00' : '#00ff88';
+          ctx.fillStyle = lit ? barColor : 'rgba(255,255,255,0.12)';
+          ctx.fillRect(sx, baseY - sh, segW, sh);
+        }
+        // Pulsing ring when active and signal > 0
+        if (active && sig > 0) {
+          const pulse = (Math.sin(Date.now() / 180) + 1) / 2;
+          ctx.strokeStyle = `rgba(0,255,136,${0.2 + pulse * 0.5})`;
+          ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.arc(bx+bw/2, barY+28, 10 + pulse * 4, 0, Math.PI*2); ctx.stroke();
+        }
+        ctx.font = '16px serif'; ctx.fillText('📡', bx+bw/2, barY+34);
+      } else {
+        ctx.fillStyle = active ? 'rgba(96,165,250,0.85)' : 'rgba(20,20,30,0.78)';
+        rrect(ctx, bx, barY, bw, bh, 10); ctx.fill();
+        if (active) { ctx.strokeStyle = '#60a5fa'; ctx.lineWidth = 2; rrect(ctx, bx, barY, bw, bh, 10); ctx.stroke(); }
+        ctx.font = '22px serif'; ctx.textAlign = 'center';
+        ctx.fillText(icons[t], bx+bw/2, barY+26);
+        // Signal bar
+        ctx.fillStyle = 'rgba(255,255,255,0.18)';
+        ctx.fillRect(bx+6, barY+bh-9, bw-12, 4);
+        ctx.fillStyle = sig > 70 ? '#ef4444' : sig > 40 ? '#f97316' : sig > 15 ? '#eab308' : '#4ade80';
+        ctx.fillRect(bx+6, barY+bh-9, (bw-12)*(sig/100), 4);
+      }
     });
 
     // Ghost progress
@@ -1433,10 +1469,10 @@
       ctx.fillText('_ '.repeat(gh.nameLength).trim(), bx+bw/2, by+bh+26);
     }
 
-    // Submitting phase: prompt to type
+    // Submitting phase: show auto-identifying message
     if (ou.phase === 'submitting') {
       ctx.fillStyle = '#a090d8'; ctx.font = '13px monospace';
-      ctx.fillText('Unscramble the letters — type the name below', bx+bw/2, by+bh+48);
+      ctx.fillText('Identifying the spirit…', bx+bw/2, by+bh+48);
     }
 
     // Cancel button
@@ -1454,17 +1490,24 @@
   function stepOuijaPlanchette(dt) {
     const ou = S.ouija;
     if (ou.seqIdx >= ou.sequence.length) {
-      if (ou.phase === 'playing') { ou.phase = 'submitting'; openNameInput(ou.ghostId); }
+      if (ou.phase === 'playing') {
+        ou.phase = 'submitting';
+        // Auto-identify: emit the collected name directly (letters are in name order)
+        const name = ou.collected.join('');
+        socket.emit('ghost:submit_name', { roomId: S.roomId, ghostId: ou.ghostId, name });
+        setTimeout(() => { if (S && S.ouija) closeOuija('submit'); }, 1400);
+      }
       return;
     }
 
     const target = ou.sequence[ou.seqIdx];
     const p = ou.planchette, c = ou.pcfg;
-    const fx = (target.targetX - p.x) * c.stiffness;
-    const fy = (target.targetY - p.y) * c.stiffness;
-    p.vx = p.vx * (1 - c.damping) + fx * dt;
-    p.vy = p.vy * (1 - c.damping) + fy * dt;
-    if (ou.personality === 'confused') { p.vx += (Math.random()-0.5)*0.04; p.vy += (Math.random()-0.5)*0.04; }
+    // Stable velocity model: v = v * momentum + dx * speed  (always converges when momentum < 1)
+    const dx = target.targetX - p.x;
+    const dy = target.targetY - p.y;
+    p.vx = p.vx * c.momentum + dx * c.speed;
+    p.vy = p.vy * c.momentum + dy * c.speed;
+    if (ou.personality === 'confused') { p.vx += (Math.random()-0.5)*0.008; p.vy += (Math.random()-0.5)*0.008; }
     p.x += p.vx; p.y += p.vy;
     p.x = Math.max(0.04, Math.min(0.96, p.x));
     p.y = Math.max(0.08, Math.min(0.92, p.y));
@@ -1484,7 +1527,7 @@
         gaSfxOuija(target.isReal);
         ou.dwellTimer = 0;
         ou.seqIdx++;
-        p.vx = (Math.random()-0.5)*0.4; p.vy = (Math.random()-0.5)*0.4;
+        p.vx = (Math.random()-0.5)*0.015; p.vy = (Math.random()-0.5)*0.015;
       }
     } else {
       ou.dwellTimer = Math.max(0, ou.dwellTimer - dt*600);
@@ -1968,7 +2011,7 @@
     // Restore found ghosts from reconnect data
     if (gd.foundGhosts) {
       for (const g of gd.foundGhosts) {
-        S.ghosts[g.id] = { ...g, found: true, trail: [], ouijaLetters: [], attempts: 0 };
+        S.ghosts[g.id] = { ...g, found: true, trail: [], ouijaLetters: [], attempts: 0, claimedBy: false };
       }
     }
 
@@ -1978,7 +2021,14 @@
 
   function cleanup() {
     if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
-    if (S) { clearTimeout(S.attemptsMsgTimer); S.ouija = null; }
+    if (S) {
+      clearTimeout(S.attemptsMsgTimer);
+      // Release ghost board claim so other players aren't locked out
+      if (S.ouija && S.roomId) {
+        socket.emit('ghost:close_board', { roomId: S.roomId, ghostId: S.ouija.ghostId });
+      }
+      S.ouija = null;
+    }
     closeNameInput();
     const caseFile = document.getElementById('ghost-case-file');
     if (caseFile) caseFile.remove();
