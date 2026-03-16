@@ -1846,6 +1846,54 @@ body.game-ghost #lobby-screen,
 body.game-ghost #end-screen {
   background: linear-gradient(160deg, #0a0f14 0%, #0d1a0f 100%);
 }
+/* Ghost: dark surfaces & readable inputs */
+body.game-ghost .text-input {
+  background: rgba(0, 20, 5, 0.8);
+  border-color: rgba(76,175,80,0.4);
+  color: #c8e6c9;
+  box-shadow: 0 2px 8px rgba(46,125,50,0.15);
+}
+body.game-ghost .text-input:focus {
+  border-color: #4caf50;
+  box-shadow: 0 0 0 3px rgba(76,175,80,0.2);
+}
+body.game-ghost .text-input::placeholder { color: rgba(150,210,160,0.4); }
+body.game-ghost .toggle-row {
+  background: rgba(0, 20, 5, 0.65);
+  border-color: rgba(76,175,80,0.3);
+}
+body.game-ghost .lobby-join-card {
+  background: rgba(0, 20, 5, 0.6);
+  border-color: rgba(76,175,80,0.25);
+  box-shadow: 0 2px 10px rgba(46,125,50,0.12);
+}
+body.game-ghost .lobby-action-bar {
+  border-top-color: rgba(76,175,80,0.25);
+}
+body.game-ghost #room-code-display:not(.hidden) {
+  background: color-mix(in srgb, #4caf50 10%, rgba(0,20,5,0.75));
+  border-color: rgba(76,175,80,0.4);
+}
+body.game-ghost .pregame-game-badge {
+  background: rgba(0, 20, 5, 0.65);
+  border-color: rgba(76,175,80,0.25);
+  box-shadow: 0 2px 10px rgba(46,125,50,0.1);
+}
+body.game-ghost .ghost-area-btn {
+  background: rgba(0, 20, 5, 0.55);
+  border-color: rgba(76,175,80,0.3);
+  color: #c8e6c9;
+}
+body.game-ghost .ghost-area-btn:hover:not(.active) {
+  border-color: #4caf50;
+  background: rgba(0, 40, 5, 0.75);
+}
+body.game-ghost .ghost-area-btn.active {
+  background: linear-gradient(135deg, #2e7d32, #1b5e20);
+  border-color: transparent;
+  color: #c8e6c9;
+  box-shadow: 0 3px 12px rgba(46,125,50,0.4);
+}
 
 /* Ghost area selection buttons */
 .ghost-area-btns {

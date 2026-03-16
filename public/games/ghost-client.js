@@ -455,9 +455,10 @@
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 
-    canvas.addEventListener('touchstart', onTouchStart, { passive: false });
-    canvas.addEventListener('touchmove',  onTouchMove,  { passive: false });
-    canvas.addEventListener('touchend',   onTouchEnd,   { passive: false });
+    canvas.addEventListener('touchstart',  onTouchStart,  { passive: false });
+    canvas.addEventListener('touchmove',   onTouchMove,   { passive: false });
+    canvas.addEventListener('touchend',    onTouchEnd,    { passive: false });
+    canvas.addEventListener('touchcancel', onTouchCancel, { passive: false });
     canvas.addEventListener('touchstart', onTap,        { passive: false });
     // Desktop fallback
     canvas.addEventListener('mousedown', onMouseDown);
@@ -494,6 +495,12 @@
   }
   function onTouchEnd(e) {
     _lastTouchEndMs = Date.now();
+    for (const t of e.changedTouches) {
+      if (t.identifier === joy.id) { joy.active = false; joy.mag = 0; }
+    }
+  }
+  function onTouchCancel(e) {
+    // OS interrupted the touch (notification, gesture, etc.) — release joystick
     for (const t of e.changedTouches) {
       if (t.identifier === joy.id) { joy.active = false; joy.mag = 0; }
     }
@@ -2244,9 +2251,10 @@
     unbindSocketEvents();
     window.removeEventListener('resize', resizeCanvas);
     if (canvas) {
-      canvas.removeEventListener('touchstart', onTouchStart);
-      canvas.removeEventListener('touchmove',  onTouchMove);
-      canvas.removeEventListener('touchend',   onTouchEnd);
+      canvas.removeEventListener('touchstart',  onTouchStart);
+      canvas.removeEventListener('touchmove',   onTouchMove);
+      canvas.removeEventListener('touchend',    onTouchEnd);
+      canvas.removeEventListener('touchcancel', onTouchCancel);
       canvas.removeEventListener('touchstart', onTap);
       canvas.removeEventListener('mousedown',  onMouseDown);
       canvas.removeEventListener('mousemove',  onMouseMove);
