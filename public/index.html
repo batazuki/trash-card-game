@@ -60,8 +60,8 @@
         <option value="war">War</option>
         <option value="solitaire">Solitaire</option>
         <option value="hockey">Cat Paw Hockey</option>
-        <option value="mancala">Mancala</option>
         <option value="sketch">Sketch It</option>
+        <option value="ghost">Ghost Detective</option>
       </select>
 
       <!-- Game picker carousel (built by JS) -->
@@ -211,8 +211,8 @@
           <option value="war">War</option>
           <option value="solitaire">Solitaire</option>
           <option value="hockey">Cat Paw Hockey</option>
-          <option value="mancala">Mancala</option>
           <option value="sketch">Sketch It</option>
+          <option value="ghost">Ghost Detective</option>
         </select>
       </label>
 
@@ -235,8 +235,8 @@
         <button class="modal-tab" data-tab="war">War</button>
         <button class="modal-tab" data-tab="solitaire">Solitaire</button>
         <button class="modal-tab" data-tab="hockey">Hockey</button>
-        <button class="modal-tab" data-tab="mancala">Mancala</button>
         <button class="modal-tab" data-tab="sketch">Sketch It</button>
+        <button class="modal-tab" data-tab="ghost">Ghost Detective</button>
       </div>
 
       <div id="help-default" class="modal-section active">
@@ -362,33 +362,6 @@
         </div>
       </div>
 
-      <div id="help-mancala" class="modal-section">
-        <div class="modal-rule">
-          <strong>Goal</strong>
-          Collect more seeds in your store than your opponent. Most seeds after the board clears wins!
-        </div>
-        <div class="modal-rule">
-          <strong>Setup</strong>
-          Each player has 6 pits with 4 seeds each. 🌸 🫐 🍓 Your pits are on the bottom row, your store is below them.
-        </div>
-        <div class="modal-rule">
-          <strong>Your Turn</strong>
-          Tap any of your pits. Seeds are distributed one-by-one clockwise into every pit and both stores — including your opponent's store!
-        </div>
-        <div class="modal-rule">
-          <strong>Capture!</strong>
-          If your last seed lands in one of your own empty pits AND the pit directly across has seeds — you capture all of them plus your seed into your store.
-        </div>
-        <div class="modal-rule">
-          <strong>Extra Turn</strong>
-          If your last seed lands in YOUR store, you get another turn immediately!
-        </div>
-        <div class="modal-rule">
-          <strong>Game End</strong>
-          When all of one player's pits are empty, each player sweeps their remaining seeds into their own store. Most seeds wins!
-        </div>
-      </div>
-
       <div id="help-sketch" class="modal-section">
         <div class="modal-rule">
           <strong>Goal</strong>
@@ -413,6 +386,41 @@
         <div class="modal-rule">
           <strong>Winning</strong>
           Highest score wins the round. Win the most rounds to win the game. Choose 1, 3, or 5 rounds when creating a room.
+        </div>
+      </div>
+
+      <div id="help-ghost" class="modal-section">
+        <div class="modal-rule">
+          <strong>Goal</strong>
+          Find and identify all 3 ghosts haunting the area by spelling their name on the Ouija board.
+        </div>
+        <div class="modal-rule">
+          <strong>Movement</strong>
+          Use the virtual joystick (left half of screen) to move your investigator around the map. Ghosts roam freely — track them down!
+        </div>
+        <div class="modal-rule">
+          <strong>Tools</strong>
+          Tap the tool buttons to switch between your Flashlight (cone of light), EMF Detector (radial signal), and Sound Recorder (wide ambient detection).
+        </div>
+        <div class="modal-rule">
+          <strong>Finding a Ghost</strong>
+          Get close to a ghost and shine your flashlight directly at it. A strong signal (bar fills up) means you've located it — the ghost will be revealed on the map for your whole team!
+        </div>
+        <div class="modal-rule">
+          <strong>Ouija Board</strong>
+          Stand near a found ghost and tap "Place Board" to open the Ouija minigame. Slide your finger over the letters — your phone will vibrate on key letters. The ghost spells its name… with diversions based on its personality!
+        </div>
+        <div class="modal-rule">
+          <strong>Ghost Personalities</strong>
+          Shy ghosts hide and flee. Dramatic ghosts put on a show. Goofy ghosts add extra fake letters. Grumpy ghosts rush through quickly. Regal ghosts move slowly. Confused ghosts wander randomly. Personality affects name style and patience!
+        </div>
+        <div class="modal-rule">
+          <strong>Naming the Ghost</strong>
+          After the Ouija session, type what you think the ghost's name is and submit. Correct = ghost identified! Wrong = it escapes to a new spot. Find and name all 3 to win!
+        </div>
+        <div class="modal-rule">
+          <strong>Multiplayer</strong>
+          Play solo or cooperatively with up to 4 friends. All players share the same map — ghosts found by anyone are visible to everyone!
         </div>
       </div>
 
@@ -447,8 +455,8 @@
   <script src="games/war-client.js"></script>
   <script src="games/solitaire-client.js"></script>
   <script src="games/hockey-client.js"></script>
-  <script src="games/mancala-client.js"></script>
   <script src="games/sketch-client.js"></script>
+  <script src="games/ghost-client.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});

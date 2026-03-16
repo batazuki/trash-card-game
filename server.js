@@ -109,8 +109,8 @@ const trashGame    = require("./games/trash")(io, helpers);
 const warGame      = require("./games/war")(io, helpers);
 const solitaireGame = require("./games/solitaire")(io, helpers);
 const hockeyGame   = require("./games/hockey")(io, helpers);
-const mancalaGame  = require("./games/mancala")(io, helpers);
 const sketchGame   = require("./games/sketch")(io, helpers);
+const ghostGame    = require("./games/ghost")(io, helpers);
 
 const gameModules = {
   trash: trashGame,
@@ -118,8 +118,8 @@ const gameModules = {
   war: warGame,
   solitaire: solitaireGame,
   hockey: hockeyGame,
-  mancala: mancalaGame,
   sketch: sketchGame,
+  ghost: ghostGame,
 };
 
 // M10: return null for unknown game types — callers already guard for null
@@ -159,8 +159,8 @@ io.on("connection", socket => {
   warGame.registerEvents(socket, rooms);
   solitaireGame.registerEvents(socket, rooms);
   hockeyGame.registerEvents(socket, rooms);
-  mancalaGame.registerEvents(socket, rooms);
   sketchGame.registerEvents(socket, rooms);
+  ghostGame.registerEvents(socket, rooms);
 
   // ── Create Room ──
   socket.on("createRoom", ({ playerName, game, rounds, drawTime, previewTime }) => {
@@ -240,7 +240,8 @@ io.on("connection", socket => {
     const state = rooms.get(roomId);
     if (!state || state.phase !== "lobby") return;
     if (state.players[0]?.id !== socket.id) return; // host only
-    if (state.players.length < 2) return;
+    const minPlayers = state.game === "ghost" ? 1 : 2;
+    if (state.players.length < minPlayers) return;
     startGame(state, roomId);
   });
 
@@ -255,7 +256,7 @@ io.on("connection", socket => {
     catch(e) { socket.emit("joinError", { message: "Server is full, try again later." }); return; }
 
     const safeGame = gameModules[game] ? game : "trash";
-    const isSolo = safeGame === "solitaire";
+    const isSolo = safeGame === "solitaire" || safeGame === "ghost";
     const token = generateToken(); // C2
     const players = [
       { id: socket.id, name: sanitizeName(playerName), isAI: false, board: [], wantsRematch: false, token }, // C4

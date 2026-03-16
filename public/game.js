@@ -330,8 +330,8 @@ const PREGAME_GAME_INFO = {
   war:           { icon: "⚔️", name: "War" },
   solitaire:     { icon: "🃏", name: "Solitaire" },
   hockey:        { icon: "🐾", name: "Cat Paw Hockey" },
-  mancala:       { icon: "🌸", name: "Mancala" },
   sketch:        { icon: "✏️", name: "Sketch It" },
+  ghost:         { icon: "👻", name: "Ghost Detective" },
 };
 
 function showPregame(roomId, players, isHost) {
@@ -344,10 +344,11 @@ function showPregame(roomId, players, isHost) {
   updatePregamePlayers(players);
   const startBtn = $("pregame-start-btn");
   const statusEl = $("pregame-status");
+  const minPlayers = local.gameType === "ghost" ? 1 : 2;
   if (isHost) {
     startBtn.classList.remove("hidden");
-    startBtn.disabled = players.length < 2;
-    statusEl.textContent = players.length >= 2 ? "" : "Waiting for players to join...";
+    startBtn.disabled = players.length < minPlayers;
+    statusEl.textContent = players.length >= minPlayers ? "" : "Waiting for players to join...";
   } else {
     startBtn.classList.add("hidden");
     statusEl.textContent = "Waiting for host to start...";
@@ -391,7 +392,7 @@ $("pregame-cancel-btn").addEventListener("click", () => {
 });
 
 // ═══ HELP MODAL ═══
-const GAME_TO_TAB = { trash: "default", "trash-eleven": "eleven", war: "war", solitaire: "solitaire", hockey: "hockey", mancala: "mancala", sketch: "sketch" };
+const GAME_TO_TAB = { trash: "default", "trash-eleven": "eleven", war: "war", solitaire: "solitaire", hockey: "hockey", sketch: "sketch", ghost: "ghost" };
 
 function openHelp() {
   // Determine current game — in-game uses local.gameType, lobby uses dropdown
@@ -539,9 +540,10 @@ $("game-select").addEventListener("change", e => {
 
 function updateLobbyForGame(game) {
   const isSolo = game === "solitaire";
+  const isGhost = game === "ghost";
   const isSketch = game === "sketch";
   const vsAiBtn = $("vs-ai-btn");
-  vsAiBtn.textContent = isSolo ? "Play" : "Play vs AI";
+  vsAiBtn.textContent = (isSolo || isGhost) ? "Play Solo" : "Play vs AI";
   vsAiBtn.classList.toggle("hidden", isSketch);
   const friendsSection = $("friends-section");
   if (friendsSection) friendsSection.classList.toggle("hidden", isSolo);
@@ -643,13 +645,14 @@ socket.on("roomCreated", ({ roomId, players, token }) => {
 socket.on("playerJoined", ({ players }) => {
   updatePregamePlayers(players);
   if (local.isHost) {
+    const minPlayers = local.gameType === "ghost" ? 1 : 2;
     const btn = $("pregame-start-btn");
     if (btn) {
-      btn.disabled = players.length < 2;
+      btn.disabled = players.length < minPlayers;
       btn.textContent = "Start Game";
     }
     const statusEl = $("pregame-status");
-    if (statusEl) statusEl.textContent = players.length >= 2 ? "" : "Waiting for players to join...";
+    if (statusEl) statusEl.textContent = players.length >= minPlayers ? "" : "Waiting for players to join...";
   }
 });
 
@@ -686,14 +689,12 @@ socket.on("gameStart", (data) => {
 
   window._gameLocal = local;
 
-  window._mancalaTied = false; // clear stale tie flag from any previous mancala game
-
   applyGameTheme(local.gameType);
   if (local.gameType === "trash-eleven") startElevenMusic();
   else stopElevenMusic();
 
   $("settings-row-order").classList.toggle("hidden", !local.gameType.startsWith("trash"));
-  const CANVAS_GAMES = ["hockey", "mancala", "sketch"];
+  const CANVAS_GAMES = ["hockey", "sketch", "ghost"];
   $("settings-oldies").classList.toggle("hidden", CANVAS_GAMES.includes(local.gameType));
 
   const isTrash = local.gameType.startsWith("trash");
@@ -703,8 +704,8 @@ socket.on("gameStart", (data) => {
   $("trash-ui").classList.toggle("hidden", !isTrash);
   $("game-container").classList.toggle("hidden", isTrash);
 
-  // Show shared reaction bar for non-trash multiplayer games (not solitaire, not hockey)
-  const showSharedReactions = !isTrash && local.gameType !== "solitaire" && local.gameType !== "hockey";
+  // Show shared reaction bar for non-trash multiplayer games (not solitaire, not hockey, not ghost)
+  const showSharedReactions = !isTrash && local.gameType !== "solitaire" && local.gameType !== "hockey" && local.gameType !== "ghost";
   $("shared-reaction-bar").classList.toggle("hidden", !showSharedReactions);
 
   $("opp-disconnected-banner").classList.add("hidden"); // clear any leftover banner from previous game
@@ -721,23 +722,19 @@ socket.on("gameStart", (data) => {
 
 socket.on("gameOver", ({ winnerIndex, winnerName, scores, gamesPlayed, playerNames }) => {
   releaseWakeLock();
-  if (winnerIndex === local.myPlayerIndex) playWinFanfare();
-  const didWin = winnerIndex === local.myPlayerIndex;
-  $("result-emoji").textContent = didWin ? "🎉" : "😔";
-  $("result-text").textContent = didWin ? "You Win!" : `${winnerName} Wins!`;
-  // Mancala tie detection (client sets window._mancalaTied via mancala:state before gameOver arrives)
-  if (local.gameType === "mancala" && window._mancalaTied) {
-    $("result-emoji").textContent = "🤝";
-    $("result-text").textContent = "It's a Tie!";
-  }
+  const isGhostGame = local.gameType === "ghost";
+  const didWin = isGhostGame ? true : winnerIndex === local.myPlayerIndex;
+  if (isGhostGame || winnerIndex === local.myPlayerIndex) playWinFanfare();
+  $("result-emoji").textContent = "🎉";
+  $("result-text").textContent = isGhostGame ? "Case Closed!" : (didWin ? "You Win!" : `${winnerName} Wins!`);
   const subTexts = {
     trash: didWin ? "You filled all your spots first!" : "Better luck next time.",
     "trash-eleven": didWin ? "You filled all 11 slots first!" : "Better luck next time.",
     war: didWin ? "You captured all the cards!" : "Your opponent took all the cards.",
     solitaire: "Congratulations!",
     hockey: didWin ? "Purrfect victory!" : "The yarn got away...",
-    mancala: window._mancalaTied ? "24 seeds each — beautifully played! 🌸" : didWin ? "A bountiful harvest! 🌸" : "The seeds slipped away...",
     sketch: didWin ? "Your drawings were more recognizable!" : "Keep practicing your shapes!",
+    ghost: "All 3 ghosts have been identified! The haunting is over.",
   };
   $("result-sub").textContent = subTexts[local.gameType] || (didWin ? "Nice job!" : "Better luck next time.");
   $("play-again-btn").disabled = false;
@@ -746,8 +743,8 @@ socket.on("gameOver", ({ winnerIndex, winnerName, scores, gamesPlayed, playerNam
   // Hide hockey from physics cleanup (already handled by clearInterval on server)
 
 
-  // Show game switcher only for multiplayer (not AI, not solitaire)
-  const showSwitcher = !local.vsAI && local.gameType !== "solitaire";
+  // Show game switcher only for multiplayer (not AI, not solitaire, not ghost-solo)
+  const showSwitcher = !local.vsAI && local.gameType !== "solitaire" && local.gameType !== "ghost";
   $("end-game-switch").classList.toggle("hidden", !showSwitcher);
   if (showSwitcher) $("end-game-select").value = local.gameType;
 
@@ -904,8 +901,8 @@ $("see-cards-btn").addEventListener("click", viewCards);
     { value: "war",           icon: "⚔️", name: "War",            tagline: "Flip to win the deck",          players: "2 players",  tab: "war"       },
     { value: "solitaire",     icon: "🃏", name: "Solitaire",      tagline: "Classic solo card game",        players: "Solo",       tab: "solitaire" },
     { value: "hockey",        icon: "🐾", name: "Cat Paw Hockey", tagline: "Swipe yarn into the goal",      players: "2 players",  tab: "hockey"    },
-    { value: "mancala",       icon: "🌸", name: "Mancala",        tagline: "Collect the most seeds",        players: "2 players",  tab: "mancala"   },
     { value: "sketch",        icon: "✏️", name: "Sketch It",      tagline: "Draw from memory & score",      players: "2+ players", tab: "sketch"    },
+    { value: "ghost",         icon: "👻", name: "Ghost Detective", tagline: "Hunt ghosts with your team",    players: "1-4 players", tab: "ghost"     },
   ];
 
   const savedGame = select.value || "trash";
@@ -998,9 +995,9 @@ socket.on("gameRejoined", (data) => {
   $("trash-ui").classList.toggle("hidden", !isTrash);
   $("game-container").classList.toggle("hidden", isTrash);
   $("settings-row-order").classList.toggle("hidden", !isTrash);
-  $("settings-oldies").classList.toggle("hidden", ["hockey", "mancala", "sketch"].includes(local.gameType));
+  $("settings-oldies").classList.toggle("hidden", ["hockey", "sketch", "ghost"].includes(local.gameType));
 
-  const showSharedReactions = !isTrash && local.gameType !== "solitaire" && local.gameType !== "hockey";
+  const showSharedReactions = !isTrash && local.gameType !== "solitaire" && local.gameType !== "hockey" && local.gameType !== "ghost";
   $("shared-reaction-bar").classList.toggle("hidden", !showSharedReactions);
 
   // Only hide the banner if the opponent is actually connected; leave it up if they're still offline
