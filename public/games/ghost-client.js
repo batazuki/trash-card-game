@@ -452,16 +452,13 @@
   }
 
   function resizeCanvas() {
-    dpr  = window.devicePixelRatio || 1;
     const c = canvas.parentElement;
     cssW = c.clientWidth  || window.innerWidth;
     cssH = c.clientHeight || window.innerHeight;
-    canvas.width      = Math.round(cssW * dpr);
-    canvas.height     = Math.round(cssH * dpr);
-    darkCanvas.width  = canvas.width;
-    darkCanvas.height = canvas.height;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    darkCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    canvas.width      = cssW;
+    canvas.height     = cssH;
+    darkCanvas.width  = cssW;
+    darkCanvas.height = cssH;
   }
 
   // ── Input: touch joystick ────────────────────────────────────────────────
