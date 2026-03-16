@@ -132,8 +132,230 @@
   let lastTs = 0;
   let posSendAccum = 0;
 
+  // ── Ghost Audio ───────────────────────────────────────────────────────────
+  const GA = {
+    ctx: null, master: null, delay: null,
+    persist: [],      // always-on oscillator nodes
+    emfOsc: null, emfGain: null,
+    sndOsc: null, sndGain: null,
+    timers: [],       // music scheduling setTimeout handles
+  };
+
+  function gaInit(area) {
+    if (GA.ctx) return;
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      GA.ctx = ctx;
+      GA.area = area || 'graveyard';
+
+      const master = ctx.createGain();
+      master.gain.value = 0.38;
+      master.connect(ctx.destination);
+      GA.master = master;
+
+      // Reverb: simple feedback delay network
+      const dly = ctx.createDelay(1.8); dly.delayTime.value = 0.68;
+      const fb  = ctx.createGain();     fb.gain.value  = 0.44;
+      const dOut = ctx.createGain();    dOut.gain.value = 0.25;
+      dly.connect(fb); fb.connect(dly);
+      dly.connect(dOut); dOut.connect(master);
+      GA.delay = dly;
+
+      // Drones: area-specific tritone pairs for atmosphere
+      const DRONE_PAIRS = {
+        graveyard: [[36.71, 0.060, 0.048], [51.91, 0.036, 0.073]], // D1+Ab1 — classic unease
+        garden:    [[41.20, 0.050, 0.052], [55.00, 0.032, 0.065]], // E1+A1  — eerie pastoral
+        house:     [[30.87, 0.065, 0.041], [46.25, 0.040, 0.079]], // B0+Bb1 — deep dread
+      };
+      const dronePair = DRONE_PAIRS[GA.area] || DRONE_PAIRS.graveyard;
+      dronePair.forEach(([f, vol, lfoHz]) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        const lfo = ctx.createOscillator(), lg = ctx.createGain();
+        o.type = 'sine'; o.frequency.value = f; g.gain.value = vol;
+        lfo.type = 'sine'; lfo.frequency.value = lfoHz; lg.gain.value = f * 0.016;
+        lfo.connect(lg); lg.connect(o.frequency);
+        o.connect(g); g.connect(master);
+        lfo.start(); o.start();
+        GA.persist.push(o, lfo);
+      });
+
+      // EMF buzz oscillator — gain/freq driven per frame
+      const emfO = ctx.createOscillator(), emfG = ctx.createGain();
+      emfO.type = 'sawtooth'; emfO.frequency.value = 100; emfG.gain.value = 0;
+      emfO.connect(emfG); emfG.connect(master);
+      emfO.start(); GA.persist.push(emfO);
+      GA.emfOsc = emfO; GA.emfGain = emfG;
+
+      // Sound-recorder rumble oscillator
+      const sndO = ctx.createOscillator(), sndG = ctx.createGain();
+      sndO.type = 'sine'; sndO.frequency.value = 50; sndG.gain.value = 0;
+      sndO.connect(sndG); sndG.connect(master);
+      sndO.start(); GA.persist.push(sndO);
+      GA.sndOsc = sndO; GA.sndGain = sndG;
+
+      // Hook so game.js toggleMusic() can mute/unmute ghost audio too
+      window._ghostAudioSetMute = muted => {
+        if (GA.master) GA.master.gain.setTargetAtTime(muted ? 0 : 0.38, GA.ctx.currentTime, 0.12);
+      };
+
+      // Kick off music loops
+      gaMusicPulse(ctx.currentTime + 1.0);
+      gaMusicBell(ctx.currentTime + 3.0 + Math.random() * 3);
+      gaMusicChord(ctx.currentTime + 8.0 + Math.random() * 5);
+    } catch(e) {}
+  }
+
+  function gaStop() {
+    GA.timers.forEach(clearTimeout); GA.timers = [];
+    GA.persist.forEach(o => { try { o.stop(); } catch(_) {} }); GA.persist = [];
+    GA.emfOsc = GA.emfGain = GA.sndOsc = GA.sndGain = null;
+    if (GA.ctx) { GA.ctx.close().catch(() => {}); GA.ctx = null; GA.master = null; GA.delay = null; }
+    window._ghostAudioSetMute = null;
+  }
+
+  // Fire-and-forget note: freq, waveform, peak-vol, attack, hold, decay, destination, startTime
+  function gaN(f, type, vol, att, hold, dec, dest, t) {
+    const ctx = GA.ctx; if (!ctx) return;
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.value = f;
+    o.connect(g); g.connect(dest || GA.master);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol, t + att);
+    if (hold > 0) g.gain.setValueAtTime(vol, t + att + hold);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + att + hold + dec);
+    o.start(t); o.stop(t + att + hold + dec + 0.1);
+  }
+
+  // Area-specific note pools
+  const GA_NOTE_POOLS = {
+    graveyard: {
+      bass:   [73.42, 110.00, 146.83],                          // D2 A2 D3 — D minor
+      bells:  [293.66, 349.23, 440.00, 523.25, 587.33, 698.46], // D4 F4 A4 C5 D5 F5
+      chords: [[146.83,174.61,207.65],[110.00,130.81,155.56],[196.00,220.00,261.63]],
+      bassInterval: [2.0, 3.5], bellInterval: [4.5, 9.0], chordInterval: [10, 14],
+    },
+    garden: {
+      bass:   [98.00, 130.81, 164.81],                           // G2 C3 E3 — Gm
+      bells:  [392.00, 466.16, 523.25, 622.25, 698.46, 783.99], // G4 Bb4 C5 Eb5 F5 G5
+      chords: [[196.00,233.08,293.66],[261.63,311.13,392.00],[196.00,246.94,329.63]],
+      bassInterval: [1.5, 2.5], bellInterval: [3.0, 7.0], chordInterval: [8, 12],
+    },
+    house: {
+      bass:   [61.74, 92.50, 123.47],                            // B1 F#2 B2 — B dim
+      bells:  [246.94, 311.13, 369.99, 493.88, 622.25, 739.99], // B3 Eb4 F#4 B4 Eb5 F#5
+      chords: [[123.47,155.56,184.99],[185.00,220.00,261.63],[246.94,311.13,369.99]],
+      bassInterval: [2.5, 4.5], bellInterval: [5.0, 11.0], chordInterval: [12, 18],
+    },
+  };
+
+  function gaPool() {
+    return GA_NOTE_POOLS[GA.area] || GA_NOTE_POOLS.graveyard;
+  }
+
+  function gaMusicPulse(t) {
+    if (!GA.ctx) return;
+    const pool = gaPool();
+    const f = pool.bass[Math.floor(Math.random() * pool.bass.length)];
+    gaN(f, 'triangle', 0.09, 0.04, 0.06, 1.8, GA.master, t);
+    gaN(f, 'sawtooth', 0.03, 0.04, 0.06, 0.9, GA.delay,  t);
+    const dt = pool.bassInterval[0] + Math.random() * pool.bassInterval[1];
+    GA.timers.push(setTimeout(() => gaMusicPulse(t + dt),
+      Math.max(50, (t + dt - GA.ctx.currentTime - 0.4) * 1000)));
+  }
+
+  function gaMusicBell(t) {
+    if (!GA.ctx) return;
+    const pool = gaPool();
+    const f = pool.bells[Math.floor(Math.random() * pool.bells.length)];
+    gaN(f,     'sine', 0.055, 0.005, 0.05, 4.2, GA.delay, t);
+    gaN(f * 2, 'sine', 0.020, 0.005, 0.05, 2.6, GA.delay, t);
+    const dt = pool.bellInterval[0] + Math.random() * pool.bellInterval[1];
+    GA.timers.push(setTimeout(() => gaMusicBell(t + dt),
+      Math.max(50, (t + dt - GA.ctx.currentTime - 0.4) * 1000)));
+  }
+
+  function gaMusicChord(t) {
+    if (!GA.ctx) return;
+    const pool = gaPool();
+    const notes = pool.chords[Math.floor(Math.random() * pool.chords.length)];
+    notes.forEach(f => gaN(f, 'sine', 0.034, 0.40, 0.30, 4.2, GA.delay, t));
+    const dt = pool.chordInterval[0] + Math.random() * pool.chordInterval[1];
+    GA.timers.push(setTimeout(() => gaMusicChord(t + dt),
+      Math.max(50, (t + dt - GA.ctx.currentTime - 0.4) * 1000)));
+  }
+
+  // Called every frame — drives EMF/sound signal oscillators
+  function gaSignals(signals, tool) {
+    if (!GA.ctx || !GA.emfGain || !GA.sndGain) return;
+    const ct = GA.ctx.currentTime;
+    if (tool === 'emf') {
+      const sig = (signals.emf || 0) / 100;
+      GA.emfGain.gain.setTargetAtTime(sig * 0.11, ct, 0.07);
+      GA.emfOsc.frequency.setTargetAtTime(80 + sig * 180, ct, 0.07);
+      GA.sndGain.gain.setTargetAtTime(0, ct, 0.07);
+    } else if (tool === 'sound') {
+      const sig = (signals.sound || 0) / 100;
+      GA.sndGain.gain.setTargetAtTime(sig * 0.08, ct, 0.10);
+      GA.sndOsc.frequency.setTargetAtTime(40 + sig * 75, ct, 0.10);
+      GA.emfGain.gain.setTargetAtTime(0, ct, 0.07);
+    } else {
+      GA.emfGain.gain.setTargetAtTime(0, ct, 0.06);
+      GA.sndGain.gain.setTargetAtTime(0, ct, 0.08);
+    }
+  }
+
+  // SFX — tool switch click
+  function gaSfxTool() {
+    if (!GA.ctx) return;
+    const t = GA.ctx.currentTime;
+    gaN(1400, 'sine', 0.055, 0.002, 0.01, 0.07, GA.master, t);
+    gaN(900,  'sine', 0.028, 0.002, 0.01, 0.05, GA.master, t + 0.04);
+  }
+
+  // SFX — ghost detected by flashlight
+  function gaSfxGhostFound() {
+    if (!GA.ctx) return;
+    const t = GA.ctx.currentTime;
+    gaN(55, 'sine', 0.18, 0.01, 0.05, 2.2, GA.master, t);
+    [[207.65, 0], [261.63, 0.15], [369.99, 0.30]].forEach(([f, dt]) =>
+      gaN(f, 'sine', 0.11, 0.02, 0.07, 1.6, GA.delay, t + dt));
+  }
+
+  // SFX — ghost fully identified
+  function gaSfxIdentified() {
+    if (!GA.ctx) return;
+    const t = GA.ctx.currentTime;
+    [293.66, 349.23, 440.00, 587.33, 880.00].forEach((f, i) => {
+      gaN(f, 'sine',     0.09, 0.012, 0.06, 1.1, GA.delay,  t + i * 0.13);
+      gaN(f, 'triangle', 0.05, 0.012, 0.06, 0.5, GA.master, t + i * 0.13);
+    });
+  }
+
+  // SFX — wrong name submitted
+  function gaSfxWrong() {
+    if (!GA.ctx) return;
+    const t = GA.ctx.currentTime;
+    gaN(233.08, 'sawtooth', 0.09, 0.004, 0.07, 0.28, GA.master, t);
+    gaN(174.61, 'sawtooth', 0.07, 0.004, 0.07, 0.24, GA.master, t + 0.19);
+  }
+
+  // SFX — ouija planchette lands on a letter
+  function gaSfxOuija(isReal) {
+    if (!GA.ctx) return;
+    const t = GA.ctx.currentTime;
+    if (isReal) {
+      gaN(880,  'sine', 0.07, 0.003, 0.02, 0.75, GA.delay, t);
+      gaN(1320, 'sine', 0.03, 0.003, 0.02, 0.42, GA.delay, t);
+    } else {
+      gaN(330, 'triangle', 0.03, 0.002, 0.01, 0.10, GA.master, t);
+    }
+  }
+
   // Virtual joystick
   const joy = { active: false, id: null, bx: 0, by: 0, dx: 0, dy: 0, angle: 0, mag: 0 };
+
+  // Suppress synthetic click events that follow touchstart on mobile
+  let _lastTouchEndMs = 0;
 
   // ── Canvas setup ─────────────────────────────────────────────────────────
   function setupCanvas() {
@@ -159,6 +381,7 @@
     canvas.addEventListener('mousedown', onMouseDown);
     canvas.addEventListener('mousemove', onMouseMove);
     canvas.addEventListener('mouseup',   onMouseUp);
+    canvas.addEventListener('click',     onCanvasClick);
   }
 
   function resizeCanvas() {
@@ -172,6 +395,7 @@
   // ── Input: touch joystick ────────────────────────────────────────────────
   function onTouchStart(e) {
     e.preventDefault();
+    gaInit(S && S.area); // start audio on first user gesture
     for (const t of e.changedTouches) {
       if (t.clientX < canvas.clientWidth * 0.5 && !joy.active && !(S && S.ouija)) {
         Object.assign(joy, { active:true, id:t.identifier, bx:t.clientX, by:t.clientY, dx:0, dy:0, angle:0, mag:0 });
@@ -185,13 +409,20 @@
     }
   }
   function onTouchEnd(e) {
+    _lastTouchEndMs = Date.now();
     for (const t of e.changedTouches) {
       if (t.identifier === joy.id) { joy.active = false; joy.mag = 0; }
     }
   }
   // Desktop fallback
   let mouseJoy = false;
-  function onMouseDown(e) { if (e.clientX < canvas.clientWidth * 0.5 && !(S && S.ouija)) { mouseJoy = true; Object.assign(joy, { active:true, bx:e.clientX, by:e.clientY, dx:0, dy:0, angle:0, mag:0 }); } }
+  function onMouseDown(e) { gaInit(S && S.area); if (e.clientX < canvas.clientWidth * 0.5 && !(S && S.ouija)) { mouseJoy = true; Object.assign(joy, { active:true, bx:e.clientX, by:e.clientY, dx:0, dy:0, angle:0, mag:0 }); } }
+  function onCanvasClick(e) {
+    if (!S) return;
+    // Ignore synthetic click events generated by touch (follow touchend within 500ms)
+    if (Date.now() - _lastTouchEndMs < 500) return;
+    handleTap(e.clientX, e.clientY);
+  }
   function onMouseMove(e) { if (mouseJoy) updateJoy(e.clientX - joy.bx, e.clientY - joy.by); }
   function onMouseUp()    { mouseJoy = false; joy.active = false; joy.mag = 0; }
 
@@ -219,6 +450,14 @@
 
     if (S.ouija) { handleOuijaTap(tx, ty, cw, ch); return; }
 
+    // Journal button (top-right)
+    const jbX = cw - 44, jbY = 8, jbW = 36, jbH = 32;
+    if (tx >= jbX && tx <= jbX+jbW && ty >= jbY && ty <= jbY+jbH) {
+      S.journal = !S.journal; return;
+    }
+    // If journal open, any other tap closes it
+    if (S.journal) { S.journal = false; return; }
+
     // Tool bar (bottom-center)
     const tools = ['flashlight','emf','sound'];
     const bw = 70, bh = 52, gap = 8;
@@ -226,7 +465,9 @@
     const barX = (cw - barW) / 2, barY = ch - bh - 10;
     tools.forEach((t, i) => {
       const bx = barX + i*(bw+gap);
-      if (tx >= bx && tx <= bx+bw && ty >= barY && ty <= barY+bh) S.activeTool = t;
+      if (tx >= bx && tx <= bx+bw && ty >= barY && ty <= barY+bh) {
+        if (S.activeTool !== t) { gaSfxTool(); S.activeTool = t; }
+      }
     });
 
     // Place board button
@@ -294,6 +535,9 @@
       posSendAccum = 0;
       socket.emit('ghost:move', { roomId: S.roomId, x: S.me.x, y: S.me.y, facing: S.me.facing });
     }
+
+    // Drive signal-reactive audio (EMF buzz / sound rumble)
+    gaSignals(S.signals, S.activeTool);
   }
 
   // ── Render ───────────────────────────────────────────────────────────────
@@ -345,6 +589,21 @@
     // Found ghosts
     for (const gh of Object.values(S.ghosts)) {
       if (!gh.found || gh.identified) continue;
+
+      // Vapor trail — fading position history
+      if (gh.trail && gh.trail.length > 0) {
+        for (let ti = 0; ti < gh.trail.length; ti++) {
+          const tp = gh.trail[ti];
+          const alpha = (ti / gh.trail.length) * 0.45;
+          const r = 8 + (ti / gh.trail.length) * 18;
+          const tg = ctx.createRadialGradient(tp.x, tp.y, 0, tp.x, tp.y, r);
+          tg.addColorStop(0, gh.color + Math.round(alpha * 200).toString(16).padStart(2,'0'));
+          tg.addColorStop(1, gh.color + '00');
+          ctx.fillStyle = tg;
+          ctx.beginPath(); ctx.arc(tp.x, tp.y, r, 0, Math.PI*2); ctx.fill();
+        }
+      }
+
       const pulse = 0.6 + 0.4 * Math.sin(now * 0.003 + gh.id * 1.8);
       const glow  = ctx.createRadialGradient(gh.x, gh.y, 0, gh.x, gh.y, 44);
       glow.addColorStop(0, gh.color + 'bb');
@@ -452,6 +711,16 @@
 
     dc.globalCompositeOperation = 'source-over';
     ctx.drawImage(darkCanvas, 0, 0);
+
+    // Cold spot: frost-blue edge glow when near an undiscovered ghost
+    if (S.coldSignal > 0.15) {
+      const intensity = Math.min(1, (S.coldSignal - 0.15) / 0.85);
+      const cg = ctx.createRadialGradient(cw/2, ch/2, Math.min(cw,ch)*0.28, cw/2, ch/2, Math.max(cw,ch)*0.75);
+      cg.addColorStop(0, 'rgba(100,200,255,0)');
+      cg.addColorStop(1, `rgba(80,170,255,${(intensity * 0.38).toFixed(3)})`);
+      ctx.fillStyle = cg;
+      ctx.fillRect(0, 0, cw, ch);
+    }
   }
 
   function drawHUD(cw, ch) {
@@ -488,6 +757,14 @@
     ctx.fillStyle = '#cbd5e1'; ctx.font = '13px monospace'; ctx.textAlign = 'center';
     ctx.fillText(AREA_DEFS[S.area]?.label || '', cw/2, 30);
 
+    // Journal toggle button (top-right)
+    const jbX = cw - 44, jbY = 8, jbW = 36, jbH = 32;
+    ctx.fillStyle = S.journal ? 'rgba(124,58,237,0.85)' : 'rgba(20,20,30,0.78)';
+    rrect(ctx, jbX, jbY, jbW, jbH, 8); ctx.fill();
+    if (S.journal) { ctx.strokeStyle = '#a78bfa'; ctx.lineWidth = 1.5; rrect(ctx, jbX, jbY, jbW, jbH, 8); ctx.stroke(); }
+    ctx.font = '16px serif'; ctx.textAlign = 'center';
+    ctx.fillText('📒', jbX+jbW/2, jbY+22);
+
     // Place Board button
     if (S.nearGhost && !S.nearGhost.claimedBy) {
       const btnW = 160, btnH = 42;
@@ -506,7 +783,7 @@
 
     // Wrong-guess message
     if (S.attemptsMsg) {
-      const msgW = 230, msgH = 34;
+      const msgW = Math.min(cw - 24, 300), msgH = 34;
       const msgX = (cw - msgW) / 2, msgY = ch / 2 - 60;
       ctx.fillStyle = 'rgba(0,0,0,0.75)';
       rrect(ctx, msgX, msgY, msgW, msgH, 8); ctx.fill();
@@ -517,6 +794,13 @@
     }
 
     ctx.textAlign = 'left';
+
+    // Direction arrow (signal tool pointing toward ghost)
+    drawDirectionArrow(cw, ch);
+    // Minimap (bottom-right)
+    drawMinimap(cw, ch);
+    // Evidence journal overlay
+    drawJournal(cw, ch);
   }
 
   function drawJoystick(cw, ch) {
@@ -700,10 +984,13 @@
       if (ou.dwellTimer >= c.dwellMs) {
         if (target.isReal) {
           ou.collected.push(target.letter);
+          // Mirror to ghost so journal can show it
+          if (S && S.ghosts[ou.ghostId]) S.ghosts[ou.ghostId].ouijaLetters = [...ou.collected];
           if (navigator.vibrate) navigator.vibrate([70, 30, 70]);
         } else {
           if (navigator.vibrate) navigator.vibrate([15]);
         }
+        gaSfxOuija(target.isReal);
         ou.dwellTimer = 0;
         ou.seqIdx++;
         p.vx = (Math.random()-0.5)*0.4; p.vy = (Math.random()-0.5)*0.4;
@@ -773,6 +1060,176 @@
     if (line) ctx.fillText(line, cx, y);
   }
 
+  // ── Minimap ───────────────────────────────────────────────────────────────
+  function drawMinimap(cw, ch) {
+    if (!S.cam) return;
+    const area = AREA_DEFS[S.area];
+    const mmW = 90;
+    const mmH = Math.round(mmW * area.areaHeight / area.areaWidth);
+    const mmX = cw - mmW - 8, mmY = ch - mmH - 70;
+    const sc = mmW / area.areaWidth;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    rrect(ctx, mmX-2, mmY-2, mmW+4, mmH+4, 5); ctx.fill();
+    ctx.fillStyle = area.bgColor;
+    ctx.fillRect(mmX, mmY, mmW, mmH);
+
+    // Viewport rect
+    ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1;
+    const vx = Math.max(mmX, mmX + S.cam.x * sc);
+    const vy = Math.max(mmY, mmY + S.cam.y * sc);
+    ctx.strokeRect(vx, vy, Math.min(cw * sc, mmW - (vx - mmX)), Math.min(ch * sc, mmH - (vy - mmY)));
+
+    // Clip subsequent dots to minimap bounds
+    ctx.save();
+    ctx.beginPath(); ctx.rect(mmX, mmY, mmW, mmH); ctx.clip();
+
+    // Other players
+    const pColors = ['#60a5fa','#f97316','#a855f7','#10b981'];
+    for (const [piStr, p] of Object.entries(S.otherPlayers)) {
+      ctx.fillStyle = pColors[parseInt(piStr) % pColors.length];
+      ctx.beginPath(); ctx.arc(mmX + p.x*sc, mmY + p.y*sc, 2.5, 0, Math.PI*2); ctx.fill();
+    }
+
+    // Found ghosts
+    for (const gh of Object.values(S.ghosts)) {
+      if (!gh.found) continue;
+      ctx.fillStyle = gh.identified ? gh.color + '99' : gh.color;
+      ctx.beginPath(); ctx.arc(mmX + gh.x*sc, mmY + gh.y*sc, gh.identified ? 2 : 3.5, 0, Math.PI*2); ctx.fill();
+    }
+
+    // Self
+    ctx.fillStyle = '#22c55e';
+    ctx.beginPath(); ctx.arc(mmX + S.me.x*sc, mmY + S.me.y*sc, 3.5, 0, Math.PI*2); ctx.fill();
+
+    ctx.restore();
+  }
+
+  // ── Direction Arrow ───────────────────────────────────────────────────────
+  function drawDirectionArrow(cw, ch) {
+    const dir = S.activeTool === 'emf' ? S.emfDir : (S.activeTool === 'sound' ? S.sndDir : null);
+    if (dir === null) return;
+
+    const cx = cw / 2, cy = ch / 2;
+    const margin = 48;
+    const cos = Math.cos(dir), sin = Math.sin(dir);
+    let t = Infinity;
+    if (cos > 0.001)  t = Math.min(t, (cw - cx - margin) / cos);
+    else if (cos < -0.001) t = Math.min(t, (cx - margin) / (-cos));
+    if (sin > 0.001)  t = Math.min(t, (ch - cy - margin) / sin);
+    else if (sin < -0.001) t = Math.min(t, (cy - margin) / (-sin));
+
+    const ax = cx + cos * t, ay = cy + sin * t;
+    const col = S.activeTool === 'emf' ? '#4ade80' : '#c084fc';
+
+    ctx.save();
+    ctx.translate(ax, ay);
+    ctx.rotate(dir);
+    ctx.globalAlpha = 0.82 + 0.18 * Math.sin(Date.now() * 0.004);
+    ctx.fillStyle = col;
+    ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(14, 0); ctx.lineTo(-9, -8); ctx.lineTo(-5, 0); ctx.lineTo(-9, 8);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  // ── Evidence Journal ─────────────────────────────────────────────────────
+  function drawJournal(cw, ch) {
+    if (!S.journal) return;
+    const jW = Math.min(cw - 24, 300), jH = Math.min(ch - 100, 420);
+    const jX = (cw - jW) / 2, jY = (ch - jH) / 2;
+
+    ctx.fillStyle = 'rgba(8,8,18,0.94)';
+    rrect(ctx, jX, jY, jW, jH, 14); ctx.fill();
+    ctx.strokeStyle = '#7c3aed'; ctx.lineWidth = 2;
+    rrect(ctx, jX, jY, jW, jH, 14); ctx.stroke();
+
+    ctx.fillStyle = '#c4b5fd'; ctx.font = 'bold 14px Georgia,serif'; ctx.textAlign = 'center';
+    ctx.fillText('📒 Evidence Journal', jX+jW/2, jY+28);
+    ctx.strokeStyle = 'rgba(124,58,237,0.35)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(jX+14, jY+38); ctx.lineTo(jX+jW-14, jY+38); ctx.stroke();
+
+    const found = Object.values(S.ghosts).filter(g => g.found);
+    if (found.length === 0) {
+      ctx.fillStyle = '#6b7280'; ctx.font = '12px monospace'; ctx.textAlign = 'center';
+      ctx.fillText('No ghosts located yet...', jX+jW/2, jY+jH/2);
+    } else {
+      let cardY = jY + 48;
+      for (const gh of found) {
+        const cardH = 72;
+        if (cardY + cardH > jY + jH - 10) break;
+        ctx.fillStyle = gh.color + '22';
+        rrect(ctx, jX+8, cardY, jW-16, cardH, 8); ctx.fill();
+        ctx.strokeStyle = gh.color + '66'; ctx.lineWidth = 1;
+        rrect(ctx, jX+8, cardY, jW-16, cardH, 8); ctx.stroke();
+
+        ctx.fillStyle = gh.color; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'left';
+        ctx.fillText(`Ghost #${gh.id+1}`, jX+16, cardY+18);
+        ctx.fillStyle = '#94a3b8'; ctx.font = '11px monospace';
+        ctx.fillText(`${gh.personality || '?'} • ${gh.nameLength} letters`, jX+16, cardY+33);
+        if (gh.ouijaLetters && gh.ouijaLetters.length > 0) {
+          ctx.fillStyle = '#d4a840';
+          ctx.fillText('Letters: '+gh.ouijaLetters.join(' '), jX+16, cardY+49);
+        }
+        if (gh.attempts > 0) {
+          ctx.fillStyle = '#ef4444'; ctx.font = '10px monospace';
+          ctx.fillText(`${gh.attempts} wrong guess${gh.attempts!==1?'es':''}`, jX+16, cardY+63);
+        }
+        if (gh.identified) {
+          ctx.fillStyle = '#4ade80'; ctx.font = 'bold 10px monospace'; ctx.textAlign = 'right';
+          ctx.fillText('✓ NAMED', jX+jW-14, cardY+18);
+        }
+        cardY += cardH + 5;
+      }
+    }
+    ctx.textAlign = 'left';
+  }
+
+  // ── Post-game case file DOM overlay ──────────────────────────────────────
+  function showCaseFile() {
+    const old = document.getElementById('ghost-case-file');
+    if (old) old.remove();
+    if (!S || Object.keys(S.identifiedGhosts).length === 0) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'ghost-case-file';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.93);z-index:9000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;overflow:auto;font-family:Georgia,serif;';
+
+    const title = document.createElement('div');
+    title.style.cssText = 'font-size:20px;font-weight:bold;color:#d4a840;letter-spacing:0.04em;text-align:center;';
+    title.textContent = '📋 Case Closed — Ghost Report';
+    overlay.appendChild(title);
+
+    const cards = document.createElement('div');
+    cards.style.cssText = 'display:flex;flex-wrap:wrap;gap:14px;justify-content:center;max-width:700px;';
+
+    for (const gh of Object.values(S.identifiedGhosts)) {
+      const card = document.createElement('div');
+      card.style.cssText = `background:${gh.color}25;border:2px solid ${gh.color}aa;border-radius:14px;padding:16px 18px;min-width:140px;max-width:190px;text-align:center;color:#fff;`;
+      const letters = gh.letters && gh.letters.length > 0
+        ? `<div style="margin-top:8px;font-size:11px;font-family:monospace;color:#d4a840;opacity:0.9">Letters: ${gh.letters.join(' ')}</div>` : '';
+      card.innerHTML = `<div style="font-size:26px;margin-bottom:4px">👻</div>`
+        + `<div style="font-weight:bold;font-size:15px;color:${gh.color}">${gh.name}</div>`
+        + `<div style="font-size:10px;letter-spacing:0.08em;opacity:0.7;margin-top:3px">${gh.personality.toUpperCase()}</div>`
+        + `<div style="font-size:10px;opacity:0.6;margin-top:8px;line-height:1.4">${gh.description}</div>`
+        + letters;
+      cards.appendChild(card);
+    }
+    overlay.appendChild(cards);
+
+    const sub = document.createElement('div');
+    sub.style.cssText = 'color:#6b7280;font-size:12px;font-family:monospace;text-align:center;';
+    sub.textContent = 'All spirits have been identified...';
+    overlay.appendChild(sub);
+
+    document.body.appendChild(overlay);
+    setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 5500);
+  }
+
   // ── Helpers ──────────────────────────────────────────────────────────────
   function rrect(ctx, x, y, w, h, r) {
     ctx.beginPath();
@@ -784,26 +1241,38 @@
 
   // ── Socket listeners ─────────────────────────────────────────────────────
   function bindSocketEvents() {
-    socket.on('ghost:signals', ({ signals }) => {
+    socket.on('ghost:signals', ({ signals, emfDir, sndDir }) => {
       if (!S) return;
-      let emf = 0, sound = 0, flashlight = 0;
+      let emf = 0, sound = 0, flashlight = 0, coldSignal = 0;
       for (const sig of signals) {
-        emf       = Math.max(emf,       sig.emf       * 100);
-        sound     = Math.max(sound,     sig.sound     * 100);
+        emf        = Math.max(emf,        sig.emf       * 100);
+        sound      = Math.max(sound,      sig.sound     * 100);
         flashlight = Math.max(flashlight, sig.flashlight * 100);
+        // Cold spot: track proximity to ghosts not yet found
+        if (!S.ghosts[sig.ghostId]) coldSignal = Math.max(coldSignal, sig.emf);
       }
-      S.signals = { emf: Math.round(emf), sound: Math.round(sound), flashlight: Math.round(flashlight) };
+      S.signals   = { emf: Math.round(emf), sound: Math.round(sound), flashlight: Math.round(flashlight) };
+      S.emfDir    = (emfDir !== null && emfDir !== undefined) ? emfDir : null;
+      S.sndDir    = (sndDir !== null && sndDir !== undefined) ? sndDir : null;
+      S.coldSignal = coldSignal;
     });
 
     socket.on('ghost:found', ({ ghostId, x, y, personality, color, nameLength }) => {
       if (!S) return;
-      S.ghosts[ghostId] = { id:ghostId, x, y, personality, color, nameLength, found:true, identified:false };
+      S.ghosts[ghostId] = { id:ghostId, x, y, personality, color, nameLength,
+        found:true, identified:false, claimedBy:false,
+        trail:[], ouijaLetters:[], attempts:0 };
       if (navigator.vibrate) navigator.vibrate([60,25,60,25,60]);
+      gaSfxGhostFound();
     });
 
     socket.on('ghost:position', ({ ghostId, x, y }) => {
       if (!S || !S.ghosts[ghostId]) return;
-      S.ghosts[ghostId].x = x; S.ghosts[ghostId].y = y;
+      const gh = S.ghosts[ghostId];
+      if (!gh.trail) gh.trail = [];
+      gh.trail.push({ x: gh.x, y: gh.y });
+      if (gh.trail.length > 15) gh.trail.shift();
+      gh.x = x; gh.y = y;
     });
 
     socket.on('ghost:player_pos', ({ playerIndex, x, y }) => {
@@ -827,17 +1296,31 @@
 
     socket.on('ghost:identified', ({ ghostId, name, personality, color, description, identifiedBy }) => {
       if (!S) return;
-      if (S.ghosts[ghostId]) { S.ghosts[ghostId].identified = true; S.ghosts[ghostId].claimedBy = false; }
+      const gh = S.ghosts[ghostId];
+      if (gh) { gh.identified = true; gh.claimedBy = false; }
+      S.identifiedGhosts[ghostId] = { name, personality, color, description,
+        letters: gh ? (gh.ouijaLetters || []) : [] };
       S.identified++;
+      gaSfxIdentified();
       showReveal(name, personality, color, description, identifiedBy === S.myPlayerIndex);
+      if (S.identified >= S.totalGhosts) {
+        setTimeout(() => showCaseFile(), 400);
+      }
     });
 
-    socket.on('ghost:wrong_name', ({ ghostId, attemptsLeft }) => {
+    socket.on('ghost:wrong_name', ({ ghostId, attemptsLeft, respawned }) => {
       if (!S) return;
+      if (S.ghosts[ghostId]) S.ghosts[ghostId].attempts = (S.ghosts[ghostId].attempts || 0) + 1;
       S.wrongFlash = 1.0;
-      S.attemptsMsg = attemptsLeft > 0
-        ? `Wrong! ${attemptsLeft} guess${attemptsLeft !== 1 ? 'es' : ''} left`
-        : 'Ghost escapes permanently!';
+      gaSfxWrong();
+      if (respawned) {
+        delete S.ghosts[ghostId];
+        S.attemptsMsg = '👻 Wrong! Ghost fled—find it again.';
+      } else {
+        S.attemptsMsg = attemptsLeft > 0
+          ? `Wrong! ${attemptsLeft} guess${attemptsLeft !== 1 ? 'es' : ''} left`
+          : 'Ghost escapes permanently!';
+      }
       clearTimeout(S.attemptsMsgTimer);
       S.attemptsMsgTimer = setTimeout(() => { if (S) S.attemptsMsg = null; }, 2500);
     });
@@ -851,12 +1334,22 @@
       if (!S || !S.ghosts[ghostId]) return;
       S.ghosts[ghostId].claimedBy = false;
     });
+
+    socket.on('ghost:respawn', ({ ghostId }) => {
+      if (!S) return;
+      delete S.ghosts[ghostId];
+      // Show notification for all players (guesser's ghost:wrong_name will override)
+      S.attemptsMsg = '👻 Ghost fled! Find it again.';
+      clearTimeout(S.attemptsMsgTimer);
+      S.attemptsMsgTimer = setTimeout(() => { if (S) S.attemptsMsg = null; }, 2500);
+    });
   }
 
   function unbindSocketEvents() {
     ['ghost:signals','ghost:found','ghost:position','ghost:player_pos',
      'ghost:ouija_start','ghost:ouija_tick','ghost:ouija_timeout',
-     'ghost:identified','ghost:wrong_name','ghost:claimed','ghost:released'].forEach(ev => socket.off(ev));
+     'ghost:identified','ghost:wrong_name','ghost:claimed','ghost:released',
+     'ghost:respawn'].forEach(ev => socket.off(ev));
   }
 
   // ── Init / cleanup ────────────────────────────────────────────────────────
@@ -878,6 +1371,9 @@
       otherPlayers: {},
       activeTool:   'flashlight',
       signals:      { emf: 0, sound: 0, flashlight: 0 },
+      emfDir:       null,
+      sndDir:       null,
+      coldSignal:   0,
       ouija:        null,
       reveal:       null,
       nearGhost:    null,
@@ -886,12 +1382,14 @@
       wrongFlash:   0,
       attemptsMsg:  null,
       attemptsMsgTimer: null,
+      journal:      false,
+      identifiedGhosts: {},
     };
 
     // Restore found ghosts from reconnect data
     if (gd.foundGhosts) {
       for (const g of gd.foundGhosts) {
-        S.ghosts[g.id] = { ...g, found: true };
+        S.ghosts[g.id] = { ...g, found: true, trail: [], ouijaLetters: [], attempts: 0 };
       }
     }
 
@@ -902,6 +1400,9 @@
   function cleanup() {
     if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
     if (S) { clearTimeout(S.attemptsMsgTimer); S.ouija = null; }
+    const caseFile = document.getElementById('ghost-case-file');
+    if (caseFile) caseFile.remove();
+    gaStop();
     unbindSocketEvents();
     window.removeEventListener('resize', resizeCanvas);
     if (canvas) {
@@ -912,6 +1413,7 @@
       canvas.removeEventListener('mousedown',  onMouseDown);
       canvas.removeEventListener('mousemove',  onMouseMove);
       canvas.removeEventListener('mouseup',    onMouseUp);
+      canvas.removeEventListener('click',      onCanvasClick);
     }
     S = null;
   }

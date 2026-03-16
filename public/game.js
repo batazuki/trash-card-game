@@ -273,6 +273,7 @@ function stopElevenMusic() {
 function toggleMusic() {
   musicMuted = !musicMuted;
   if (musicMasterGain) musicMasterGain.gain.setTargetAtTime(musicMuted ? 0 : 0.55, musicCtx.currentTime, 0.1);
+  if (window._ghostAudioSetMute) window._ghostAudioSetMute(musicMuted);
   const btn = $("settings-music");
   if (btn) btn.textContent = musicMuted ? "🔇 Sound" : "🔊 Sound";
 }
@@ -551,6 +552,8 @@ function updateLobbyForGame(game) {
     const el = document.getElementById(id);
     if (el) el.classList.toggle("hidden", !isSketch);
   });
+  const ghostAreaRow = document.getElementById("ghost-area-row");
+  if (ghostAreaRow) ghostAreaRow.classList.toggle("hidden", !isGhost);
 }
 updateLobbyForGame(localStorage.getItem("game") || "trash");
 
@@ -560,12 +563,27 @@ function setLobbyBusy(busy) {
   });
 }
 
+// Ghost area selection buttons
+document.querySelectorAll(".ghost-area-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".ghost-area-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+  });
+});
+function getSelectedGhostArea() {
+  const active = document.querySelector(".ghost-area-btn.active");
+  const area = active ? active.dataset.area : "random";
+  return area === "random" ? null : area;
+}
+
 $("vs-ai-btn").addEventListener("click", () => {
   const name = $("player-name").value.trim() || "Player";
   local.playerName = name;
   local.vsAI = true;
   setLobbyBusy(true);
-  socket.emit("playVsAI", { playerName: name, game: $("game-select").value });
+  const payload = { playerName: name, game: $("game-select").value };
+  if ($("game-select").value === "ghost") payload.ghostArea = getSelectedGhostArea();
+  socket.emit("playVsAI", payload);
 });
 
 $("create-room-btn").addEventListener("click", () => {
@@ -578,6 +596,7 @@ $("create-room-btn").addEventListener("click", () => {
     roomPayload.drawTime = parseInt($("sketch-draw-time").value) || 15;
     roomPayload.previewTime = parseInt($("sketch-preview-time").value) || 3;
   }
+  if (selectedGame === "ghost") roomPayload.ghostArea = getSelectedGhostArea();
   setLobbyBusy(true);
   socket.emit("createRoom", roomPayload);
 });

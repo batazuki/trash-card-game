@@ -1847,6 +1847,33 @@ body.game-ghost #end-screen {
   background: linear-gradient(160deg, #0a0f14 0%, #0d1a0f 100%);
 }
 
+/* Ghost area selection buttons */
+.ghost-area-btns {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.ghost-area-btn {
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(76,175,80,0.3);
+  background: rgba(0,20,0,0.5);
+  color: rgba(150,210,160,0.8);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.ghost-area-btn.active {
+  border-color: #4caf50;
+  background: rgba(46,125,50,0.45);
+  color: #c8e6c9;
+}
+.ghost-area-btn:hover:not(.active) {
+  border-color: rgba(76,175,80,0.6);
+  background: rgba(0,40,0,0.6);
+}
+
 /* Sketch layout */
 .sketch-wrap {
   width: 100%; max-width: 480px; margin: 0 auto;

@@ -545,10 +545,21 @@ module.exports = function(io, helpers) {
 
         // Compute signals for each unfound ghost
         const signals = [];
+        let emfDir = null, sndDir = null, maxEmf = 0, maxSnd = 0;
         for (const ghost of ghosts) {
           if (ghost.identified) continue;
           const sig = computeSignals(ghost, playerPos, facing);
           signals.push({ ghostId: ghost.id, ...sig });
+
+          // Track strongest signal direction for arrow indicator
+          if (sig.emf > maxEmf) {
+            maxEmf = sig.emf;
+            emfDir = Math.atan2(ghost.y - playerPos.y, ghost.x - playerPos.x);
+          }
+          if (sig.sound > maxSnd) {
+            maxSnd = sig.sound;
+            sndDir = Math.atan2(ghost.y - playerPos.y, ghost.x - playerPos.x);
+          }
 
           // Detection: flashlight > 0.6 → found
           if (!ghost.found && sig.flashlight > 0.6) {
@@ -564,7 +575,11 @@ module.exports = function(io, helpers) {
           }
         }
 
-        io.to(player.id).emit('ghost:signals', { signals });
+        io.to(player.id).emit('ghost:signals', {
+          signals,
+          emfDir: maxEmf > 0.05 ? emfDir : null,
+          sndDir: maxSnd > 0.05 ? sndDir : null,
+        });
       }
 
       // Broadcast found (but not yet identified) ghost positions to whole room
@@ -597,9 +612,10 @@ module.exports = function(io, helpers) {
     // Clear any existing state
     clearAllTimers(state.ghost);
 
-    // Pick random area
+    // Pick area (respect host's selection if valid, otherwise random)
     const areaKeys = ['graveyard', 'garden', 'house'];
-    const areaKey  = areaKeys[Math.floor(Math.random() * areaKeys.length)];
+    const areaKey  = (state.ghostArea && AREAS[state.ghostArea]) ? state.ghostArea
+                   : areaKeys[Math.floor(Math.random() * areaKeys.length)];
     const areaData = AREAS[areaKey];
 
     // Spawn ghosts
@@ -727,12 +743,24 @@ module.exports = function(io, helpers) {
           endGame(state, roomId, playerIndex);
         }
       } else {
-        // Wrong guess: immediately release claim so others can try, then increment attempt counter
+        // Wrong guess: immediately release claim, increment counter
         ghost.claimedBy = null;
         if (gs.ouijaTimers[ghostId]) { clearInterval(gs.ouijaTimers[ghostId]); delete gs.ouijaTimers[ghostId]; }
         ghost.ouijaAttempts++;
         io.to(roomId).emit('ghost:released', { ghostId });
-        socket.emit('ghost:wrong_name', { ghostId, attemptsLeft: 3 - ghost.ouijaAttempts });
+
+        if (ghost.ouijaAttempts >= 3) {
+          // Ghost flees to a new location and resets
+          const areaData = AREAS[gs.area];
+          const newPos = randomSpawn(areaData.spawnZones);
+          ghost.x = newPos.x; ghost.y = newPos.y;
+          ghost.targetX = newPos.x; ghost.targetY = newPos.y;
+          ghost.found = false; ghost.ouijaAttempts = 0; ghost.stateTimer = 0;
+          io.to(roomId).emit('ghost:respawn', { ghostId, personality: ghost.personality, color: ghost.color });
+          socket.emit('ghost:wrong_name', { ghostId, attemptsLeft: 0, respawned: true });
+        } else {
+          socket.emit('ghost:wrong_name', { ghostId, attemptsLeft: 3 - ghost.ouijaAttempts });
+        }
       }
     });
 

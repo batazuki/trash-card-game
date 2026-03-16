@@ -163,7 +163,7 @@ io.on("connection", socket => {
   ghostGame.registerEvents(socket, rooms);
 
   // ── Create Room ──
-  socket.on("createRoom", ({ playerName, game, rounds, drawTime, previewTime }) => {
+  socket.on("createRoom", ({ playerName, game, rounds, drawTime, previewTime, ghostArea }) => {
     let roomId;
     try { roomId = generateRoomId(); }
     catch(e) { socket.emit("joinError", { message: "Server is full, try again later." }); return; }
@@ -187,6 +187,7 @@ io.on("connection", socket => {
       sketchMaxPlayers:  isSketch ? 4 : undefined,
       sketchDrawTime:    isSketch ? Math.min(20, Math.max(10, parseInt(drawTime)    || 15)) : undefined,
       sketchPreviewTime: isSketch ? Math.min(3,  Math.max(1,  parseInt(previewTime) || 3))  : undefined,
+      ghostArea:         safeGame === 'ghost' ? (ghostArea || null) : undefined,
       players: [creator],
       deck: [],
       discardPile: [],
@@ -246,7 +247,7 @@ io.on("connection", socket => {
   });
 
   // ── Play vs AI (or solo for Solitaire) ──
-  socket.on("playVsAI", ({ playerName, game }) => {
+  socket.on("playVsAI", ({ playerName, game, ghostArea }) => {
     if (game === "sketch") {
       socket.emit("joinError", { message: "Sketch It requires two real players. Create a room and share the code!" });
       return;
@@ -268,6 +269,7 @@ io.on("connection", socket => {
       roomId,
       phase: "lobby",
       game: safeGame,
+      ghostArea: safeGame === 'ghost' ? (ghostArea || null) : undefined,
       players,
       deck: [],
       discardPile: [],
