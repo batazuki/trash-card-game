@@ -61,6 +61,15 @@ function showScreen(id) {
   $(id).classList.add("active");
 }
 
+function showLobbyScreen() {
+  // Always reset to main view when returning to lobby
+  const mainView = $("lobby-main-view");
+  const gameView = $("lobby-game-view");
+  if (mainView) mainView.classList.remove("hidden");
+  if (gameView) gameView.classList.add("hidden");
+  showScreen("lobby-screen");
+}
+
 function showError(msg) {
   const el = $("lobby-error");
   el.textContent = msg;
@@ -389,7 +398,7 @@ $("pregame-cancel-btn").addEventListener("click", () => {
   const currentGame = $("game-select").value || "trash";
   if (window._syncCarousel) window._syncCarousel(currentGame);
   setLobbyBusy(false);
-  showScreen("lobby-screen");
+  showLobbyScreen();
 });
 
 // ═══ HELP MODAL ═══
@@ -544,10 +553,12 @@ function updateLobbyForGame(game) {
   const isGhost = game === "ghost";
   const isSketch = game === "sketch";
   const vsAiBtn = $("vs-ai-btn");
-  vsAiBtn.textContent = (isSolo || isGhost) ? "Play Solo" : "Play vs AI";
-  vsAiBtn.classList.toggle("hidden", isSketch);
-  const friendsSection = $("friends-section");
-  if (friendsSection) friendsSection.classList.toggle("hidden", isSolo);
+  if (vsAiBtn) {
+    vsAiBtn.textContent = (isSolo || isGhost) ? "Play Solo" : "Play vs AI";
+    vsAiBtn.classList.toggle("hidden", isSketch);
+  }
+  const createRoomBtn = $("create-room-btn");
+  if (createRoomBtn) createRoomBtn.classList.toggle("hidden", isSolo);
   ["sketch-rounds-row", "sketch-preview-row", "sketch-draw-row"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle("hidden", !isSketch);
@@ -558,10 +569,23 @@ function updateLobbyForGame(game) {
 updateLobbyForGame(localStorage.getItem("game") || "trash");
 
 function setLobbyBusy(busy) {
-  [$("vs-ai-btn"), $("create-room-btn"), $("join-room-btn")].forEach(btn => {
+  [$("vs-ai-btn"), $("create-room-btn"), $("join-room-btn"), $("play-game-btn")].forEach(btn => {
     if (btn) btn.disabled = busy;
   });
 }
+
+// ── Lobby view switching ──────────────────────────────────────────────────
+$("play-game-btn").addEventListener("click", () => {
+  $("lobby-main-view").classList.add("hidden");
+  $("lobby-game-view").classList.remove("hidden");
+});
+$("back-to-main-btn").addEventListener("click", () => {
+  $("room-code-display").classList.add("hidden");
+  $("room-code-text").textContent = "";
+  setLobbyBusy(false);
+  $("lobby-game-view").classList.add("hidden");
+  $("lobby-main-view").classList.remove("hidden");
+});
 
 // Ghost area selection buttons
 document.querySelectorAll(".ghost-area-btn").forEach(btn => {
@@ -648,7 +672,7 @@ $("back-lobby-btn").addEventListener("click", () => {
   $("end-game-switch").classList.add("hidden");
   if (window._syncCarousel) window._syncCarousel(savedGame);
   setLobbyBusy(false);
-  showScreen("lobby-screen");
+  showLobbyScreen();
 });
 
 // ═══ SOCKET EVENTS ═══
@@ -740,6 +764,8 @@ socket.on("gameStart", (data) => {
 });
 
 socket.on("gameOver", ({ winnerIndex, winnerName, scores, gamesPlayed, playerNames }) => {
+  // Ignore if we already left the game (e.g. user quit)
+  if (!local.roomId) return;
   releaseWakeLock();
   const isGhostGame = local.gameType === "ghost";
   const didWin = isGhostGame ? true : winnerIndex === local.myPlayerIndex;
@@ -875,7 +901,7 @@ function doQuitGame() {
   local.gameType = savedGame;
   $("shared-reaction-bar").classList.add("hidden");
   if (window._syncCarousel) window._syncCarousel(savedGame);
-  showScreen("lobby-screen");
+  showLobbyScreen();
 }
 window._quitCurrentGame = doQuitGame;
 

@@ -45,93 +45,102 @@
         <button class="help-btn" id="help-btn-lobby">?</button>
       </div>
 
-      <h1 class="game-title">
-        <span class="title-line">✨ Tiny Tiny ✨</span>
-        <span class="title-games">Games</span>
-      </h1>
-      <p class="subtitle">Card games and more!</p>
+      <!-- ── Main view: always visible in lobby ── -->
+      <div id="lobby-main-view">
+        <h1 class="game-title">
+          <span class="title-line">✨ Tiny Tiny ✨</span>
+          <span class="title-games">Games</span>
+        </h1>
+        <p class="subtitle">Card games and more!</p>
 
-      <!-- Hidden select kept for JS compatibility -->
-      <select id="game-select" class="hidden" aria-hidden="true">
-        <optgroup label="Trash">
-          <option value="trash">Trash</option>
-          <option value="trash-eleven">Trash / Eleven</option>
-        </optgroup>
-        <option value="war">War</option>
-        <option value="solitaire">Solitaire</option>
-        <option value="hockey">Cat Paw Hockey</option>
-        <option value="sketch">Sketch It</option>
-        <option value="ghost">Ghost Detective</option>
-      </select>
+        <input id="player-name" class="text-input" type="text"
+               placeholder="Your name" maxlength="20" autocomplete="off">
 
-      <!-- Game picker carousel (built by JS) -->
-      <div class="game-carousel-wrap">
-        <div id="game-carousel" class="game-carousel"></div>
-      </div>
+        <button class="btn btn-primary btn-full" id="play-game-btn">Play Game</button>
 
-      <div id="sketch-rounds-row" class="toggle-row hidden">
-        <span class="toggle-label">Rounds</span>
-        <select id="sketch-rounds" class="game-select">
-          <option value="1">1 Round</option>
-          <option value="3" selected>3 Rounds</option>
-          <option value="5">5 Rounds</option>
-        </select>
-      </div>
-
-      <div id="sketch-preview-row" class="toggle-row hidden">
-        <span class="toggle-label">Preview</span>
-        <select id="sketch-preview-time" class="game-select">
-          <option value="1">1 second</option>
-          <option value="2">2 seconds</option>
-          <option value="3" selected>3 seconds</option>
-        </select>
-      </div>
-
-      <div id="sketch-draw-row" class="toggle-row hidden">
-        <span class="toggle-label">Draw time</span>
-        <select id="sketch-draw-time" class="game-select">
-          <option value="10">10 seconds</option>
-          <option value="15" selected>15 seconds</option>
-          <option value="20">20 seconds</option>
-        </select>
-      </div>
-
-      <div id="ghost-area-row" class="toggle-row hidden">
-        <span class="toggle-label">Location</span>
-        <div class="ghost-area-btns">
-          <button class="ghost-area-btn active" data-area="random">🎲 Random</button>
-          <button class="ghost-area-btn" data-area="graveyard">⚰️ Graveyard</button>
-          <button class="ghost-area-btn" data-area="garden">🌿 Garden</button>
-          <button class="ghost-area-btn" data-area="house">🏚️ Old House</button>
-        </div>
-      </div>
-
-      <input id="player-name" class="text-input" type="text"
-             placeholder="Your name" maxlength="20" autocomplete="off">
-
-      <button class="btn btn-primary btn-full" id="vs-ai-btn">Play vs AI</button>
-
-      <div id="friends-section">
-        <div class="divider">— or play with friends —</div>
-        <button class="btn btn-secondary btn-full" id="create-room-btn">Create Room</button>
+        <div class="divider">— or join with a code —</div>
         <div class="join-row">
           <input id="join-code" class="text-input join-input" type="text"
                  placeholder="Room code" maxlength="4" autocomplete="off"
                  style="text-transform:uppercase">
-          <button class="btn btn-secondary" id="join-room-btn">Join</button>
+          <button class="btn btn-secondary" id="join-room-btn">Join Game</button>
+        </div>
+
+        <p id="lobby-error" class="error hidden"></p>
+      </div>
+
+      <!-- ── Game selection view: shown after "Play Game" ── -->
+      <div id="lobby-game-view" class="hidden">
+        <button class="btn btn-ghost" id="back-to-main-btn" style="margin-bottom:8px;align-self:flex-start">← Back</button>
+
+        <!-- Hidden select kept for JS compatibility -->
+        <select id="game-select" class="hidden" aria-hidden="true">
+          <optgroup label="Trash">
+            <option value="trash">Trash</option>
+            <option value="trash-eleven">Trash / Eleven</option>
+          </optgroup>
+          <option value="war">War</option>
+          <option value="solitaire">Solitaire</option>
+          <option value="hockey">Cat Paw Hockey</option>
+          <option value="sketch">Sketch It</option>
+          <option value="ghost">Ghost Detective</option>
+        </select>
+
+        <!-- Game picker carousel (built by JS) -->
+        <div class="game-carousel-wrap">
+          <div id="game-carousel" class="game-carousel"></div>
+        </div>
+
+        <div id="sketch-rounds-row" class="toggle-row hidden">
+          <span class="toggle-label">Rounds</span>
+          <select id="sketch-rounds" class="game-select">
+            <option value="1">1 Round</option>
+            <option value="3" selected>3 Rounds</option>
+            <option value="5">5 Rounds</option>
+          </select>
+        </div>
+
+        <div id="sketch-preview-row" class="toggle-row hidden">
+          <span class="toggle-label">Preview</span>
+          <select id="sketch-preview-time" class="game-select">
+            <option value="1">1 second</option>
+            <option value="2">2 seconds</option>
+            <option value="3" selected>3 seconds</option>
+          </select>
+        </div>
+
+        <div id="sketch-draw-row" class="toggle-row hidden">
+          <span class="toggle-label">Draw time</span>
+          <select id="sketch-draw-time" class="game-select">
+            <option value="10">10 seconds</option>
+            <option value="15" selected>15 seconds</option>
+            <option value="20">20 seconds</option>
+          </select>
+        </div>
+
+        <div id="ghost-area-row" class="toggle-row hidden">
+          <span class="toggle-label">Location</span>
+          <div class="ghost-area-btns">
+            <button class="ghost-area-btn active" data-area="random">🎲 Random</button>
+            <button class="ghost-area-btn" data-area="graveyard">⚰️ Graveyard</button>
+            <button class="ghost-area-btn" data-area="garden">🌿 Garden</button>
+            <button class="ghost-area-btn" data-area="house">🏚️ Old House</button>
+          </div>
+        </div>
+
+        <button class="btn btn-secondary btn-full" id="vs-ai-btn">Play Solo</button>
+        <button class="btn btn-primary btn-full" id="create-room-btn">Create Lobby</button>
+
+        <div id="room-code-display" class="hidden">
+          <p class="label">Share this code:</p>
+          <div class="room-code-row">
+            <div class="room-code" id="room-code-text"></div>
+            <button class="btn btn-secondary btn-share" id="share-btn">Share</button>
+          </div>
+          <p class="waiting-msg" id="waiting-msg">Waiting for opponent...</p>
         </div>
       </div>
 
-      <div id="room-code-display" class="hidden">
-        <p class="label">Share this code:</p>
-        <div class="room-code-row">
-          <div class="room-code" id="room-code-text"></div>
-          <button class="btn btn-secondary btn-share" id="share-btn">Share</button>
-        </div>
-        <p class="waiting-msg" id="waiting-msg">Waiting for opponent...</p>
-      </div>
-
-      <p id="lobby-error" class="error hidden"></p>
     </div>
   </div>
 
