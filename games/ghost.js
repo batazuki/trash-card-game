@@ -41,171 +41,78 @@ module.exports = function(io, helpers) {
 
   function buildGraveyardObstacles() {
     const obs = [];
-    // Border walls (T thick)
-    obs.push(rect(0,  0,  80, 1,  'stone')); // top
-    obs.push(rect(0,  59, 80, 1,  'stone')); // bottom
-    obs.push(rect(0,  0,  1,  60, 'stone')); // left
-    obs.push(rect(79, 0,  1,  60, 'stone')); // right
-
-    // Mausoleum at tile (4,4), size 8×6
-    obs.push(rect(4, 4, 8, 6, 'stone'));
-
-    // 40 tombstones (1×2 tiles), type:'stone', 5 groups of 8
-    // Group 1: around (14,8)
-    obs.push(rect(14,  8, 1, 2, 'stone'));
-    obs.push(rect(18,  8, 1, 2, 'stone'));
-    obs.push(rect(22,  8, 1, 2, 'stone'));
-    obs.push(rect(14, 13, 1, 2, 'stone'));
-    obs.push(rect(18, 13, 1, 2, 'stone'));
-    obs.push(rect(22, 13, 1, 2, 'stone'));
-    obs.push(rect(26,  8, 1, 2, 'stone'));
-    obs.push(rect(26, 13, 1, 2, 'stone'));
-
-    // Group 2: around (50,6)
-    obs.push(rect(50,  6, 1, 2, 'stone'));
-    obs.push(rect(54,  6, 1, 2, 'stone'));
-    obs.push(rect(58,  6, 1, 2, 'stone'));
-    obs.push(rect(62,  6, 1, 2, 'stone'));
-    obs.push(rect(50, 11, 1, 2, 'stone'));
-    obs.push(rect(54, 11, 1, 2, 'stone'));
-    obs.push(rect(58, 11, 1, 2, 'stone'));
-    obs.push(rect(66,  6, 1, 2, 'stone'));
-
-    // Group 3: around (10,35)
-    obs.push(rect(10, 35, 1, 2, 'stone'));
-    obs.push(rect(14, 35, 1, 2, 'stone'));
-    obs.push(rect(18, 35, 1, 2, 'stone'));
-    obs.push(rect(10, 40, 1, 2, 'stone'));
-    obs.push(rect(14, 40, 1, 2, 'stone'));
-    obs.push(rect(18, 40, 1, 2, 'stone'));
-    obs.push(rect(22, 35, 1, 2, 'stone'));
-    obs.push(rect(22, 40, 1, 2, 'stone'));
-
-    // Group 4: around (45,38)
-    obs.push(rect(45, 38, 1, 2, 'stone'));
-    obs.push(rect(49, 38, 1, 2, 'stone'));
-    obs.push(rect(53, 38, 1, 2, 'stone'));
-    obs.push(rect(57, 38, 1, 2, 'stone'));
-    obs.push(rect(45, 43, 1, 2, 'stone'));
-    obs.push(rect(49, 43, 1, 2, 'stone'));
-    obs.push(rect(53, 43, 1, 2, 'stone'));
-    obs.push(rect(61, 38, 1, 2, 'stone'));
-
-    // Group 5: around (30,22)
-    obs.push(rect(30, 22, 1, 2, 'stone'));
-    obs.push(rect(34, 22, 1, 2, 'stone'));
-    obs.push(rect(38, 22, 1, 2, 'stone'));
-    obs.push(rect(42, 22, 1, 2, 'stone'));
-    obs.push(rect(30, 27, 1, 2, 'stone'));
-    obs.push(rect(34, 27, 1, 2, 'stone'));
-    obs.push(rect(38, 27, 1, 2, 'stone'));
-    obs.push(rect(42, 27, 1, 2, 'stone'));
-
-    // 6 dead trees: 1×3 tiles, type:'tree'
-    obs.push(rect(36,  5, 1, 3, 'tree'));
-    obs.push(rect(68, 12, 1, 3, 'tree'));
-    obs.push(rect(3,  25, 1, 3, 'tree'));
-    obs.push(rect(70, 38, 1, 3, 'tree'));
-    obs.push(rect(28, 50, 1, 3, 'tree'));
-    obs.push(rect(60, 52, 1, 3, 'tree'));
-
-    // 4 low stone walls: 12×1 tiles, type:'stone'
-    obs.push(rect(32, 10, 12, 1, 'stone'));
-    obs.push(rect( 6, 48, 12, 1, 'stone'));
-    obs.push(rect(55, 24, 12, 1, 'stone'));
-    obs.push(rect(35, 45,  1,12, 'stone')); // vertical variant
-
+    obs.push(rect(0,0,80,1,'stone'),rect(0,59,80,1,'stone'),rect(0,0,1,60,'stone'),rect(79,0,1,60,'stone'));
+    obs.push(rect(4,4,8,6,'stone'));
+    obs.push(rect(7,10,1,3,'arch'),rect(9,10,1,3,'arch'),rect(7,9,3,1,'arch'));
+    obs.push(rect(14,8,1,2,'cross'),rect(18,8,1,2,'cross'),rect(22,8,1,2,'cross'));
+    obs.push(rect(14,13,1,2,'cross'),rect(18,13,1,2,'cross'),rect(22,13,1,2,'cross'));
+    obs.push(rect(26,8,1,2,'cross'),rect(26,13,1,2,'cross'));
+    obs.push(rect(50,6,1,2,'cross'),rect(54,6,1,2,'cross'),rect(58,6,1,2,'cross'),rect(62,6,1,2,'cross'));
+    obs.push(rect(50,11,1,2,'cross'),rect(54,11,1,2,'cross'),rect(58,11,1,2,'cross'),rect(66,6,1,2,'cross'));
+    obs.push(rect(10,35,1,2,'cross'),rect(14,35,1,2,'cross'),rect(18,35,1,2,'cross'));
+    obs.push(rect(10,40,1,2,'cross'),rect(14,40,1,2,'cross'),rect(18,40,1,2,'cross'));
+    obs.push(rect(22,35,1,2,'cross'),rect(22,40,1,2,'cross'));
+    obs.push(rect(45,38,1,2,'cross'),rect(49,38,1,2,'cross'),rect(53,38,1,2,'cross'),rect(57,38,1,2,'cross'));
+    obs.push(rect(45,43,1,2,'cross'),rect(49,43,1,2,'cross'),rect(53,43,1,2,'cross'),rect(61,38,1,2,'cross'));
+    obs.push(rect(30,22,1,2,'cross'),rect(34,22,1,2,'cross'),rect(38,22,1,2,'cross'),rect(42,22,1,2,'cross'));
+    obs.push(rect(30,27,1,2,'cross'),rect(34,27,1,2,'cross'),rect(38,27,1,2,'cross'),rect(42,27,1,2,'cross'));
+    obs.push(rect(36,5,1,3,'tree'),rect(68,12,1,3,'tree'),rect(3,25,1,3,'tree'));
+    obs.push(rect(70,38,1,3,'tree'),rect(28,50,1,3,'tree'),rect(60,52,1,3,'tree'));
+    obs.push(rect(32,10,12,1,'stone'),rect(6,48,12,1,'stone'));
+    obs.push(rect(55,24,12,1,'stone'),rect(35,45,1,12,'stone'));
+    obs.push(rect(13,2,6,1,'fence'),rect(25,2,6,1,'fence'),rect(45,2,6,1,'fence'),rect(60,2,6,1,'fence'));
+    obs.push(rect(13,57,6,1,'fence'),rect(35,57,6,1,'fence'),rect(55,57,6,1,'fence'));
+    obs.push(rect(65,48,2,2,'well'));
+    obs.push(rect(48,20,1,1,'shrub'),rect(72,28,1,1,'shrub'),rect(15,52,1,1,'shrub'),rect(40,5,1,1,'shrub'));
+    obs.push(rect(8,18,1,1,'shrub'),rect(74,50,1,1,'shrub'),rect(56,35,1,1,'shrub'));
     return obs;
   }
 
   function buildGardenObstacles() {
     const obs = [];
-    // Border hedges (T thick)
-    obs.push(rect(0,   0,  100, 1,  'hedge')); // top
-    obs.push(rect(0,   69, 100, 1,  'hedge')); // bottom
-    obs.push(rect(0,   0,  1,   70, 'hedge')); // left
-    obs.push(rect(99,  0,  1,   70, 'hedge')); // right
-
-    // Fountain center at tile (46,31), size 8×8
-    obs.push(rect(46, 31, 8, 8, 'stone'));
-
-    // ~15 hedge sections forming a partial maze (mix of H and V)
-    // Horizontal segments
-    obs.push(rect(10, 15, 12, 1, 'hedge'));
-    obs.push(rect(30, 10,  8, 1, 'hedge'));
-    obs.push(rect(60, 18, 10, 1, 'hedge'));
-    obs.push(rect(75, 30,  8, 1, 'hedge'));
-    obs.push(rect(20, 45, 14, 1, 'hedge'));
-    obs.push(rect(60, 50, 10, 1, 'hedge'));
-    obs.push(rect(38, 58,  8, 1, 'hedge'));
-    obs.push(rect(80, 55, 12, 1, 'hedge'));
-    // Vertical segments
-    obs.push(rect(25, 20, 1,  8, 'hedge'));
-    obs.push(rect(40, 12, 1, 10, 'hedge'));
-    obs.push(rect(70, 25, 1,  8, 'hedge'));
-    obs.push(rect(15, 50, 1,  8, 'hedge'));
-    obs.push(rect(55, 35, 1,  8, 'hedge'));
-    obs.push(rect(85, 20, 1, 12, 'hedge'));
-    obs.push(rect(35, 42, 1,  8, 'hedge'));
-
-    // 6 flower beds (3×3 tiles), type:'flower'
-    obs.push(rect( 5,  5, 3, 3, 'flower'));
-    obs.push(rect(92,  5, 3, 3, 'flower'));
-    obs.push(rect( 5, 62, 3, 3, 'flower'));
-    obs.push(rect(92, 62, 3, 3, 'flower'));
-    obs.push(rect(20, 30, 3, 3, 'flower'));
-    obs.push(rect(74, 55, 3, 3, 'flower'));
-
-    // 6 corner/edge trees (2×2 tiles), type:'tree'
-    obs.push(rect( 3,  3, 2, 2, 'tree'));
-    obs.push(rect(95,  3, 2, 2, 'tree'));
-    obs.push(rect( 3, 65, 2, 2, 'tree'));
-    obs.push(rect(95, 65, 2, 2, 'tree'));
-    obs.push(rect(47,  3, 2, 2, 'tree'));
-    obs.push(rect(47, 65, 2, 2, 'tree'));
-
+    obs.push(rect(0,0,100,1,'hedge'),rect(0,69,100,1,'hedge'),rect(0,0,1,70,'hedge'),rect(99,0,1,70,'hedge'));
+    obs.push(rect(46,31,8,8,'stone'));
+    obs.push(rect(10,15,12,1,'hedge'),rect(30,10,8,1,'hedge'),rect(60,18,10,1,'hedge'),rect(75,30,8,1,'hedge'));
+    obs.push(rect(20,45,14,1,'hedge'),rect(60,50,10,1,'hedge'),rect(38,58,8,1,'hedge'),rect(80,55,12,1,'hedge'));
+    obs.push(rect(25,20,1,8,'hedge'),rect(40,12,1,10,'hedge'),rect(70,25,1,8,'hedge'));
+    obs.push(rect(15,50,1,8,'hedge'),rect(55,35,1,8,'hedge'),rect(85,20,1,12,'hedge'),rect(35,42,1,8,'hedge'));
+    obs.push(rect(5,5,3,3,'flower'),rect(92,5,3,3,'flower'),rect(5,62,3,3,'flower'));
+    obs.push(rect(92,62,3,3,'flower'),rect(20,30,3,3,'flower'),rect(74,55,3,3,'flower'));
+    obs.push(rect(3,3,2,2,'tree'),rect(95,3,2,2,'tree'),rect(3,65,2,2,'tree'));
+    obs.push(rect(95,65,2,2,'tree'),rect(47,3,2,2,'tree'),rect(47,65,2,2,'tree'));
+    obs.push(rect(12,8,3,1,'bench'),rect(72,12,3,1,'bench'),rect(8,38,3,1,'bench'));
+    obs.push(rect(88,40,3,1,'bench'),rect(50,60,3,1,'bench'),rect(28,62,3,1,'bench'));
+    obs.push(rect(8,8,1,2,'lamp'),rect(90,8,1,2,'lamp'),rect(8,60,1,2,'lamp'),rect(90,60,1,2,'lamp'));
+    obs.push(rect(49,28,1,2,'lamp'),rect(49,42,1,2,'lamp'));
+    obs.push(rect(22,18,2,3,'statue'),rect(72,50,2,3,'statue'));
+    obs.push(rect(18,62,2,2,'birdbath'),rect(78,8,2,2,'birdbath'));
+    obs.push(rect(42,22,1,2,'pillar'),rect(45,22,1,2,'pillar'),rect(48,22,1,2,'pillar'),rect(51,22,1,2,'pillar'));
+    obs.push(rect(42,26,1,2,'pillar'),rect(45,26,1,2,'pillar'),rect(48,26,1,2,'pillar'),rect(51,26,1,2,'pillar'));
     return obs;
   }
 
   function buildHouseObstacles() {
     const obs = [];
-    // Outer walls (T thick), all 4 sides
-    obs.push(rect(0,   0,  60, 1,  'stone')); // top
-    obs.push(rect(0,  79, 60, 1,  'stone')); // bottom
-    obs.push(rect(0,   0,  1,  80, 'stone')); // left
-    obs.push(rect(59,  0,  1,  80, 'stone')); // right
-
-    // Ground floor dividers:
-    // Horizontal wall at row 15: x=1..19 (skip gap 10-12), x=21..58
-    obs.push(rect( 1, 15,  9, 1, 'stone')); // tiles 1-9
-    obs.push(rect(13, 15,  7, 1, 'stone')); // tiles 13-19 (gap at 10-12)
-    obs.push(rect(21, 15, 38, 1, 'stone')); // tiles 21-58
-
-    // Vertical wall col 20 from row 1 to 14
-    obs.push(rect(20, 1, 1, 14, 'stone'));
-    // Vertical wall col 40 from row 1 to 39
-    obs.push(rect(40, 1, 1, 39, 'stone'));
-
-    // Stairwell divider at row 39 except gap at cols 28-32
-    obs.push(rect( 1, 39, 27, 1, 'stone')); // cols 1-27
-    obs.push(rect(33, 39, 26, 1, 'stone')); // cols 33-58
-
-    // Basement: vertical divider at col 30
-    obs.push(rect(30, 40, 1, 40, 'stone'));
-
-    // Basement horizontal at row 55:
-    obs.push(rect( 1, 55, 13, 1, 'stone')); // cols 1-13
-    obs.push(rect(18, 55, 12, 1, 'stone')); // cols 18-29 (gap at 14-17)
-    obs.push(rect(32, 55, 27, 1, 'stone')); // cols 32-58
-
-    // 6 furniture pieces (5×3 tiles), type:'wood' — placed in rooms
-    obs.push(rect( 2,  2, 5, 3, 'wood')); // ground floor room 1 (left of col 20)
-    obs.push(rect(22,  2, 5, 3, 'wood')); // ground floor room 2 (col 20-40)
-    obs.push(rect(42,  2, 5, 3, 'wood')); // ground floor room 3 (right of col 40)
-    obs.push(rect( 2, 20, 5, 3, 'wood')); // mid floor
-    obs.push(rect( 2, 42, 5, 3, 'wood')); // basement left
-    obs.push(rect(33, 42, 5, 3, 'wood')); // basement right
-
+    obs.push(rect(0,0,60,1,'stone'),rect(0,79,60,1,'stone'),rect(0,0,1,80,'stone'),rect(59,0,1,80,'stone'));
+    obs.push(rect(1,15,9,1,'stone'),rect(13,15,7,1,'stone'),rect(21,15,38,1,'stone'));
+    obs.push(rect(20,1,1,14,'stone'),rect(40,1,1,39,'stone'));
+    obs.push(rect(1,39,27,1,'stone'),rect(33,39,26,1,'stone'));
+    obs.push(rect(30,40,1,40,'stone'));
+    obs.push(rect(1,55,13,1,'stone'),rect(18,55,12,1,'stone'),rect(32,55,27,1,'stone'));
+    obs.push(rect(2,2,4,2,'fireplace'));
+    obs.push(rect(8,2,2,1,'chair'),rect(10,2,2,1,'chair'));
+    obs.push(rect(22,3,5,2,'table'));
+    obs.push(rect(22,2,1,1,'chair'),rect(24,2,1,1,'chair'),rect(26,2,1,1,'chair'));
+    obs.push(rect(22,5,1,1,'chair'),rect(24,5,1,1,'chair'),rect(26,5,1,1,'chair'));
+    obs.push(rect(42,1,1,6,'shelf'),rect(55,1,1,6,'shelf'));
+    obs.push(rect(47,1,2,2,'mirror'));
+    obs.push(rect(2,20,1,2,'clock'),rect(5,20,3,2,'table'));
+    obs.push(rect(10,20,2,1,'chair'));
+    obs.push(rect(28,37,2,2,'stairs'),rect(30,37,2,2,'stairs'));
+    obs.push(rect(2,42,5,2,'table'),rect(2,47,1,4,'shelf'));
+    obs.push(rect(10,42,2,1,'chair'));
+    obs.push(rect(33,42,5,2,'table'));
+    obs.push(rect(50,42,1,6,'shelf'),rect(53,42,1,6,'shelf'));
     return obs;
   }
 

@@ -18,37 +18,55 @@
 
   function buildGraveyardObs() {
     const o = [];
+    // Border walls
     o.push(rect(0,0,80,1,'stone'),rect(0,59,80,1,'stone'),rect(0,0,1,60,'stone'),rect(79,0,1,60,'stone'));
+    // Mausoleum
     o.push(rect(4,4,8,6,'stone'));
-    // Group 1
-    o.push(rect(14,8,1,2,'stone'),rect(18,8,1,2,'stone'),rect(22,8,1,2,'stone'));
-    o.push(rect(14,13,1,2,'stone'),rect(18,13,1,2,'stone'),rect(22,13,1,2,'stone'));
-    o.push(rect(26,8,1,2,'stone'),rect(26,13,1,2,'stone'));
-    // Group 2
-    o.push(rect(50,6,1,2,'stone'),rect(54,6,1,2,'stone'),rect(58,6,1,2,'stone'),rect(62,6,1,2,'stone'));
-    o.push(rect(50,11,1,2,'stone'),rect(54,11,1,2,'stone'),rect(58,11,1,2,'stone'),rect(66,6,1,2,'stone'));
-    // Group 3
-    o.push(rect(10,35,1,2,'stone'),rect(14,35,1,2,'stone'),rect(18,35,1,2,'stone'));
-    o.push(rect(10,40,1,2,'stone'),rect(14,40,1,2,'stone'),rect(18,40,1,2,'stone'));
-    o.push(rect(22,35,1,2,'stone'),rect(22,40,1,2,'stone'));
-    // Group 4
-    o.push(rect(45,38,1,2,'stone'),rect(49,38,1,2,'stone'),rect(53,38,1,2,'stone'),rect(57,38,1,2,'stone'));
-    o.push(rect(45,43,1,2,'stone'),rect(49,43,1,2,'stone'),rect(53,43,1,2,'stone'),rect(61,38,1,2,'stone'));
-    // Group 5
-    o.push(rect(30,22,1,2,'stone'),rect(34,22,1,2,'stone'),rect(38,22,1,2,'stone'),rect(42,22,1,2,'stone'));
-    o.push(rect(30,27,1,2,'stone'),rect(34,27,1,2,'stone'),rect(38,27,1,2,'stone'),rect(42,27,1,2,'stone'));
-    // Trees
+    // Iron arch gate near mausoleum
+    o.push(rect(7,10,1,3,'arch'),rect(9,10,1,3,'arch'),rect(7,9,3,1,'arch'));
+    // Group 1 tombstones (crosses)
+    o.push(rect(14,8,1,2,'cross'),rect(18,8,1,2,'cross'),rect(22,8,1,2,'cross'));
+    o.push(rect(14,13,1,2,'cross'),rect(18,13,1,2,'cross'),rect(22,13,1,2,'cross'));
+    o.push(rect(26,8,1,2,'cross'),rect(26,13,1,2,'cross'));
+    // Group 2 tombstones
+    o.push(rect(50,6,1,2,'cross'),rect(54,6,1,2,'cross'),rect(58,6,1,2,'cross'),rect(62,6,1,2,'cross'));
+    o.push(rect(50,11,1,2,'cross'),rect(54,11,1,2,'cross'),rect(58,11,1,2,'cross'),rect(66,6,1,2,'cross'));
+    // Group 3 tombstones
+    o.push(rect(10,35,1,2,'cross'),rect(14,35,1,2,'cross'),rect(18,35,1,2,'cross'));
+    o.push(rect(10,40,1,2,'cross'),rect(14,40,1,2,'cross'),rect(18,40,1,2,'cross'));
+    o.push(rect(22,35,1,2,'cross'),rect(22,40,1,2,'cross'));
+    // Group 4 tombstones
+    o.push(rect(45,38,1,2,'cross'),rect(49,38,1,2,'cross'),rect(53,38,1,2,'cross'),rect(57,38,1,2,'cross'));
+    o.push(rect(45,43,1,2,'cross'),rect(49,43,1,2,'cross'),rect(53,43,1,2,'cross'),rect(61,38,1,2,'cross'));
+    // Group 5 tombstones
+    o.push(rect(30,22,1,2,'cross'),rect(34,22,1,2,'cross'),rect(38,22,1,2,'cross'),rect(42,22,1,2,'cross'));
+    o.push(rect(30,27,1,2,'cross'),rect(34,27,1,2,'cross'),rect(38,27,1,2,'cross'),rect(42,27,1,2,'cross'));
+    // Dead trees
     o.push(rect(36,5,1,3,'tree'),rect(68,12,1,3,'tree'),rect(3,25,1,3,'tree'));
     o.push(rect(70,38,1,3,'tree'),rect(28,50,1,3,'tree'),rect(60,52,1,3,'tree'));
-    // Low walls
+    // Low stone walls
     o.push(rect(32,10,12,1,'stone'),rect(6,48,12,1,'stone'));
     o.push(rect(55,24,12,1,'stone'),rect(35,45,1,12,'stone'));
+    // Iron fence sections along borders
+    o.push(rect(13,2,6,1,'fence'),rect(25,2,6,1,'fence'),rect(45,2,6,1,'fence'),rect(60,2,6,1,'fence'));
+    o.push(rect(13,57,6,1,'fence'),rect(35,57,6,1,'fence'),rect(55,57,6,1,'fence'));
+    // Stone well
+    o.push(rect(65,48,2,2,'well'));
+    // Overgrown shrubs
+    o.push(rect(48,20,1,1,'shrub'),rect(72,28,1,1,'shrub'),rect(15,52,1,1,'shrub'),rect(40,5,1,1,'shrub'));
+    o.push(rect(8,18,1,1,'shrub'),rect(74,50,1,1,'shrub'),rect(56,35,1,1,'shrub'));
+    // Torches (non-collidable decoration)
+    o.push(rect(4,3,1,1,'torch'),rect(11,3,1,1,'torch'));
+    o.push(rect(32,9,1,1,'torch'),rect(43,9,1,1,'torch'));
+    o.push(rect(6,47,1,1,'torch'),rect(17,47,1,1,'torch'));
     return o;
   }
 
   function buildGardenObs() {
     const o = [];
+    // Border hedges
     o.push(rect(0,0,100,1,'hedge'),rect(0,69,100,1,'hedge'),rect(0,0,1,70,'hedge'),rect(99,0,1,70,'hedge'));
+    // Fountain center
     o.push(rect(46,31,8,8,'stone'));
     // Hedges H
     o.push(rect(10,15,12,1,'hedge'),rect(30,10,8,1,'hedge'),rect(60,18,10,1,'hedge'),rect(75,30,8,1,'hedge'));
@@ -56,25 +74,62 @@
     // Hedges V
     o.push(rect(25,20,1,8,'hedge'),rect(40,12,1,10,'hedge'),rect(70,25,1,8,'hedge'));
     o.push(rect(15,50,1,8,'hedge'),rect(55,35,1,8,'hedge'),rect(85,20,1,12,'hedge'),rect(35,42,1,8,'hedge'));
-    // Flowers
+    // Flower beds
     o.push(rect(5,5,3,3,'flower'),rect(92,5,3,3,'flower'),rect(5,62,3,3,'flower'));
     o.push(rect(92,62,3,3,'flower'),rect(20,30,3,3,'flower'),rect(74,55,3,3,'flower'));
     // Trees
     o.push(rect(3,3,2,2,'tree'),rect(95,3,2,2,'tree'),rect(3,65,2,2,'tree'));
     o.push(rect(95,65,2,2,'tree'),rect(47,3,2,2,'tree'),rect(47,65,2,2,'tree'));
+    // Garden benches
+    o.push(rect(12,8,3,1,'bench'),rect(72,12,3,1,'bench'),rect(8,38,3,1,'bench'));
+    o.push(rect(88,40,3,1,'bench'),rect(50,60,3,1,'bench'),rect(28,62,3,1,'bench'));
+    // Gas lamp posts
+    o.push(rect(8,8,1,2,'lamp'),rect(90,8,1,2,'lamp'),rect(8,60,1,2,'lamp'),rect(90,60,1,2,'lamp'));
+    o.push(rect(49,28,1,2,'lamp'),rect(49,42,1,2,'lamp'));
+    // Stone statues
+    o.push(rect(22,18,2,3,'statue'),rect(72,50,2,3,'statue'));
+    // Birdbaths
+    o.push(rect(18,62,2,2,'birdbath'),rect(78,8,2,2,'birdbath'));
+    // Gazebo pillars
+    o.push(rect(42,22,1,2,'pillar'),rect(45,22,1,2,'pillar'),rect(48,22,1,2,'pillar'),rect(51,22,1,2,'pillar'));
+    o.push(rect(42,26,1,2,'pillar'),rect(45,26,1,2,'pillar'),rect(48,26,1,2,'pillar'),rect(51,26,1,2,'pillar'));
     return o;
   }
 
   function buildHouseObs() {
     const o = [];
+    // Outer walls
     o.push(rect(0,0,60,1,'stone'),rect(0,79,60,1,'stone'),rect(0,0,1,80,'stone'),rect(59,0,1,80,'stone'));
+    // Ground floor dividers
     o.push(rect(1,15,9,1,'stone'),rect(13,15,7,1,'stone'),rect(21,15,38,1,'stone'));
     o.push(rect(20,1,1,14,'stone'),rect(40,1,1,39,'stone'));
+    // Stairwell divider
     o.push(rect(1,39,27,1,'stone'),rect(33,39,26,1,'stone'));
+    // Basement divider
     o.push(rect(30,40,1,40,'stone'));
+    // Basement horizontal walls
     o.push(rect(1,55,13,1,'stone'),rect(18,55,12,1,'stone'),rect(32,55,27,1,'stone'));
-    o.push(rect(2,2,5,3,'wood'),rect(22,2,5,3,'wood'),rect(42,2,5,3,'wood'));
-    o.push(rect(2,20,5,3,'wood'),rect(2,42,5,3,'wood'),rect(33,42,5,3,'wood'));
+    // Ground floor room 1: fireplace + chairs
+    o.push(rect(2,2,4,2,'fireplace'));
+    o.push(rect(8,2,2,1,'chair'),rect(10,2,2,1,'chair'));
+    // Ground floor room 2: table + chairs
+    o.push(rect(22,3,5,2,'table'));
+    o.push(rect(22,2,1,1,'chair'),rect(24,2,1,1,'chair'),rect(26,2,1,1,'chair'));
+    o.push(rect(22,5,1,1,'chair'),rect(24,5,1,1,'chair'),rect(26,5,1,1,'chair'));
+    // Ground floor room 3: bookshelves + mirror
+    o.push(rect(42,1,1,6,'shelf'),rect(55,1,1,6,'shelf'));
+    o.push(rect(47,1,2,2,'mirror'));
+    // Mid floor: clock + table + chair
+    o.push(rect(2,20,1,2,'clock'),rect(5,20,3,2,'table'));
+    o.push(rect(10,20,2,1,'chair'));
+    // Staircase sections
+    o.push(rect(28,37,2,2,'stairs'),rect(30,37,2,2,'stairs'));
+    // Basement left: workbench + shelf
+    o.push(rect(2,42,5,2,'table'),rect(2,47,1,4,'shelf'));
+    o.push(rect(10,42,2,1,'chair'));
+    // Basement right: table + shelves
+    o.push(rect(33,42,5,2,'table'));
+    o.push(rect(50,42,1,6,'shelf'),rect(53,42,1,6,'shelf'));
     return o;
   }
 
@@ -82,26 +137,34 @@
     graveyard: {
       areaWidth: 2560, areaHeight: 1920, bgColor: '#1a2e1a', label: 'Graveyard',
       playerStart: { x:1280, y:960 }, obstacles: buildGraveyardObs(),
-      obsColors: { stone:'#6a6a6a', tree:'#3a2510', default:'#5a5a5a' },
+      obsColors: { stone:'#6a6a6a', tree:'#3a2510', cross:'#9a9a8a', fence:'#505058',
+                   well:'#7a7a7a', torch:'#b05820', shrub:'#2a5a1a', arch:'#7a6a58',
+                   default:'#5a5a5a' },
       pathColor: '#243524',
     },
     garden: {
       areaWidth: 3200, areaHeight: 2240, bgColor: '#2d4a1e', label: 'Garden',
       playerStart: { x:1600, y:1120 }, obstacles: buildGardenObs(),
-      obsColors: { hedge:'#1a4010', flower:'#8b3a6a', tree:'#3a2510', stone:'#7a7a5a', default:'#2a5018' },
+      obsColors: { hedge:'#1a4010', flower:'#8b3a6a', tree:'#3a2510', stone:'#7a7a5a',
+                   bench:'#8b6a40', lamp:'#c0a850', statue:'#a09080', birdbath:'#7090a0',
+                   pillar:'#c8b878', default:'#2a5018' },
       pathColor: '#3d5a2a',
     },
     house: {
       areaWidth: 1920, areaHeight: 2560, bgColor: '#1a1510', label: 'Old House',
       playerStart: { x:960, y:640 }, obstacles: buildHouseObs(),
-      obsColors: { stone:'#4a3a2a', wood:'#6b4a1a', default:'#3a2a1a' },
+      obsColors: { stone:'#4a3a2a', wood:'#6b4a1a', table:'#7a5030', chair:'#5a3a18',
+                   shelf:'#3a2810', fireplace:'#5a3020', clock:'#3a2a10', mirror:'#8080a8',
+                   stairs:'#5a4838', default:'#3a2a1a' },
       pathColor: '#251c14',
     },
   };
 
   // ── Collision ────────────────────────────────────────────────────────────
+  const NON_COLLIDABLE = new Set(['torch', 'candle']);
   function isBlocked(x, y, r, obstacles) {
     for (const o of obstacles) {
+      if (NON_COLLIDABLE.has(o.type)) continue;
       if (x+r > o.x && x-r < o.x+o.w && y+r > o.y && y-r < o.y+o.h) return true;
     }
     return false;
@@ -131,6 +194,10 @@
   let animFrame = null;
   let lastTs = 0;
   let posSendAccum = 0;
+  let cssW = 0, cssH = 0, dpr = 1;
+  let mmOpen = true;
+  let fogGrid = null, fogGridW = 0, fogGridH = 0;
+  const FOG_CELL = 64;
 
   // ── Ghost Audio ───────────────────────────────────────────────────────────
   const GA = {
@@ -362,7 +429,7 @@
     const container = document.getElementById('game-container');
     container.innerHTML = '';
     canvas = document.createElement('canvas');
-    canvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;touch-action:none;';
+    canvas.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;touch-action:none;';
     container.style.position = 'relative';
     container.appendChild(canvas);
     ctx = canvas.getContext('2d');
@@ -385,11 +452,15 @@
   }
 
   function resizeCanvas() {
-    const c = canvas.parentElement;
-    const w = c.clientWidth  || window.innerWidth;
-    const h = c.clientHeight || window.innerHeight;
-    canvas.width = w; canvas.height = h;
-    darkCanvas.width = w; darkCanvas.height = h;
+    dpr   = window.devicePixelRatio || 1;
+    cssW  = window.innerWidth;
+    cssH  = window.innerHeight;
+    canvas.width      = Math.round(cssW * dpr);
+    canvas.height     = Math.round(cssH * dpr);
+    darkCanvas.width  = canvas.width;
+    darkCanvas.height = canvas.height;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    darkCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
   // ── Input: touch joystick ────────────────────────────────────────────────
@@ -442,11 +513,8 @@
   }
 
   function handleTap(cx, cy) {
-    // Scale from CSS to canvas pixels
-    const scaleX = canvas.width  / (canvas.clientWidth  || canvas.width);
-    const scaleY = canvas.height / (canvas.clientHeight || canvas.height);
-    const tx = cx * scaleX, ty = cy * scaleY;
-    const cw = canvas.width, ch = canvas.height;
+    const tx = cx, ty = cy;
+    const cw = cssW, ch = cssH;
 
     if (S.ouija) { handleOuijaTap(tx, ty, cw, ch); return; }
 
@@ -457,6 +525,12 @@
     }
     // If journal open, any other tap closes it
     if (S.journal) { S.journal = false; return; }
+
+    // Map toggle button
+    const tbW = 28, tbH = 22, tbX = cw - tbW - 6, tbY = ch - tbH - 6;
+    if (tx >= tbX && tx <= tbX+tbW && ty >= tbY && ty <= tbY+tbH) {
+      mmOpen = !mmOpen; return;
+    }
 
     // Tool bar (bottom-center)
     const tools = ['flashlight','emf','sound'];
@@ -512,13 +586,31 @@
     }
 
     // Camera (smooth follow)
-    const cw = canvas.width, ch = canvas.height;
+    const cw = cssW, ch = cssH;
     const tx = S.me.x - cw/2, ty = S.me.y - ch/2;
     if (!S.cam) S.cam = { x: tx, y: ty };
     S.cam.x += (tx - S.cam.x) * 0.12;
     S.cam.y += (ty - S.cam.y) * 0.12;
     S.cam.x = Math.max(0, Math.min(area.areaWidth  - cw, S.cam.x));
     S.cam.y = Math.max(0, Math.min(area.areaHeight - ch, S.cam.y));
+
+    // Update fog-of-war grid
+    if (fogGrid) {
+      const revR = S.activeTool === 'flashlight' ? FLASH_RANGE :
+                   S.activeTool === 'emf' ? 250 : 350;
+      const markCircle = (wx, wy, r) => {
+        const gcx = Math.floor(wx / FOG_CELL), gcy = Math.floor(wy / FOG_CELL);
+        const gcr = Math.ceil(r / FOG_CELL) + 1;
+        for (let gy = Math.max(0, gcy-gcr); gy <= Math.min(fogGridH-1, gcy+gcr); gy++) {
+          for (let gx = Math.max(0, gcx-gcr); gx <= Math.min(fogGridW-1, gcx+gcr); gx++) {
+            if (Math.hypot((gx+0.5)*FOG_CELL - wx, (gy+0.5)*FOG_CELL - wy) <= r)
+              fogGrid[gy * fogGridW + gx] = 1;
+          }
+        }
+      };
+      markCircle(S.me.x, S.me.y, revR);
+      for (const p of Object.values(S.otherPlayers)) markCircle(p.x, p.y, 80);
+    }
 
     // Find nearest found ghost for "Place Board" button
     S.nearGhost = null;
@@ -543,7 +635,7 @@
   // ── Render ───────────────────────────────────────────────────────────────
   function render() {
     if (!S || !canvas) return;
-    const cw = canvas.width, ch = canvas.height;
+    const cw = cssW, ch = cssH;
 
     if (S.ouija) { renderOuija(cw, ch); return; }
 
@@ -564,22 +656,273 @@
 
   function drawWorld() {
     const area = AREA_DEFS[S.area];
+    const now = Date.now();
     ctx.fillStyle = area.bgColor;
     ctx.fillRect(0, 0, area.areaWidth, area.areaHeight);
 
-    // Simple path-color border region (cosmetic)
     ctx.fillStyle = area.pathColor;
     ctx.fillRect(32, 32, area.areaWidth-64, area.areaHeight-64);
     ctx.fillStyle = area.bgColor;
     ctx.fillRect(64, 64, area.areaWidth-128, area.areaHeight-128);
 
     for (const ob of area.obstacles) {
-      const color = (area.obsColors || {})[ob.type] || (area.obsColors || {}).default || '#5a5a5a';
-      ctx.fillStyle = color;
-      ctx.fillRect(ob.x, ob.y, ob.w, ob.h);
-      // Top edge highlight
+      drawObstacle(ob, area, now);
+    }
+  }
+
+  function drawObstacle(ob, area, now) {
+    const { x, y, w, h, type } = ob;
+    const colors = area.obsColors || {};
+    const col = colors[type] || colors.default || '#5a5a5a';
+    switch (type) {
+      case 'cross':    drawCross(x, y, w, h, col); break;
+      case 'fence':    drawFence(x, y, w, h, col); break;
+      case 'well':     drawWell(x, y, w, h, col); break;
+      case 'torch':
+      case 'candle':   drawTorch(x, y, w, h, now); break;
+      case 'shrub':    drawShrub(x, y, w, h, col); break;
+      case 'arch':     drawArch(x, y, w, h, col); break;
+      case 'bench':    drawBench(x, y, w, h, col); break;
+      case 'lamp':     drawLamp(x, y, w, h, col, now); break;
+      case 'statue':   drawStatue(x, y, w, h, col); break;
+      case 'birdbath': drawBirdbath(x, y, w, h, col); break;
+      case 'pillar':   drawPillar(x, y, w, h, col); break;
+      case 'table':    drawTable(x, y, w, h, col); break;
+      case 'chair':    drawChair(x, y, w, h, col); break;
+      case 'shelf':    drawShelf(x, y, w, h, col); break;
+      case 'fireplace':drawFireplace(x, y, w, h, col, now); break;
+      case 'clock':    drawClock(x, y, w, h, col); break;
+      case 'mirror':   drawMirror(x, y, w, h, col); break;
+      case 'stairs':   drawStairs(x, y, w, h, col); break;
+      default:
+        ctx.fillStyle = col;
+        ctx.fillRect(x, y, w, h);
+        ctx.fillStyle = 'rgba(255,255,255,0.1)';
+        ctx.fillRect(x, y, w, 2);
+    }
+  }
+
+  function drawCross(x, y, w, h, col) {
+    ctx.fillStyle = col;
+    const bw = Math.max(3, Math.round(w * 0.28));
+    const cx2 = x + w/2 - bw/2;
+    ctx.fillRect(cx2, y, bw, h);
+    ctx.fillRect(x, y + h * 0.3, w, bw);
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.fillRect(cx2, y, bw, 2);
+  }
+
+  function drawFence(x, y, w, h, col) {
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y + 3, w, 2);
+    ctx.fillRect(x, y + h - 5, w, 2);
+    const nPosts = Math.max(2, Math.round(w / 14));
+    const sp = w / nPosts;
+    for (let i = 0; i <= nPosts; i++) {
+      const px = Math.round(x + i * sp);
+      ctx.fillStyle = col;
+      ctx.fillRect(px - 2, y, 4, h);
+      ctx.fillStyle = '#b0b0c0';
+      ctx.beginPath();
+      ctx.moveTo(px - 3, y + 4); ctx.lineTo(px, y - 3); ctx.lineTo(px + 3, y + 4);
+      ctx.fill();
+    }
+  }
+
+  function drawWell(x, y, w, h, col) {
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y + 8, w, h - 8);
+    ctx.fillStyle = '#2a1a0a';
+    ctx.beginPath(); ctx.ellipse(x+w/2, y+8, w/2-2, 6, 0, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#8a8a8a'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(x+w/2, y+8, w/2-2, 6, 0, 0, Math.PI*2); ctx.stroke();
+    ctx.fillStyle = '#5a3a1a';
+    ctx.fillRect(x+w/2-3, y-8, 5, 18);
+    ctx.fillRect(x+2, y-10, w-4, 5);
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.fillRect(x, y+8, w, 2);
+  }
+
+  function drawTorch(x, y, w, h, now) {
+    const flicker = 0.7 + 0.3 * Math.sin(now * 0.008 + x);
+    const cx2 = x + w/2;
+    ctx.fillStyle = '#5a3a1a';
+    ctx.fillRect(cx2 - 3, y + h*0.3, 5, h*0.7);
+    ctx.fillStyle = '#c06020';
+    ctx.fillRect(cx2 - 5, y + h*0.15, 10, h*0.25);
+    const fg = ctx.createRadialGradient(cx2, y + h*0.15, 0, cx2, y + h*0.15, 18 * flicker);
+    fg.addColorStop(0, `rgba(255,200,60,${(0.85*flicker).toFixed(2)})`);
+    fg.addColorStop(0.5, `rgba(255,100,20,${(0.5*flicker).toFixed(2)})`);
+    fg.addColorStop(1, 'rgba(255,80,10,0)');
+    ctx.fillStyle = fg;
+    ctx.beginPath(); ctx.arc(cx2, y + h*0.1, 18 * flicker, 0, Math.PI*2); ctx.fill();
+  }
+
+  function drawShrub(x, y, w, h, col) {
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.arc(x + w*0.35, y + h*0.6, w*0.38, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x + w*0.65, y + h*0.55, w*0.35, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x + w*0.5, y + h*0.35, w*0.32, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.beginPath(); ctx.arc(x + w*0.4, y + h*0.3, w*0.15, 0, Math.PI*2); ctx.fill();
+  }
+
+  function drawArch(x, y, w, h, col) {
+    ctx.fillStyle = col;
+    const pw = Math.max(4, Math.round(w * 0.28));
+    ctx.fillRect(x, y, pw, h);
+    ctx.fillRect(x + w - pw, y, pw, h);
+    ctx.fillRect(x, y, w, Math.round(h * 0.28));
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.fillRect(x, y, w, 2);
+  }
+
+  function drawBench(x, y, w, h, col) {
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y + 2, w, h - 8);
+    ctx.fillStyle = '#6a5030';
+    ctx.fillRect(x + 4, y + h - 6, 6, 6);
+    ctx.fillRect(x + w - 10, y + h - 6, 6, 6);
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fillRect(x, y + 2, w, 2);
+  }
+
+  function drawLamp(x, y, w, h, col, now) {
+    const flicker = 0.85 + 0.15 * Math.sin(now * 0.005 + x * 0.01);
+    ctx.fillStyle = '#3a3a3a';
+    ctx.fillRect(x + w/2 - 3, y + 10, 5, h - 10);
+    ctx.fillRect(x + 2, y + h - 6, w - 4, 4);
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(x + w/2, y + 7, 8, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = `rgba(255,230,120,${(0.7 * flicker).toFixed(2)})`;
+    ctx.beginPath(); ctx.arc(x + w/2, y + 7, 5, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#808060'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(x + w/2, y + 7, 8, 0, Math.PI*2); ctx.stroke();
+  }
+
+  function drawStatue(x, y, w, h, col) {
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y + h - 10, w, 10);
+    ctx.fillRect(x + 4, y + h - 18, w - 8, 10);
+    ctx.fillStyle = '#b8a888';
+    ctx.beginPath(); ctx.arc(x + w/2, y + 8, w*0.28, 0, Math.PI*2); ctx.fill();
+    ctx.fillRect(x + w/2 - w*0.22, y + 14, w*0.44, h*0.42);
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.fillRect(x, y + h - 10, w, 2);
+  }
+
+  function drawBirdbath(x, y, w, h, col) {
+    ctx.fillStyle = col;
+    ctx.fillRect(x + w/2 - 4, y + 10, 7, h - 10);
+    ctx.fillRect(x + w/2 - 5, y + h - 6, 10, 6);
+    ctx.fillStyle = '#8090b0';
+    ctx.beginPath(); ctx.ellipse(x+w/2, y+10, w/2-2, 7, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#5070a0';
+    ctx.beginPath(); ctx.ellipse(x+w/2, y+10, w/2-6, 4, 0, 0, Math.PI*2); ctx.fill();
+  }
+
+  function drawPillar(x, y, w, h, col) {
+    const pw = Math.max(3, w - 4);
+    ctx.fillStyle = col;
+    ctx.fillRect(x + (w-pw)/2, y + 4, pw, h - 8);
+    ctx.fillRect(x, y, w, 5);
+    ctx.fillRect(x, y + h - 5, w, 5);
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.fillRect(x + (w-pw)/2, y + 4, 2, h - 8);
+  }
+
+  function drawTable(x, y, w, h, col) {
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y + 4, w, h - 8);
+    ctx.fillStyle = '#5a3818';
+    ctx.fillRect(x + 3, y + h - 4, 5, 4);
+    ctx.fillRect(x + w - 8, y + h - 4, 5, 4);
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fillRect(x, y + 4, w, 2);
+  }
+
+  function drawChair(x, y, w, h, col) {
+    ctx.fillStyle = col;
+    ctx.fillRect(x + 2, y + h*0.4, w - 4, h*0.35);
+    ctx.fillRect(x + 2, y, 4, h*0.45);
+    ctx.fillStyle = '#3a2210';
+    ctx.fillRect(x + 2, y + h*0.75, 4, h*0.25);
+    ctx.fillRect(x + w - 6, y + h*0.75, 4, h*0.25);
+  }
+
+  function drawShelf(x, y, w, h, col) {
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y, w, h);
+    const nShelves = Math.max(2, Math.round(h / 20));
+    const sp = h / nShelves;
+    const bookColors = ['#8a2020','#2050a0','#206a20','#80601a'];
+    for (let i = 0; i < nShelves; i++) {
       ctx.fillStyle = 'rgba(255,255,255,0.1)';
-      ctx.fillRect(ob.x, ob.y, ob.w, 2);
+      ctx.fillRect(x, y + i * sp, w, 2);
+      const nBooks = Math.floor(w / 5);
+      for (let b = 0; b < nBooks; b++) {
+        ctx.fillStyle = bookColors[(i * nBooks + b) % bookColors.length] + 'bb';
+        ctx.fillRect(x + b * 5 + 1, y + i * sp + 3, 4, sp - 5);
+      }
+    }
+  }
+
+  function drawFireplace(x, y, w, h, col, now) {
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#1a0a00';
+    ctx.fillRect(x + 5, y + 5, w - 10, h - 10);
+    const flicker = 0.6 + 0.4 * Math.sin(now * 0.01 + x);
+    const fg = ctx.createRadialGradient(x+w/2, y+h-4, 2, x+w/2, y+h/2, h*0.5*flicker);
+    fg.addColorStop(0, `rgba(255,180,30,${(0.9*flicker).toFixed(2)})`);
+    fg.addColorStop(0.4, `rgba(255,80,10,${(0.7*flicker).toFixed(2)})`);
+    fg.addColorStop(1, 'rgba(200,40,0,0)');
+    ctx.fillStyle = fg;
+    ctx.fillRect(x + 5, y + 5, w - 10, h - 10);
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fillRect(x, y, w, 2);
+  }
+
+  function drawClock(x, y, w, h, col) {
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#c8a060';
+    ctx.fillRect(x + 2, y + 2, w - 4, w - 4);
+    ctx.fillStyle = '#0a0808';
+    ctx.beginPath(); ctx.arc(x+w/2, y+w/2, w/2-4, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#c8a060'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x+w/2, y+w/2);
+    ctx.lineTo(x+w/2 + (w/2-6)*0.6, y+w/2 - (w/2-6)*0.5);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.fillRect(x, y, w, 2);
+  }
+
+  function drawMirror(x, y, w, h, col) {
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = 'rgba(180,200,220,0.45)';
+    ctx.fillRect(x + 3, y + 3, w - 6, h - 6);
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.fillRect(x + 4, y + 4, 4, h - 8);
+  }
+
+  function drawStairs(x, y, w, h, col) {
+    const nSteps = 4;
+    const sw = w / nSteps;
+    for (let i = 0; i < nSteps; i++) {
+      const shade = 40 + i * 15;
+      ctx.fillStyle = `rgb(${shade+30},${shade+20},${shade})`;
+      ctx.fillRect(x + i*sw, y + (h - h*(i+1)/nSteps), sw, h*(i+1)/nSteps);
+      ctx.fillStyle = 'rgba(255,255,255,0.1)';
+      ctx.fillRect(x + i*sw, y + (h - h*(i+1)/nSteps), sw, 2);
     }
   }
 
@@ -709,8 +1052,23 @@
     dc.fillStyle = ag;
     dc.beginPath(); dc.arc(sx, sy, 48, 0, Math.PI*2); dc.fill();
 
+    // Lamp posts in garden — static ambient light sources
+    if (S.area === 'garden') {
+      const area = AREA_DEFS[S.area];
+      for (const ob of area.obstacles) {
+        if (ob.type !== 'lamp') continue;
+        const lx = ob.x + ob.w/2 - S.cam.x;
+        const ly = ob.y - S.cam.y;
+        if (lx < -120 || lx > cw+120 || ly < -120 || ly > ch+120) continue;
+        const lg = dc.createRadialGradient(lx, ly, 0, lx, ly, 90);
+        lg.addColorStop(0, 'rgba(255,255,200,0.55)');
+        lg.addColorStop(1, 'rgba(255,255,200,0)');
+        dc.fillStyle = lg;
+        dc.beginPath(); dc.arc(lx, ly, 90, 0, Math.PI*2); dc.fill();
+      }
+    }
     dc.globalCompositeOperation = 'source-over';
-    ctx.drawImage(darkCanvas, 0, 0);
+    ctx.drawImage(darkCanvas, 0, 0, cssW, cssH);
 
     // Cold spot: frost-blue edge glow when near an undiscovered ghost
     if (S.coldSignal > 0.15) {
@@ -805,10 +1163,9 @@
 
   function drawJoystick(cw, ch) {
     if (!joy.active) return;
-    const scale = canvas.width / (canvas.clientWidth || canvas.width);
-    const bx = joy.bx * scale, by = joy.by * scale;
-    const dx = joy.dx * scale, dy = joy.dy * scale;
-    const maxR = 60 * scale;
+    const bx = joy.bx, by = joy.by;
+    const dx = joy.dx, dy = joy.dy;
+    const maxR = 60;
     const dist = Math.hypot(dx, dy);
     const kx = bx + (dist > 0 ? (dx/dist)*Math.min(dist,maxR) : 0);
     const ky = by + (dist > 0 ? (dy/dist)*Math.min(dist,maxR) : 0);
@@ -816,7 +1173,7 @@
     ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(bx, by, maxR, 0, Math.PI*2); ctx.stroke();
     ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.beginPath(); ctx.arc(kx, ky, 18*scale, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(kx, ky, 18, 0, Math.PI*2); ctx.fill();
   }
 
   // ── Ouija board ──────────────────────────────────────────────────────────
@@ -1064,25 +1421,58 @@
   function drawMinimap(cw, ch) {
     if (!S.cam) return;
     const area = AREA_DEFS[S.area];
-    const mmW = 90;
-    const mmH = Math.round(mmW * area.areaHeight / area.areaWidth);
-    const mmX = cw - mmW - 8, mmY = ch - mmH - 70;
-    const sc = mmW / area.areaWidth;
 
-    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    // Toggle button
+    const tbW = 28, tbH = 22, tbX = cw - tbW - 6, tbY = ch - tbH - 6;
+    ctx.fillStyle = mmOpen ? 'rgba(40,60,40,0.85)' : 'rgba(20,20,30,0.80)';
+    rrect(ctx, tbX, tbY, tbW, tbH, 5); ctx.fill();
+    ctx.fillStyle = '#94a3b8'; ctx.font = '12px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('[M]', tbX + tbW/2, tbY + 14);
+
+    if (!mmOpen) return;
+
+    const mmW = Math.min(70, Math.round(cw * 0.18));
+    const mmH = Math.round(mmW * area.areaHeight / area.areaWidth);
+    const mmX = cw - mmW - 6, mmY = ch - mmH - tbH - 10;
+    const sc  = mmW / area.areaWidth;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.82)';
     rrect(ctx, mmX-2, mmY-2, mmW+4, mmH+4, 5); ctx.fill();
-    ctx.fillStyle = area.bgColor;
+    ctx.fillStyle = '#050a05';
     ctx.fillRect(mmX, mmY, mmW, mmH);
 
-    // Viewport rect
-    ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1;
-    const vx = Math.max(mmX, mmX + S.cam.x * sc);
-    const vy = Math.max(mmY, mmY + S.cam.y * sc);
-    ctx.strokeRect(vx, vy, Math.min(cw * sc, mmW - (vx - mmX)), Math.min(ch * sc, mmH - (vy - mmY)));
-
-    // Clip subsequent dots to minimap bounds
     ctx.save();
     ctx.beginPath(); ctx.rect(mmX, mmY, mmW, mmH); ctx.clip();
+
+    if (fogGrid) {
+      // Revealed terrain
+      for (let gy = 0; gy < fogGridH; gy++) {
+        for (let gx = 0; gx < fogGridW; gx++) {
+          if (!fogGrid[gy * fogGridW + gx]) continue;
+          const px = mmX + gx * FOG_CELL * sc;
+          const py = mmY + gy * FOG_CELL * sc;
+          const ps = Math.ceil(FOG_CELL * sc) + 1;
+          ctx.fillStyle = area.bgColor;
+          ctx.fillRect(px, py, ps, ps);
+        }
+      }
+      // Obstacles in revealed cells
+      const obsColors = area.obsColors || {};
+      for (const ob of area.obstacles) {
+        const gcx = Math.floor((ob.x + ob.w/2) / FOG_CELL);
+        const gcy = Math.floor((ob.y + ob.h/2) / FOG_CELL);
+        if (gcx < 0 || gcy < 0 || gcx >= fogGridW || gcy >= fogGridH) continue;
+        if (!fogGrid[gcy * fogGridW + gcx]) continue;
+        ctx.fillStyle = obsColors[ob.type] || obsColors.default || '#5a5a5a';
+        ctx.fillRect(mmX + ob.x*sc, mmY + ob.y*sc,
+                     Math.max(1, ob.w*sc), Math.max(1, ob.h*sc));
+      }
+    }
+
+    // Viewport rect
+    ctx.strokeStyle = 'rgba(255,255,255,0.28)'; ctx.lineWidth = 1;
+    const vx = mmX + S.cam.x * sc, vy = mmY + S.cam.y * sc;
+    ctx.strokeRect(vx, vy, Math.min(cssW*sc, mmW-(vx-mmX)), Math.min(cssH*sc, mmH-(vy-mmY)));
 
     // Other players
     const pColors = ['#60a5fa','#f97316','#a855f7','#10b981'];
@@ -1095,7 +1485,8 @@
     for (const gh of Object.values(S.ghosts)) {
       if (!gh.found) continue;
       ctx.fillStyle = gh.identified ? gh.color + '99' : gh.color;
-      ctx.beginPath(); ctx.arc(mmX + gh.x*sc, mmY + gh.y*sc, gh.identified ? 2 : 3.5, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(mmX + gh.x*sc, mmY + gh.y*sc,
+        gh.identified ? 2 : 3.5, 0, Math.PI*2); ctx.fill();
     }
 
     // Self
@@ -1103,6 +1494,9 @@
     ctx.beginPath(); ctx.arc(mmX + S.me.x*sc, mmY + S.me.y*sc, 3.5, 0, Math.PI*2); ctx.fill();
 
     ctx.restore();
+
+    ctx.strokeStyle = 'rgba(80,120,80,0.55)'; ctx.lineWidth = 1;
+    rrect(ctx, mmX-2, mmY-2, mmW+4, mmH+4, 5); ctx.stroke();
   }
 
   // ── Direction Arrow ───────────────────────────────────────────────────────
@@ -1385,6 +1779,13 @@
       journal:      false,
       identifiedGhosts: {},
     };
+
+    // Init fog grid
+    const areaForFog = AREA_DEFS[S.area] || AREA_DEFS.graveyard;
+    fogGridW = Math.ceil(areaForFog.areaWidth  / FOG_CELL);
+    fogGridH = Math.ceil(areaForFog.areaHeight / FOG_CELL);
+    fogGrid  = new Float32Array(fogGridW * fogGridH);
+    mmOpen   = true;
 
     // Restore found ghosts from reconnect data
     if (gd.foundGhosts) {
