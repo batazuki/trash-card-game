@@ -146,6 +146,11 @@ function startGame(state, roomId) {
   // H6: cancel any pending room-delete timer before starting a new game
   clearTimeout(state.cleanupTimer);
   state.cleanupTimer = null;
+  // Cancel any pending avatar-selection timer
+  if (state.avatarSelectTimer) {
+    clearTimeout(state.avatarSelectTimer);
+    state.avatarSelectTimer = null;
+  }
   // Ensure scores array has a slot for every player (joinRoom doesn't add one)
   while (state.scores.length < state.players.length) state.scores.push(0);
   const mod = getGameModule(state.game);
@@ -255,11 +260,45 @@ io.on("connection", socket => {
     if (state.players[0]?.id !== socket.id) return; // host only
     const minPlayers = state.game === "ghost" ? 1 : 2;
     if (state.players.length < minPlayers) return;
+
+    // Ghost: enter avatar-selection phase before starting
+    if (state.game === "ghost") {
+      state.phase = "avatar_select";
+      state.avatarConfirmed = new Set();
+      state.avatarSelectTimer = setTimeout(() => {
+        if (state.phase === "avatar_select") {
+          state.avatarSelectTimer = null;
+          startGame(state, roomId);
+        }
+      }, 10000);
+      io.to(roomId).emit("ghost:avatarSelect", { timeoutMs: 10000 });
+      return;
+    }
+
     startGame(state, roomId);
   });
 
+  // ── Ghost: player confirms avatar selection ──
+  socket.on("ghost:avatarChosen", ({ roomId, avatar }) => {
+    const state = rooms.get(roomId);
+    if (!state || state.phase !== "avatar_select") return;
+    const pi = state.players.findIndex(p => p.id === socket.id);
+    if (pi === -1) return;
+    const av = Math.max(0, Math.min(3, parseInt(avatar) || 0));
+    state.players[pi].lobbyAvatar = av;
+    if (!state.avatarConfirmed) state.avatarConfirmed = new Set();
+    state.avatarConfirmed.add(pi);
+    // Start early if all human players have confirmed
+    const humanCount = state.players.filter(p => !p.isAI).length;
+    if (state.avatarConfirmed.size >= humanCount) {
+      clearTimeout(state.avatarSelectTimer);
+      state.avatarSelectTimer = null;
+      startGame(state, roomId);
+    }
+  });
+
   // ── Play vs AI (or solo for Solitaire) ──
-  socket.on("playVsAI", ({ playerName, game, ghostArea, ghostCount }) => {
+  socket.on("playVsAI", ({ playerName, game, ghostArea, ghostCount, ghostAvatar }) => {
     if (game === "sketch") {
       socket.emit("joinError", { message: "Sketch It requires two real players. Create a room and share the code!" });
       return;
@@ -271,8 +310,10 @@ io.on("connection", socket => {
     const safeGame = gameModules[game] ? game : "trash";
     const isSolo = safeGame === "solitaire" || safeGame === "ghost";
     const token = generateToken(); // C2
+    const soloPiAvatar = Math.max(0, Math.min(3, parseInt(ghostAvatar) || 0));
     const players = [
-      { id: socket.id, name: sanitizeName(playerName), isAI: false, board: [], wantsRematch: false, token }, // C4
+      { id: socket.id, name: sanitizeName(playerName), isAI: false, board: [], wantsRematch: false, token,
+        lobbyAvatar: soloPiAvatar }, // C4
     ];
     if (!isSolo) {
       players.push({ id: "ai", name: "AI", isAI: true, board: [], wantsRematch: false, token: null });

@@ -2224,14 +2224,27 @@
     setupCanvas();
     walkPhase = 0;
 
+    // Use server-confirmed avatar (from ghost:avatarChosen) if present in gameStart data,
+    // falling back to local selection
+    const myAvatar = ((data.players || [])[data.myPlayerIndex] || {}).avatar
+                     ?? (window._ghostAvatarSelection || 0);
+
+    // Seed other players with their confirmed avatars from gameStart
+    const seedOtherPlayers = {};
+    (data.players || []).forEach((p, i) => {
+      if (i !== data.myPlayerIndex && !p.isAI) {
+        seedOtherPlayers[i] = { x: start.x, y: start.y, facing: 0, avatar: p.avatar || 0, walkPhase: 0 };
+      }
+    });
+
     S = {
       roomId:       data.roomId,
       myPlayerIndex: data.myPlayerIndex,
       area:         gd.area || 'graveyard',
-      me:           { x: start.x, y: start.y, facing: 0, avatar: (window._ghostAvatarSelection || 0) },
+      me:           { x: start.x, y: start.y, facing: 0, avatar: myAvatar },
       cam:          null,
       ghosts:       {},
-      otherPlayers: {},
+      otherPlayers: seedOtherPlayers,
       activeTool:   'flashlight',
       signals:      { emf: 0, sound: 0, flashlight: 0 },
       emfDir:       null,

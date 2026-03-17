@@ -686,7 +686,7 @@ module.exports = function(io, helpers) {
       io.to(player.id).emit('gameStart', {
         roomId,
         myPlayerIndex: idx,
-        players: state.players.map(p => ({ name: p.name, isAI: p.isAI })),
+        players: state.players.map(p => ({ name: p.name, isAI: p.isAI, avatar: p.lobbyAvatar || 0 })),
         game: 'ghost',
         ghost: {
           area:        areaKey,

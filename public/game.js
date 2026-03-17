@@ -510,9 +510,9 @@ function applyPregameConfig(config, isHost) {
   const isGhost = game === "ghost";
   const isSketch = game === "sketch";
 
-  // Show/hide avatar section
+  // Avatar section is intentionally hidden — selection happens post-start via overlay
   const avatarSec = $("pregame-avatar-section");
-  if (avatarSec) avatarSec.classList.toggle("hidden", !isGhost);
+  if (avatarSec) avatarSec.classList.add("hidden");
 
   if (isHost) {
     // Highlight the correct game pill
@@ -882,8 +882,9 @@ $("vs-ai-btn").addEventListener("click", () => {
   setLobbyBusy(true);
   const payload = { playerName: name, game: $("game-select").value };
   if ($("game-select").value === "ghost") {
-    payload.ghostArea  = getSelectedGhostArea();
-    payload.ghostCount = getSelectedGhostCount();
+    payload.ghostArea   = getSelectedGhostArea();
+    payload.ghostCount  = getSelectedGhostCount();
+    payload.ghostAvatar = _ghostAvatar;
   }
   socket.emit("playVsAI", payload);
 });
@@ -989,6 +990,104 @@ $("back-lobby-btn").addEventListener("click", () => {
 
 // ═══ SOCKET EVENTS ═══
 
+// ═══ GHOST AVATAR SELECT OVERLAY ═══
+
+let _avatarSelectInterval = null;
+let _avatarSelectOverlay  = null;
+
+function closeAvatarSelectOverlay() {
+  if (_avatarSelectInterval) { clearInterval(_avatarSelectInterval); _avatarSelectInterval = null; }
+  if (_avatarSelectOverlay)  { _avatarSelectOverlay.remove(); _avatarSelectOverlay = null; }
+}
+
+function confirmAvatarSelection() {
+  if (!_avatarSelectOverlay) return; // already confirmed or closed
+  const chosen = _ghostAvatar;
+  closeAvatarSelectOverlay();
+  socket.emit("ghost:avatarChosen", { roomId: local.roomId, avatar: chosen });
+}
+
+function showAvatarSelectOverlay(timeoutMs) {
+  closeAvatarSelectOverlay();
+
+  const overlay = document.createElement("div");
+  overlay.className = "avatar-select-overlay";
+
+  const panel = document.createElement("div");
+  panel.className = "avatar-select-panel";
+
+  const heading = document.createElement("div");
+  heading.className = "avatar-select-heading";
+  heading.textContent = "Choose Your Avatar";
+
+  const sub = document.createElement("div");
+  sub.className = "avatar-select-sub";
+  sub.textContent = "Game starts automatically when all players choose";
+
+  const countdown = document.createElement("div");
+  countdown.className = "avatar-select-countdown";
+  let secsLeft = Math.ceil(timeoutMs / 1000);
+  countdown.textContent = secsLeft;
+
+  const grid = document.createElement("div");
+  grid.className = "avatar-select-grid";
+
+  GHOST_AVATAR_DEFS.forEach((av, idx) => {
+    const card = document.createElement("button");
+    card.className = "avatar-select-card" + (idx === _ghostAvatar ? " active" : "");
+
+    const cvs = document.createElement("canvas");
+    cvs.width = 54; cvs.height = 60;
+    const c = cvs.getContext("2d");
+    c.fillStyle = av.body;
+    c.beginPath(); c.arc(27, 36, 20, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = "rgba(255,255,255,0.4)"; c.lineWidth = 2; c.stroke();
+    c.font = "22px sans-serif"; c.textAlign = "center"; c.textBaseline = "middle";
+    c.fillText(av.emoji, 27, 24);
+
+    const name = document.createElement("div");
+    name.className = "avatar-select-name";
+    name.textContent = av.name;
+
+    const stats = document.createElement("div");
+    stats.className = "avatar-select-stats";
+    stats.innerHTML = buildAvatarStatHTML(av);
+
+    card.appendChild(cvs);
+    card.appendChild(name);
+    card.appendChild(stats);
+
+    card.addEventListener("click", () => {
+      _ghostAvatar = idx;
+      window._ghostAvatarSelection = idx;
+      localStorage.setItem("ghostAvatar", idx);
+      grid.querySelectorAll(".avatar-select-card").forEach(b => b.classList.remove("active"));
+      card.classList.add("active");
+      confirmAvatarSelection();
+    });
+
+    grid.appendChild(card);
+  });
+
+  panel.appendChild(heading);
+  panel.appendChild(sub);
+  panel.appendChild(countdown);
+  panel.appendChild(grid);
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+  _avatarSelectOverlay = overlay;
+
+  _avatarSelectInterval = setInterval(() => {
+    secsLeft--;
+    countdown.textContent = secsLeft;
+    if (secsLeft <= 0) confirmAvatarSelection();
+  }, 1000);
+}
+
+socket.on("ghost:avatarSelect", ({ timeoutMs }) => {
+  showAvatarSelectOverlay(timeoutMs || 10000);
+});
+
 socket.on("roomCreated", ({ roomId, players, token, game, ghostArea, ghostCount, sketchRounds, sketchDrawTime, sketchPreviewTime }) => {
   local.roomId = roomId;
   local.isHost = true;
@@ -1041,6 +1140,7 @@ socket.on("joinError", ({ message }) => {
 });
 
 socket.on("gameStart", (data) => {
+  closeAvatarSelectOverlay();
   const { roomId, myPlayerIndex, players, game } = data;
   local.roomId = roomId;
   local.myPlayerIndex = myPlayerIndex;

@@ -2581,6 +2581,104 @@ body.game-hockey .gear-btn:hover {
   background: rgba(255,255,255,0.9);
 }
 
+/* ── Ghost avatar select overlay (post-start) ── */
+.avatar-select-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9800;
+  background: rgba(0, 8, 2, 0.93);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: avOverlayIn 0.25s ease-out;
+}
+@keyframes avOverlayIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.avatar-select-panel {
+  background: linear-gradient(160deg, rgba(0,30,8,0.98), rgba(0,16,4,0.99));
+  border: 1.5px solid rgba(76,175,80,0.35);
+  border-radius: 20px;
+  padding: 24px 20px 28px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 0 60px rgba(76,175,80,0.12), 0 8px 40px rgba(0,0,0,0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.avatar-select-heading {
+  font-size: 20px;
+  font-weight: 800;
+  color: #c8e6c9;
+  letter-spacing: 0.03em;
+  text-align: center;
+}
+.avatar-select-sub {
+  font-size: 11px;
+  color: rgba(150,210,160,0.55);
+  text-align: center;
+  margin-top: -4px;
+}
+.avatar-select-countdown {
+  font-size: 36px;
+  font-weight: 900;
+  font-family: monospace;
+  color: #4caf50;
+  line-height: 1;
+  text-shadow: 0 0 20px rgba(76,175,80,0.5);
+  min-width: 48px;
+  text-align: center;
+}
+.avatar-select-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  width: 100%;
+  margin-top: 4px;
+}
+.avatar-select-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px 14px;
+  background: rgba(0,30,8,0.7);
+  border: 2px solid rgba(76,175,80,0.2);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: border-color 0.18s, background 0.18s, transform 0.12s;
+  touch-action: manipulation;
+}
+.avatar-select-card:hover:not(.active) {
+  border-color: rgba(76,175,80,0.5);
+  background: rgba(0,40,10,0.8);
+}
+.avatar-select-card:active { transform: scale(0.94); }
+.avatar-select-card.active {
+  border-color: #4caf50;
+  background: rgba(46,125,50,0.25);
+  box-shadow: 0 0 0 3px rgba(76,175,80,0.2);
+}
+.avatar-select-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #c8e6c9;
+  letter-spacing: 0.02em;
+}
+.avatar-select-card.active .avatar-select-name { color: #81c784; }
+.avatar-select-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  margin-top: 2px;
+}
+
 /* ── Ghost avatar picker ── */
 .ghost-avatar-grid {
   display: grid;
