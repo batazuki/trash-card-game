@@ -290,7 +290,7 @@ module.exports = function(io, helpers) {
     if (ghost.identified || ghost.claimedBy !== null) return;
 
     const { areaWidth, areaHeight, obstacles } = areaData;
-    const cfg = PCONFIG[ghost.personality];
+    const cfg = PCONFIG[ghost.personality] || PCONFIG.confused;
     const MARGIN = 64;
 
     ghost.stateTimer -= dt;
@@ -721,11 +721,10 @@ module.exports = function(io, helpers) {
       const cy = clamp(y, 0, areaData.areaHeight);
       state.players[playerIndex].ghostPos    = { x: cx, y: cy };
       state.players[playerIndex].ghostFacing = facing || 0;
-      if (avatar !== undefined) state.players[playerIndex].ghostAvatar = avatar;
       socket.to(roomId).emit('ghost:player_pos', {
         playerIndex, x: cx, y: cy,
         facing: facing || 0,
-        avatar: state.players[playerIndex].ghostAvatar || 0,
+        avatar: state.players[playerIndex].lobbyAvatar || 0,
       });
     });
 
@@ -766,7 +765,7 @@ module.exports = function(io, helpers) {
         ghost.identified = true;
         ghost.claimedBy  = null;
         gs.identifiedCount++;
-        const cfg = PCONFIG[ghost.personality];
+        const cfg = PCONFIG[ghost.personality] || PCONFIG.confused;
         io.to(roomId).emit('ghost:identified', {
           ghostId, name: ghost.name, personality: ghost.personality,
           color: cfg.color, description: cfg.description, identifiedBy: playerIndex,

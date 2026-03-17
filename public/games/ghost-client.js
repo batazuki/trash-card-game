@@ -11,12 +11,42 @@
   const POS_SEND_MS   = 60;
   const T             = 32;    // tile size
 
-  // ── Avatar definitions ──────────────────────────────────────────────────
-  const AVATARS = [
-    { name:'Pirate',   body:'#2a3a6a', hat:'#1a2040', acc:'#c8a820' },
-    { name:'Explorer', body:'#8b4a18', hat:'#6a3510', acc:'#e8c840' },
-    { name:'Police',   body:'#1a2a5a', hat:'#0a1530', acc:'#6090d8' },
-    { name:'Doctor',   body:'#c8e4ef', hat:'#8ab4c8', acc:'#4488b0' },
+  // ── Avatar pixel-art palettes ────────────────────────────────────────────
+  const PIXEL = 2; // real pixels per art unit
+
+  const CHAR_PAL = [
+    { name: 'Pirate',
+      skin: '#f4c07a', skinSh: '#c0885a',
+      coat: '#243070', coatSh: '#141840', coatHi: '#3a4898',
+      trim: '#c8a020', trim2: '#ff8820',
+      pant: '#101820', pantSh: '#080c10',
+      boot: '#4a2814',
+      hat: '#1a1d38', hatHi: '#2a2d50',
+    },
+    { name: 'Explorer',
+      skin: '#e8aa7a', skinSh: '#b87840',
+      coat: '#c8a860', coatSh: '#907535', coatHi: '#ddc478',
+      trim: '#e8d040', trim2: '#508830',
+      pant: '#3a5818', pantSh: '#283c10',
+      boot: '#5a3010',
+      hat: '#d4ac58', hatHi: '#c49840',
+    },
+    { name: 'Police',
+      skin: '#f4c07a', skinSh: '#c0885a',
+      coat: '#182050', coatSh: '#0c1030', coatHi: '#243070',
+      trim: '#6090e0', trim2: '#e8c030',
+      pant: '#182050', pantSh: '#0c1030',
+      boot: '#0c0c18',
+      hat: '#0c1028', hatHi: '#182048',
+    },
+    { name: 'Doctor',
+      skin: '#f4c07a', skinSh: '#c0885a',
+      coat: '#e4eef8', coatSh: '#b0c8d8', coatHi: '#f8fcff',
+      trim: '#3880b0', trim2: '#d82840',
+      pant: '#3878b0', pantSh: '#2a5888',
+      boot: '#c0c4d0',
+      hat: '#c0d4e4', hatHi: '#d8ecf8',
+    },
   ];
 
   // Per-avatar stat multipliers (must match GHOST_AVATAR_DEFS in game.js and AVATAR_STATS in ghost.js)
@@ -483,6 +513,15 @@
 
   // Walk animation phase (increments with distance moved)
   let walkPhase = 0;
+  // Shock animation start timestamp (0 = not active)
+  let shockStart = 0;
+
+  function getShockAmt(startMs) {
+    if (!startMs) return 0;
+    const t = (Date.now() - startMs) / 1600;
+    if (t >= 1) return 0;
+    return t < 0.12 ? t / 0.12 : 1.0 - (t - 0.12) / 0.88;
+  }
 
   // Suppress synthetic click events that follow touchstart on mobile
   let _lastTouchEndMs = 0;
@@ -730,7 +769,16 @@
     }
   }
 
-  // ── Avatar sprites ────────────────────────────────────────────────────────
+  // ── Avatar pixel-art sprites ──────────────────────────────────────────────
+
+  // Helper: draw filled rect in art-unit coords (ctx already at char center)
+  function ar(ctx, x, y, w, h) {
+    ctx.fillRect(
+      Math.round(x * PIXEL), Math.round(y * PIXEL),
+      Math.round(w * PIXEL), Math.round(h * PIXEL)
+    );
+  }
+
   function facingToDir(angle) {
     const a = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
     if (a < Math.PI * 0.25 || a >= Math.PI * 1.75) return 'right';
@@ -739,125 +787,452 @@
     return 'up';
   }
 
-  function drawAvatarHat(ctx, idx, av, dir) {
+  // ── Character-specific details ────────────────────────────────────────────
+  function drawBodyDetailsFront(ctx, idx, pal) {
     switch (idx) {
-      case 0: { // Pirate - tricorn hat
-        ctx.fillStyle = av.hat;
-        // Brim
-        ctx.beginPath(); ctx.ellipse(0, -3, 10, 2.8, 0, 0, Math.PI * 2); ctx.fill();
-        // Crown
-        ctx.beginPath();
-        ctx.moveTo(-6, -4); ctx.lineTo(-7, -12); ctx.lineTo(0, -15); ctx.lineTo(7, -12); ctx.lineTo(6, -4);
-        ctx.closePath(); ctx.fill();
-        // Gold band
-        ctx.strokeStyle = av.acc; ctx.lineWidth = 1.8;
-        ctx.beginPath(); ctx.moveTo(-6, -7); ctx.lineTo(6, -7); ctx.stroke();
-        // Skull & crossbones (tiny)
-        ctx.fillStyle = av.acc; ctx.font = 'bold 7px sans-serif'; ctx.textAlign = 'center';
-        ctx.fillText('☠', 0, -9.5);
+      case 0: // Pirate — white collar + gold buttons
+        ctx.fillStyle = '#e8e4d0';
+        ar(ctx, -1.5, -5, 1, 2); ar(ctx, 0.5, -5, 1, 2);
+        ctx.fillStyle = pal.trim;
+        ar(ctx, -0.5, -4, 1, 1); ar(ctx, -0.5, -2, 1, 1); ar(ctx, -0.5, 0, 1, 1);
         break;
-      }
-      case 1: { // Explorer - pith helmet
-        ctx.fillStyle = av.hat;
-        // Wide brim
-        ctx.beginPath(); ctx.ellipse(0, -3, 11, 3.2, 0, 0, Math.PI * 2); ctx.fill();
-        // Dome crown
-        ctx.beginPath(); ctx.arc(0, -7, 7, Math.PI, Math.PI * 2); ctx.fill();
-        ctx.fillRect(-7, -7, 14, 4);
-        // Center ridge line
-        ctx.strokeStyle = av.acc; ctx.lineWidth = 1.2;
-        ctx.beginPath(); ctx.moveTo(0, -14); ctx.lineTo(0, -3); ctx.stroke();
-        // Side vent dots
-        ctx.fillStyle = av.acc;
-        ctx.beginPath(); ctx.arc(-4, -8, 1, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(4, -8, 1, 0, Math.PI * 2); ctx.fill();
+      case 1: // Explorer — breast pockets + compass
+        ctx.fillStyle = pal.coatSh;
+        ar(ctx, -3.5, -3, 2.5, 2.5); ar(ctx, 1, -3, 2.5, 2.5);
+        ctx.fillStyle = '#181810';
+        ar(ctx, -3.5, -3, 2.5, 0.5); ar(ctx, 1, -3, 2.5, 0.5);
+        ctx.fillStyle = '#d0b830'; ar(ctx, -1, -1, 2, 2);
+        ctx.fillStyle = '#4898c8'; ar(ctx, -0.5, -0.5, 1, 1);
         break;
-      }
-      case 2: { // Police - peaked cap
-        ctx.fillStyle = av.hat;
-        // Crown
-        ctx.beginPath(); ctx.arc(0, -7, 6.5, Math.PI, Math.PI * 2); ctx.fill();
-        ctx.fillRect(-6.5, -7, 13, 4);
-        // Peak brim (direction aware)
-        const peakDir = (dir === 'left') ? -1 : 1;
-        ctx.beginPath(); ctx.ellipse(peakDir * 5.5, -3.5, 5.5, 2, 0, 0, Math.PI * 2); ctx.fill();
-        // Hat band
-        ctx.fillStyle = av.acc;
-        ctx.fillRect(-6.5, -5, 13, 1.8);
-        // Badge
-        ctx.fillStyle = '#ffe040';
-        ctx.beginPath(); ctx.arc(0, -9, 2.2, 0, Math.PI * 2); ctx.fill();
+      case 2: // Police — chest badge + buttons
+        ctx.fillStyle = pal.trim2; ar(ctx, -2, -4.5, 4, 4);
+        ctx.fillStyle = '#fff060'; ar(ctx, -1.5, -4, 3, 3);
+        ctx.fillStyle = '#c0b820';
+        ar(ctx, -0.5, -3.5, 1, 2); ar(ctx, -1.5, -3, 3, 0.5);
+        ctx.fillStyle = '#a0a0a0';
+        ar(ctx, -0.5, 2.5, 1, 1); ar(ctx, -0.5, 0.5, 1, 1);
         break;
-      }
-      case 3: { // Doctor - surgical cap + headband
-        ctx.fillStyle = av.hat;
-        // Soft cap dome
-        ctx.beginPath(); ctx.arc(0, -7, 7, Math.PI, Math.PI * 2); ctx.fill();
-        ctx.fillRect(-7, -7, 14, 5);
-        // Headband (contrasting color)
-        ctx.fillStyle = av.acc;
-        ctx.fillRect(-7, -3, 14, 2.5);
-        // Cap fold line
-        ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(-7, -7); ctx.lineTo(7, -7); ctx.stroke();
-        // Tiny red cross emblem
-        ctx.fillStyle = '#e83040';
-        ctx.fillRect(-1, -10, 2, 6);
-        ctx.fillRect(-3, -8, 6, 2);
+      case 3: // Doctor — buttons + stethoscope
+        ctx.fillStyle = '#8090a0';
+        ar(ctx, -0.5, -4, 1, 1); ar(ctx, -0.5, -2, 1, 1); ar(ctx, -0.5, 0, 1, 1);
+        ctx.fillStyle = pal.trim;
+        ar(ctx, -2.5, -3.5, 1.5, 0.5); ar(ctx, -2.5, -3.5, 0.5, 2);
+        ar(ctx, 1, -3.5, 1.5, 0.5); ar(ctx, 2, -3.5, 0.5, 2);
+        ar(ctx, -2.5, -1.5, 5, 0.5);
+        ctx.fillStyle = pal.coatSh; ar(ctx, -3.5, 0, 2.5, 2.5);
+        ctx.fillStyle = pal.trim2; ar(ctx, -3, 0.5, 1.5, 0.5);
         break;
-      }
     }
   }
 
-  function drawAvatar(ctx, cx, cy, dir, wPhase, bob, avatarIdx, isMe) {
-    const av = AVATARS[avatarIdx % AVATARS.length];
-    const walkBob = Math.abs(Math.sin(wPhase * Math.PI * 2)) * 1.5;
-    const totalBob = walkBob + bob;
+  function drawFaceDetailsFront(ctx, idx, pal, shock) {
+    if (idx === 0) { // Pirate eyepatch
+      ctx.fillStyle = '#181020';
+      ar(ctx, -4.5, -12, 4, 3);
+      ctx.fillStyle = '#0a0a14';
+      ar(ctx, -3.5, -13, 0.5, 1.5);
+    }
+    if (idx === 3 && shock < 0.3) { // Doctor glasses
+      ctx.strokeStyle = '#4080a0'; ctx.lineWidth = 1;
+      ctx.strokeRect(-4.5 * PIXEL, -11.5 * PIXEL, 3 * PIXEL, 2.5 * PIXEL);
+      ctx.strokeRect(1 * PIXEL, -11.5 * PIXEL, 3 * PIXEL, 2.5 * PIXEL);
+      ctx.beginPath();
+      ctx.moveTo(-1.5 * PIXEL, -10 * PIXEL); ctx.lineTo(1 * PIXEL, -10 * PIXEL);
+      ctx.stroke();
+    }
+  }
+
+  function drawBodyDetailsSide(ctx, idx, pal) {
+    if (idx === 0) {
+      ctx.fillStyle = pal.trim;
+      ar(ctx, -1.5, -4, 1, 1); ar(ctx, -1.5, -2, 1, 1); ar(ctx, -1.5, 0, 1, 1);
+    }
+    if (idx === 2) {
+      ctx.fillStyle = pal.trim2; ar(ctx, -2, -4.5, 3.5, 4);
+      ctx.fillStyle = '#fff060'; ar(ctx, -1.5, -4, 2.5, 3);
+    }
+    if (idx === 3) {
+      ctx.fillStyle = pal.trim;
+      ar(ctx, -2, -3.5, 0.5, 3); ar(ctx, -2, -0.5, 3, 0.5);
+    }
+  }
+
+  function drawFaceDetailsSide(ctx, idx, pal, shock) {
+    if (idx === 0) {
+      ctx.fillStyle = '#181020'; ar(ctx, -4, -12, 3.5, 3);
+    }
+    if (idx === 3 && shock < 0.3) {
+      ctx.fillStyle = '#4080a0'; ar(ctx, -4, -12, 2.5, 2.5);
+    }
+  }
+
+  // ── Hat drawing (3 directions) ────────────────────────────────────────────
+  function drawHatFront(ctx, idx, pal) {
+    ctx.save(); ctx.translate(0, -12);
+    switch (idx) {
+      case 0: // Pirate — Tricorn
+        ctx.fillStyle = pal.hat;
+        ar(ctx, -5, -7, 10, 6);
+        ctx.fillStyle = pal.hatHi;
+        ar(ctx, -5, -7, 10, 1.5); ar(ctx, -5, -7, 1.5, 6);
+        ctx.fillStyle = pal.hat;
+        ar(ctx, -8, -5, 16, 1.5);
+        ar(ctx, -9.5, -5, 3, 3); ar(ctx, 6.5, -5, 3, 3); ar(ctx, -1.5, -7.5, 3, 2);
+        ctx.fillStyle = pal.trim; ar(ctx, -5, -3, 10, 1);
+        ctx.fillStyle = '#e0d8c0'; ar(ctx, -1, -6.5, 2, 2.5);
+        ctx.fillStyle = pal.hat;
+        ar(ctx, -0.8, -6, 0.8, 0.8); ar(ctx, 0.3, -6, 0.8, 0.8);
+        break;
+      case 1: // Explorer — Pith helmet
+        ctx.fillStyle = pal.hat;
+        ar(ctx, -6, -9, 12, 8);
+        ctx.fillStyle = pal.hatHi;
+        ar(ctx, -5, -9, 10, 2); ar(ctx, -6, -7, 2, 6);
+        ctx.fillStyle = pal.hat;
+        ar(ctx, -8, -2, 16, 2.5);
+        ctx.fillStyle = pal.hatHi; ar(ctx, -8, -2, 16, 0.8);
+        ctx.fillStyle = pal.coatSh;
+        ar(ctx, -1, -9, 1.5, 7.5);
+        ar(ctx, -4.5, -6, 1, 1.5); ar(ctx, 3.5, -6, 1, 1.5);
+        ctx.fillStyle = pal.hat; ar(ctx, -5, 0, 10, 1.5);
+        break;
+      case 2: // Police — Peaked cap
+        ctx.fillStyle = pal.hat;
+        ar(ctx, -5, -9, 10, 8);
+        ctx.fillStyle = pal.hatHi;
+        ar(ctx, -5, -9, 10, 2); ar(ctx, -5, -7, 2, 6);
+        ctx.fillStyle = '#000820'; ar(ctx, -5, -2, 10, 2);
+        ctx.fillStyle = pal.trim;
+        ar(ctx, -5, -2, 10, 0.5); ar(ctx, -5, -0.5, 10, 0.5);
+        ctx.fillStyle = '#000820';
+        ar(ctx, -7, -0.5, 14, 2); ar(ctx, -8, 1, 16, 1.5);
+        ctx.fillStyle = pal.trim; ar(ctx, -8, 2.5, 16, 0.6);
+        ctx.fillStyle = pal.trim2; ar(ctx, -3, -8, 6, 6);
+        ctx.fillStyle = '#d0b820'; ar(ctx, -2, -7, 4, 4);
+        ctx.fillStyle = '#fff888';
+        ar(ctx, -0.5, -7, 1, 4); ar(ctx, -2, -5.5, 4, 0.8);
+        break;
+      case 3: // Doctor — Surgical cap
+        ctx.fillStyle = pal.hat;
+        ar(ctx, -5, -8, 10, 7);
+        ctx.fillStyle = pal.hatHi;
+        ar(ctx, -5, -8, 10, 2); ar(ctx, -5, -6, 2, 5);
+        ctx.fillStyle = pal.coatSh;
+        ar(ctx, -5, -2, 10, 1);
+        ar(ctx, 4.5, -4, 2.5, 3); ar(ctx, -7, -4, 2.5, 3);
+        ctx.fillStyle = pal.trim2;
+        ar(ctx, -0.5, -7, 1, 5); ar(ctx, -2, -5.5, 4, 1.5);
+        break;
+    }
+    ctx.restore();
+  }
+
+  function drawHatBack(ctx, idx, pal) {
+    ctx.save(); ctx.translate(0, -12);
+    switch (idx) {
+      case 0:
+        ctx.fillStyle = pal.hat;
+        ar(ctx, -5, -7, 10, 6);
+        ar(ctx, -9.5, -5, 3, 3); ar(ctx, 6.5, -5, 3, 3);
+        ctx.fillStyle = pal.trim; ar(ctx, -5, -3, 10, 1);
+        break;
+      case 1:
+        ctx.fillStyle = pal.hat;
+        ar(ctx, -6, -9, 12, 8); ar(ctx, -8, -2, 16, 2.5);
+        ctx.fillStyle = pal.coatSh; ar(ctx, -1, -9, 1.5, 7.5);
+        break;
+      case 2:
+        ctx.fillStyle = pal.hat; ar(ctx, -5, -9, 10, 8);
+        ctx.fillStyle = '#000820'; ar(ctx, -5, -2, 10, 2);
+        ctx.fillStyle = pal.trim; ar(ctx, -5, -2, 10, 0.5);
+        ctx.fillStyle = '#606060'; ar(ctx, -1, -1, 2, 3);
+        break;
+      case 3:
+        ctx.fillStyle = pal.hat; ar(ctx, -5, -8, 10, 7);
+        ctx.fillStyle = pal.coatSh; ar(ctx, -5, -2, 10, 1);
+        ar(ctx, -2, 0, 1.5, 4); ar(ctx, 0.5, 0, 1.5, 4);
+        break;
+    }
+    ctx.restore();
+  }
+
+  function drawHatSide(ctx, idx, pal) {
+    ctx.save(); ctx.translate(0, -12);
+    switch (idx) {
+      case 0:
+        ctx.fillStyle = pal.hat;
+        ar(ctx, -4, -7, 8, 6);
+        ar(ctx, -7, -5, 3, 2.5); ar(ctx, 3.5, -5, 3, 2.5);
+        ctx.fillStyle = pal.trim; ar(ctx, -4, -3, 8, 1);
+        break;
+      case 1:
+        ctx.fillStyle = pal.hat; ar(ctx, -4, -9, 9, 8);
+        ctx.fillStyle = pal.hatHi;
+        ar(ctx, -4, -9, 9, 2); ar(ctx, -4, -7, 2, 6);
+        ctx.fillStyle = pal.hat; ar(ctx, -7, -2, 13, 2.5);
+        ctx.fillStyle = pal.coatSh; ar(ctx, -1, -9, 1.5, 7.5);
+        break;
+      case 2:
+        ctx.fillStyle = pal.hat; ar(ctx, -4, -9, 8, 8);
+        ctx.fillStyle = pal.hatHi;
+        ar(ctx, -4, -9, 8, 2); ar(ctx, -4, -7, 2, 6);
+        ctx.fillStyle = '#000820';
+        ar(ctx, -4, -2, 8, 2); ar(ctx, -5, -0.5, 8, 2.5);
+        ctx.fillStyle = pal.trim; ar(ctx, -5, 2, 8, 0.6);
+        break;
+      case 3:
+        ctx.fillStyle = pal.hat; ar(ctx, -4, -8, 8, 7);
+        ctx.fillStyle = pal.coatSh; ar(ctx, -4, -2, 8, 1);
+        ar(ctx, 3.5, -4, 2.5, 3);
+        break;
+    }
+    ctx.restore();
+  }
+
+  // ── Per-direction sprite renderers ────────────────────────────────────────
+  function drawCharFront(ctx, idx, pal, wPhase, shock, breathe) {
+    const wCyc     = Math.sin(wPhase * Math.PI * 2);
+    const lLeg     = wCyc * 1.8 * (1 - shock);
+    const rLeg     = -lLeg;
+    const lArm     = -lLeg * 0.7;
+    const rArm     = lLeg * 0.7;
+    const bodyY    = breathe * 0.4 - shock * 3;
+    const armRaise = shock * 5;
+    const armH     = 4 + armRaise * 0.4;
+    const armTop   = -3 - armRaise;
+
+    ctx.save(); ctx.translate(0, bodyY);
+
+    // Legs
+    ctx.fillStyle = pal.pant;
+    ar(ctx, -4, 4 + lLeg, 3, 4); ar(ctx, 1, 4 + rLeg, 3, 4);
+    ctx.fillStyle = pal.pantSh;
+    ar(ctx, -4, 4 + lLeg, 1, 4); ar(ctx, 3, 4 + rLeg, 1, 4);
+    // Boots
+    ctx.fillStyle = pal.boot;
+    ar(ctx, -5, 7.5 + lLeg, 4.5, 2.5); ar(ctx, 0.5, 7.5 + rLeg, 4.5, 2.5);
+    // Arms
+    ctx.fillStyle = pal.coat;
+    ar(ctx, -7, armTop + lArm, 3, armH); ar(ctx, 4, armTop + rArm, 3, armH);
+    ctx.fillStyle = pal.coatSh;
+    ar(ctx, -7, armTop + lArm, 1, armH); ar(ctx, 6, armTop + rArm, 1, armH);
+    ctx.fillStyle = pal.skin;
+    ar(ctx, -7, armTop + lArm + armH, 3, 2); ar(ctx, 4, armTop + rArm + armH, 3, 2);
+    // Body
+    ctx.fillStyle = pal.coat; ar(ctx, -4, -5, 8, 9);
+    ctx.fillStyle = pal.coatSh; ar(ctx, -4, -5, 1.5, 9); ar(ctx, 2.5, -5, 1.5, 9);
+    ctx.fillStyle = pal.coatHi; ar(ctx, -2.5, -5, 1.5, 9);
+    // Belt
+    ctx.fillStyle = '#181810'; ar(ctx, -4, 3.5, 8, 1.5);
+    ctx.fillStyle = pal.trim; ar(ctx, -1, 3.5, 2, 1.5);
+    drawBodyDetailsFront(ctx, idx, pal);
+    // Neck
+    ctx.fillStyle = pal.skin; ar(ctx, -1.5, -5, 3, 2);
+    // Head
+    ctx.fillStyle = pal.skin; ar(ctx, -4.5, -12, 9, 7);
+    ctx.fillStyle = pal.skinSh;
+    ar(ctx, -4.5, -12, 1, 7); ar(ctx, 3.5, -12, 1, 7); ar(ctx, -4.5, -6, 9, 1);
+    // Eyes
+    const eY = shock > 0.3 ? -11.5 : -11;
+    const eW = shock > 0.3 ? 2.5 : 2;
+    const eH = shock > 0.3 ? 2.5 : 2;
+    if (shock > 0.3) {
+      ctx.fillStyle = 'white';
+      ar(ctx, -4.5, eY - 0.5, 3.5, eH + 1); ar(ctx, 0.5, eY - 0.5, 3.5, eH + 1);
+    }
+    ctx.fillStyle = '#1a1028';
+    ar(ctx, -4, eY, eW, eH); ar(ctx, 1, eY, eW, eH);
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ar(ctx, -3.5, eY, 0.8, 0.8); ar(ctx, 1.5, eY, 0.8, 0.8);
+    // Mouth
+    if (shock > 0.4) {
+      ctx.fillStyle = '#1a0810'; ar(ctx, -2.5, -8, 5, 3);
+      ctx.fillStyle = '#b02840'; ar(ctx, -2, -7.5, 4, 2);
+    } else {
+      ctx.fillStyle = pal.skinSh; ar(ctx, -2.5, -7, 5, 1);
+    }
+    drawFaceDetailsFront(ctx, idx, pal, shock);
+    drawHatFront(ctx, idx, pal);
+    ctx.restore();
+  }
+
+  function drawCharBack(ctx, idx, pal, wPhase, shock, breathe) {
+    const wCyc     = Math.sin(wPhase * Math.PI * 2);
+    const lLeg     = wCyc * 1.8 * (1 - shock);
+    const rLeg     = -lLeg;
+    const lArm     = -lLeg * 0.7;
+    const rArm     = lLeg * 0.7;
+    const bodyY    = breathe * 0.4 - shock * 3;
+    const armRaise = shock * 5;
+    const armH     = 4 + armRaise * 0.4;
+    const armTop   = -3 - armRaise;
+
+    ctx.save(); ctx.translate(0, bodyY);
+
+    // Legs
+    ctx.fillStyle = pal.pant;
+    ar(ctx, -4, 4 + lLeg, 3, 4); ar(ctx, 1, 4 + rLeg, 3, 4);
+    ctx.fillStyle = pal.pantSh;
+    ar(ctx, -4, 4 + lLeg, 1, 4); ar(ctx, 3, 4 + rLeg, 1, 4);
+    ctx.fillStyle = pal.boot;
+    ar(ctx, -5, 7.5 + lLeg, 4.5, 2.5); ar(ctx, 0.5, 7.5 + rLeg, 4.5, 2.5);
+    // Arms
+    ctx.fillStyle = pal.coat;
+    ar(ctx, -7, armTop + lArm, 3, armH); ar(ctx, 4, armTop + rArm, 3, armH);
+    ctx.fillStyle = pal.coatSh;
+    ar(ctx, -7, armTop + lArm, 1, armH); ar(ctx, 6, armTop + rArm, 1, armH);
+    ctx.fillStyle = pal.skin;
+    ar(ctx, -7, armTop + lArm + armH, 3, 2); ar(ctx, 4, armTop + rArm + armH, 3, 2);
+    // Body
+    ctx.fillStyle = pal.coat; ar(ctx, -4, -5, 8, 9);
+    ctx.fillStyle = pal.coatSh; ar(ctx, -4, -5, 1.5, 9); ar(ctx, 2.5, -5, 1.5, 9);
+    ctx.fillStyle = pal.coatHi; ar(ctx, -2.5, -5, 1.5, 9);
+    // Belt
+    ctx.fillStyle = '#181810'; ar(ctx, -4, 3.5, 8, 1.5);
+    ctx.fillStyle = pal.trim; ar(ctx, -1, 3.5, 2, 1.5);
+    // Explorer backpack visible from behind
+    if (idx === 1) {
+      ctx.fillStyle = '#5a4830'; ar(ctx, -2.5, -4, 5, 6.5);
+      ctx.fillStyle = '#3a2810'; ar(ctx, -1.5, -1, 3, 3.5);
+      ctx.fillStyle = '#282010'; ar(ctx, -1, -3, 2, 0.5);
+    }
+    // Neck
+    ctx.fillStyle = pal.skin; ar(ctx, -1.5, -5, 3, 2);
+    // Head (back)
+    ctx.fillStyle = pal.skin; ar(ctx, -4.5, -12, 9, 7);
+    ctx.fillStyle = pal.skinSh;
+    ar(ctx, -4.5, -12, 1, 7); ar(ctx, 3.5, -12, 1, 7); ar(ctx, -4.5, -6, 9, 1);
+    // Hair (back of head shows hat color as hair)
+    ctx.fillStyle = pal.hat; ar(ctx, -3.5, -12, 7, 2.5);
+    drawHatBack(ctx, idx, pal);
+    ctx.restore();
+  }
+
+  function drawCharSide(ctx, idx, pal, wPhase, shock, breathe) {
+    // Draws facing right; caller does ctx.scale(-1,1) for left
+    const wCyc     = Math.sin(wPhase * Math.PI * 2);
+    const fLeg     = wCyc * 2.5 * (1 - shock);
+    const bLeg     = -fLeg;
+    const fArm     = -fLeg * 0.7;
+    const bArm     = fLeg * 0.7;
+    const bodyY    = breathe * 0.4 - shock * 3;
+    const armRaise = shock * 5;
+    const fArmH    = 4 + armRaise * 0.4;
+    const fArmTop  = -3 - armRaise;
+
+    ctx.save(); ctx.translate(0, bodyY);
+
+    // Back leg
+    ctx.fillStyle = pal.pantSh; ar(ctx, 0, 4 + bLeg, 3, 4);
+    ctx.fillStyle = pal.boot; ar(ctx, -0.5, 7.5 + bLeg, 3.5, 2.5);
+    // Back arm
+    ctx.fillStyle = pal.coatSh;
+    ar(ctx, 0.5, fArmTop + bArm, 2.5, fArmH);
+    ctx.fillStyle = pal.skinSh;
+    ar(ctx, 0.5, fArmTop + bArm + fArmH, 2.5, 2);
+    // Body (side profile)
+    ctx.fillStyle = pal.coat; ar(ctx, -2, -5, 7, 9);
+    ctx.fillStyle = pal.coatSh; ar(ctx, 4, -5, 1, 9);
+    ctx.fillStyle = pal.coatHi; ar(ctx, -2, -5, 1.5, 9);
+    // Belt
+    ctx.fillStyle = '#181810'; ar(ctx, -2, 3.5, 7, 1.5);
+    ctx.fillStyle = pal.trim; ar(ctx, 0, 3.5, 2, 1.5);
+    drawBodyDetailsSide(ctx, idx, pal);
+    // Front leg
+    ctx.fillStyle = pal.pant; ar(ctx, -1, 4 + fLeg, 3, 4);
+    ctx.fillStyle = pal.pantSh; ar(ctx, -1, 4 + fLeg, 1, 4);
+    ctx.fillStyle = pal.boot;
+    ar(ctx, -2, 7.5 + fLeg, 4.5, 2.5);
+    ar(ctx, -3.5, 8.5 + fLeg, 1, 1.5); // toe
+    // Front arm
+    ctx.fillStyle = pal.coat; ar(ctx, -4.5, fArmTop + fArm, 3, fArmH);
+    ctx.fillStyle = pal.coatSh; ar(ctx, -4.5, fArmTop + fArm, 1, fArmH);
+    ctx.fillStyle = pal.skin; ar(ctx, -4.5, fArmTop + fArm + fArmH, 3, 2);
+    // Neck
+    ctx.fillStyle = pal.skin; ar(ctx, -1, -5, 3, 2);
+    // Head (side profile)
+    ctx.fillStyle = pal.skin; ar(ctx, -3, -12, 7, 7);
+    ctx.fillStyle = pal.skinSh;
+    ar(ctx, 3, -12, 1, 7);
+    ar(ctx, -3, -6, 7, 1);
+    // Nose
+    ar(ctx, -4, -10.5, 1.5, 1);
+    // Eye
+    const eY = shock > 0.3 ? -11.5 : -11;
+    if (shock > 0.3) {
+      ctx.fillStyle = 'white'; ar(ctx, -3.5, eY - 0.5, 3.5, 3.5);
+    }
+    ctx.fillStyle = '#1a1028';
+    ar(ctx, -3, eY, shock > 0.3 ? 2.5 : 2, shock > 0.3 ? 2.5 : 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.75)'; ar(ctx, -3, eY, 0.8, 0.8);
+    // Mouth
+    if (shock > 0.4) {
+      ctx.fillStyle = '#1a0810'; ar(ctx, -3.5, -8.5, 2.5, 2.5);
+    } else {
+      ctx.fillStyle = pal.skinSh; ar(ctx, -3.5, -8, 2.5, 0.8);
+    }
+    drawFaceDetailsSide(ctx, idx, pal, shock);
+    drawHatSide(ctx, idx, pal);
+    ctx.restore();
+  }
+
+  // ── Shock VFX (floating ! and stars) ─────────────────────────────────────
+  function drawShockEffects(ctx, shock, nowMs) {
+    if (shock < 0.05) return;
+    const t = nowMs / 200;
+    ctx.globalAlpha = shock;
+    ctx.fillStyle = '#ff3010';
+    ar(ctx, -0.5, -21.5, 1, 4.5);
+    ar(ctx, -0.5, -16, 1, 1.5);
+    const sw = Math.sin(t) * 1.5;
+    ctx.fillStyle = '#ffee10';
+    ar(ctx, -10 + sw, -18 + sw, 2, 2);
+    ar(ctx, 8 - sw,  -20 + sw, 2, 2);
+    ar(ctx, -9 - sw, -22, 1.5, 1.5);
+    ar(ctx,  7 + sw, -16, 1.5, 1.5);
+    ctx.globalAlpha = 1;
+  }
+
+  // ── Main drawAvatar ───────────────────────────────────────────────────────
+  function drawAvatar(ctx, cx, cy, dir, wPhase, bob, avatarIdx, isMe, shockAnim) {
+    const idx   = avatarIdx % CHAR_PAL.length;
+    const pal   = CHAR_PAL[idx];
+    const shock = shockAnim || 0;
+    const nowMs = Date.now();
 
     ctx.save();
-    ctx.translate(cx, cy);
+    ctx.translate(Math.round(cx), Math.round(cy));
 
-    // Shadow (fixed to ground — does not bob with character)
-    ctx.globalAlpha = 0.22;
+    // Ground shadow (fixed, does not bob)
+    ctx.globalAlpha = 0.28;
     ctx.fillStyle = '#000';
-    ctx.beginPath(); ctx.ellipse(0, 13, 10, 3.5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(0, 11, 11 + shock * 2, 3.5, 0, 0, Math.PI * 2);
+    ctx.fill();
     ctx.globalAlpha = 1;
 
-    ctx.save();
-    ctx.translate(0, totalBob);
+    // Shock visual effects
+    drawShockEffects(ctx, shock, nowMs);
 
-    // Body circle
-    ctx.fillStyle = av.body;
-    ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = isMe ? '#ffffff' : 'rgba(255,255,255,0.5)';
-    ctx.lineWidth = isMe ? 2.5 : 1.5;
-    ctx.stroke();
-
-    // Head offset per direction
-    let hx = 0, hy = -8;
-    if (dir === 'right') { hx = 4; hy = -7; }
-    else if (dir === 'left') { hx = -4; hy = -7; }
-    else if (dir === 'up') { hx = 0; hy = -11; }
-
-    // Head (skin)
-    ctx.fillStyle = '#f0c080';
-    ctx.beginPath(); ctx.arc(hx, hy, 5.5, 0, Math.PI * 2); ctx.fill();
-
-    // Eyes (not shown when facing up)
-    if (dir !== 'up') {
-      ctx.fillStyle = '#1a1020';
-      const eo = dir === 'right' ? 1 : dir === 'left' ? -1 : 0;
-      ctx.beginPath(); ctx.arc(hx - 1.5 + eo, hy - 1.5, 1.3, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(hx + 1.5 + eo, hy - 1.5, 1.3, 0, Math.PI * 2); ctx.fill();
+    // Self indicator ring
+    if (isMe) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(0, 0, 16, 0, Math.PI * 2); ctx.stroke();
     }
 
-    // Hat
-    ctx.save(); ctx.translate(hx, hy);
-    drawAvatarHat(ctx, avatarIdx % AVATARS.length, av, dir);
-    ctx.restore();
+    if (dir === 'down') {
+      drawCharFront(ctx, idx, pal, wPhase, shock, bob);
+    } else if (dir === 'up') {
+      drawCharBack(ctx, idx, pal, wPhase, shock, bob);
+    } else if (dir === 'right') {
+      drawCharSide(ctx, idx, pal, wPhase, shock, bob);
+    } else { // left — mirror the right sprite
+      ctx.scale(-1, 1);
+      drawCharSide(ctx, idx, pal, wPhase, shock, bob);
+    }
 
-    ctx.restore(); // un-bob
-    ctx.restore(); // un-translate
+    ctx.restore();
   }
 
   // ── Render ───────────────────────────────────────────────────────────────
@@ -1283,11 +1658,11 @@
     // Other players
     for (const [, p] of Object.entries(S.otherPlayers)) {
       const pBob = Math.sin(nowSec * 1.8 + (p.walkPhase || 0) * 0.5) * 1.2;
-      drawAvatar(ctx, p.x, p.y, facingToDir(p.facing || 0), p.walkPhase || 0, pBob, p.avatar || 0, false);
+      drawAvatar(ctx, p.x, p.y, facingToDir(p.facing || 0), p.walkPhase || 0, pBob, p.avatar || 0, false, getShockAmt(p.shockStart || 0));
     }
 
     // Player (self)
-    drawAvatar(ctx, S.me.x, S.me.y, facingToDir(S.me.facing), walkPhase, meMoving ? 0 : idleBob, S.me.avatar || 0, true);
+    drawAvatar(ctx, S.me.x, S.me.y, facingToDir(S.me.facing), walkPhase, meMoving ? 0 : idleBob, S.me.avatar || 0, true, getShockAmt(shockStart));
   }
 
   function applyDarkness(cw, ch) {
@@ -2102,6 +2477,9 @@
         trail:[], ouijaLetters:[], attempts:0 };
       if (navigator.vibrate) navigator.vibrate([60,25,60,25,60]);
       gaSfxGhostFound();
+      // Trigger shock animation on self and all visible other players
+      shockStart = Date.now();
+      for (const p of Object.values(S.otherPlayers)) p.shockStart = Date.now();
     });
 
     socket.on('ghost:position', ({ ghostId, x, y }) => {
@@ -2115,7 +2493,7 @@
 
     socket.on('ghost:player_pos', ({ playerIndex, x, y, facing, avatar }) => {
       if (!S) return;
-      if (!S.otherPlayers[playerIndex]) S.otherPlayers[playerIndex] = { x, y, facing: 0, avatar: 0, walkPhase: 0 };
+      if (!S.otherPlayers[playerIndex]) S.otherPlayers[playerIndex] = { x, y, facing: 0, avatar: 0, walkPhase: 0, shockStart: 0 };
       const p = S.otherPlayers[playerIndex];
       const dist = Math.hypot(x - p.x, y - p.y);
       p.walkPhase = (p.walkPhase || 0) + dist * 0.12;
@@ -2223,6 +2601,7 @@
     cleanup();
     setupCanvas();
     walkPhase = 0;
+    shockStart = 0;
 
     // Use server-confirmed avatar (from ghost:avatarChosen) if present in gameStart data,
     // falling back to local selection
@@ -2233,7 +2612,7 @@
     const seedOtherPlayers = {};
     (data.players || []).forEach((p, i) => {
       if (i !== data.myPlayerIndex && !p.isAI) {
-        seedOtherPlayers[i] = { x: start.x, y: start.y, facing: 0, avatar: p.avatar || 0, walkPhase: 0 };
+        seedOtherPlayers[i] = { x: start.x, y: start.y, facing: 0, avatar: p.avatar || 0, walkPhase: 0, shockStart: 0 };
       }
     });
 
