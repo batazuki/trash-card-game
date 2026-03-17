@@ -100,6 +100,17 @@ function endGame(state, roomId, winnerIndex) {
   }, 5 * 60 * 1000);
 }
 
+function getLobbyConfig(state) {
+  return {
+    game:              state.game,
+    ghostArea:         state.ghostArea  || null,
+    ghostCount:        state.ghostCount || 3,
+    sketchRounds:      state.sketchMaxRounds    || 3,
+    sketchDrawTime:    state.sketchDrawTime      || 15,
+    sketchPreviewTime: state.sketchPreviewTime   || 3,
+  };
+}
+
 // ═══════════════════════════════════════════════
 // GAME MODULES
 // ═══════════════════════════════════════════════
@@ -203,7 +214,7 @@ io.on("connection", socket => {
     };
     rooms.set(roomId, state);
     socket.join(roomId);
-    socket.emit("roomCreated", { roomId, players: [{ name: creator.name }], token }); // C2: send token
+    socket.emit("roomCreated", { roomId, players: [{ name: creator.name }], token, ...getLobbyConfig(state) }); // C2: send token
   });
 
   // ── Join Room ──
@@ -232,9 +243,9 @@ io.on("connection", socket => {
       token,
     });
     socket.join(roomId);
-    const playerList = state.players.map(p => ({ name: p.name }));
-    socket.emit("joinedRoom", { roomId, game: state.game, players: playerList, token }); // C2: send token
-    io.to(roomId).emit("playerJoined", { players: playerList });
+    const playerList = state.players.map(p => ({ name: p.name, avatar: p.lobbyAvatar || 0 }));
+    socket.emit("joinedRoom", { roomId, players: playerList, token, ...getLobbyConfig(state) }); // C2: send token
+    io.to(roomId).emit("playerJoined", { players: playerList, ...getLobbyConfig(state) });
   });
 
   // ── Host requests game start (from pre-game lobby) ──
@@ -381,6 +392,55 @@ io.on("connection", socket => {
     if (!state || state.phase !== "ended") return;
     if (ghostArea !== undefined) state.ghostArea = ghostArea || null;
     if (ghostCount !== undefined) state.ghostCount = parseInt(ghostCount) || 3;
+  });
+
+  // ── Lobby: host changes game type ──
+  socket.on("lobbySetGame", ({ roomId, game }) => {
+    const state = rooms.get(roomId);
+    if (!state || state.phase !== "lobby") return;
+    if (state.players[0]?.id !== socket.id) return; // host only
+    const safeGame = gameModules[game] ? game : state.game;
+    state.game = safeGame;
+    const isSketch = safeGame === "sketch";
+    // Reset sketch options to defaults when switching to sketch
+    if (isSketch && !state.sketchMaxRounds) {
+      state.sketchMaxRounds = 3;
+      state.sketchDrawTime = 15;
+      state.sketchPreviewTime = 3;
+    }
+    // Reset ghost options to defaults when switching to ghost
+    if (safeGame === "ghost" && !state.ghostCount) {
+      state.ghostCount = 3;
+    }
+    const playerList = state.players.map(p => ({ name: p.name, avatar: p.lobbyAvatar || 0 }));
+    io.to(roomId).emit("lobbyUpdate", { players: playerList, ...getLobbyConfig(state) });
+  });
+
+  // ── Lobby: host changes a game option ──
+  socket.on("lobbySetOption", ({ roomId, key, value }) => {
+    const state = rooms.get(roomId);
+    if (!state || state.phase !== "lobby") return;
+    if (state.players[0]?.id !== socket.id) return; // host only
+    const allowed = ["ghostArea","ghostCount","sketchMaxRounds","sketchDrawTime","sketchPreviewTime"];
+    if (!allowed.includes(key)) return;
+    if (key === "ghostArea")         state.ghostArea         = value || null;
+    if (key === "ghostCount")        state.ghostCount        = parseInt(value) || 3;
+    if (key === "sketchMaxRounds")   state.sketchMaxRounds   = parseInt(value) || 3;
+    if (key === "sketchDrawTime")    state.sketchDrawTime    = parseInt(value) || 15;
+    if (key === "sketchPreviewTime") state.sketchPreviewTime = parseInt(value) || 3;
+    const playerList = state.players.map(p => ({ name: p.name, avatar: p.lobbyAvatar || 0 }));
+    io.to(roomId).emit("lobbyUpdate", { players: playerList, ...getLobbyConfig(state) });
+  });
+
+  // ── Lobby: any player sets their ghost avatar ──
+  socket.on("lobbySetAvatar", ({ roomId, avatar }) => {
+    const state = rooms.get(roomId);
+    if (!state || state.phase !== "lobby") return;
+    const pi = state.players.findIndex(p => p.id === socket.id);
+    if (pi === -1) return;
+    state.players[pi].lobbyAvatar = parseInt(avatar) || 0;
+    const playerList = state.players.map(p => ({ name: p.name, avatar: p.lobbyAvatar || 0 }));
+    io.to(roomId).emit("lobbyUpdate", { players: playerList, ...getLobbyConfig(state) });
   });
 
   // ── Reaction Emoji ──

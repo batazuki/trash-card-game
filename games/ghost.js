@@ -19,12 +19,12 @@ module.exports = function(io, helpers) {
   const PERSONALITIES = ['shy','dramatic','goofy','grumpy','regal','confused'];
 
   const PCONFIG = {
-    shy:      { speed: 60,  ouijaTime: 25, diversions: [1,2], fleeRange: 200, color: '#a8d8ea', description: 'Skittish and easily frightened — hides from the living' },
-    dramatic: { speed: 120, ouijaTime: 35, diversions: [0,1], fleeRange: 0,   color: '#ff6b9d', description: 'Theatrical and flamboyant — loves an audience' },
-    goofy:    { speed: 90,  ouijaTime: 50, diversions: [0,2], fleeRange: 0,   color: '#ffd93d', description: 'Bouncy and unpredictable — finds everything hilarious' },
-    grumpy:   { speed: 70,  ouijaTime: 15, diversions: [2,3], fleeRange: 0,   color: '#ff4757', description: 'Irritable and impatient — just wants to be left alone' },
-    regal:    { speed: 40,  ouijaTime: 30, diversions: [0,0], fleeRange: 0,   color: '#c9a86c', description: 'Dignified and slow-moving — haunting with elegance since 1842' },
-    confused: { speed: 80,  ouijaTime: 45, diversions: [2,4], fleeRange: 0,   color: '#b8f5a3', description: 'Wandering aimlessly — not sure where, or when, they are' },
+    shy:      { speed: 60,  ouijaTime: 25, diversions: [1,2], fleeRange: 200, color: '#a8d8ea', description: 'Skittish and easily frightened — hides from the living',           emfMult: 0.7, soundMult: 0.6 },
+    dramatic: { speed: 120, ouijaTime: 35, diversions: [0,1], fleeRange: 0,   color: '#ff6b9d', description: 'Theatrical and flamboyant — loves an audience',                    emfMult: 1.4, soundMult: 1.3 },
+    goofy:    { speed: 90,  ouijaTime: 50, diversions: [0,2], fleeRange: 0,   color: '#ffd93d', description: 'Bouncy and unpredictable — finds everything hilarious',             emfMult: 1.0, soundMult: 1.5 },
+    grumpy:   { speed: 70,  ouijaTime: 15, diversions: [2,3], fleeRange: 0,   color: '#ff4757', description: 'Irritable and impatient — just wants to be left alone',            emfMult: 1.3, soundMult: 0.7 },
+    regal:    { speed: 40,  ouijaTime: 30, diversions: [0,0], fleeRange: 0,   color: '#c9a86c', description: 'Dignified and slow-moving — haunting with elegance since 1842',    emfMult: 1.0, soundMult: 0.9 },
+    confused: { speed: 80,  ouijaTime: 45, diversions: [2,4], fleeRange: 0,   color: '#b8f5a3', description: 'Wandering aimlessly — not sure where, or when, they are',          emfMult: 0.8, soundMult: 1.2 },
   };
 
   const POI_POOLS = {
@@ -65,6 +65,14 @@ module.exports = function(io, helpers) {
   const EMF_RANGE   = 450;
   const SOUND_RANGE = 350;
   const PLAYER_SPEED = 180;
+
+  // Per-avatar stat multipliers (index matches GHOST_AVATAR_DEFS in game.js)
+  const AVATAR_STATS = [
+    { flashMult: 1.00, emfMult: 1.00, soundMult: 1.00 },  // 0: Pirate
+    { flashMult: 1.00, emfMult: 0.75, soundMult: 1.25 },  // 1: Explorer
+    { flashMult: 1.25, emfMult: 1.00, soundMult: 0.75 },  // 2: Police
+    { flashMult: 0.75, emfMult: 1.25, soundMult: 1.00 },  // 3: Doctor
+  ];
   const PICKUP_RANGE = 48;
 
   // ─── Area Definitions ─────────────────────────────────────────────────────
@@ -396,19 +404,24 @@ module.exports = function(io, helpers) {
   }
 
   // ─── Signal Computation ───────────────────────────────────────────────────
-  function computeSignals(ghost, playerPos, facing, emfRange) {
+  // emfRange/soundRange/flashRange already include both avatar and ghost personality multipliers
+  function computeSignals(ghost, playerPos, facing, emfRange, soundRange, flashRange) {
     const dx = ghost.x - playerPos.x;
     const dy = ghost.y - playerPos.y;
     const dist = Math.hypot(dx, dy);
-    const emf   = Math.max(0, 1 - dist / (emfRange || EMF_RANGE));
-    const sound  = Math.max(0, 1 - dist / SOUND_RANGE);
+    const ghostCfg = PCONFIG[ghost.personality] || PCONFIG.confused;
+    const effEmf   = (emfRange   || EMF_RANGE)   * (ghostCfg.emfMult   || 1.0);
+    const effSnd   = (soundRange || SOUND_RANGE)  * (ghostCfg.soundMult || 1.0);
+    const effFlash = flashRange  || FLASH_RANGE;
+    const emf   = Math.max(0, 1 - dist / effEmf);
+    const sound  = Math.max(0, 1 - dist / effSnd);
     let flashlight = 0;
-    if (dist < FLASH_RANGE) {
+    if (dist < effFlash) {
       const gAngle = Math.atan2(dy, dx);
       let diff = Math.abs(gAngle - facing);
       if (diff > Math.PI) diff = 2 * Math.PI - diff;
       if (diff < FLASH_ANGLE) {
-        flashlight = (1 - dist / FLASH_RANGE) * (1 - diff / FLASH_ANGLE);
+        flashlight = (1 - dist / effFlash) * (1 - diff / FLASH_ANGLE);
       }
     }
     return { emf, sound, flashlight };
@@ -478,9 +491,10 @@ module.exports = function(io, helpers) {
       for (const player of state.players) {
         if (player.isAI || !player.ghostPos) continue;
         const facing = player.ghostFacing || 0;
+        const avStat = AVATAR_STATS[player.lobbyAvatar || 0] || AVATAR_STATS[0];
         for (const ghost of ghosts) {
           if (ghost.identified) continue;
-          const sig = computeSignals(ghost, player.ghostPos, facing, EMF_RANGE);
+          const sig = computeSignals(ghost, player.ghostPos, facing, EMF_RANGE, SOUND_RANGE, FLASH_RANGE * avStat.flashMult);
           if (sig.flashlight > (ghostLitIntensity[ghost.id] || 0)) {
             ghostLitIntensity[ghost.id] = sig.flashlight;
           }
@@ -519,13 +533,18 @@ module.exports = function(io, helpers) {
 
         const playerPos = player.ghostPos || areaData.playerStart;
         const facing    = player.ghostFacing || 0;
+        const avStat    = AVATAR_STATS[player.lobbyAvatar || 0] || AVATAR_STATS[0];
+        const emfBase   = gs.emfUpgradedPlayers && gs.emfUpgradedPlayers.has(pi) ? EMF_RANGE * 2 : EMF_RANGE;
 
         // Compute signals for each unfound ghost
         const signals = [];
         let emfDir = null, sndDir = null, maxEmf = 0, maxSnd = 0;
         for (const ghost of ghosts) {
           if (ghost.identified) continue;
-          const sig = computeSignals(ghost, playerPos, facing, gs.emfUpgradedPlayers && gs.emfUpgradedPlayers.has(pi) ? EMF_RANGE * 2 : EMF_RANGE);
+          const sig = computeSignals(ghost, playerPos, facing,
+            emfBase   * avStat.emfMult,
+            SOUND_RANGE * avStat.soundMult,
+            FLASH_RANGE * avStat.flashMult);
           signals.push({ ghostId: ghost.id, ...sig });
 
           // Track strongest signal direction for arrow indicator
@@ -538,8 +557,8 @@ module.exports = function(io, helpers) {
             sndDir = Math.atan2(ghost.y - playerPos.y, ghost.x - playerPos.x);
           }
 
-          // Detection: flashlight > 0.6 → found
-          if (!ghost.found && sig.flashlight > 0.6) {
+          // Detection: flashlight > 0.22 → found (allows detection across most of the cone range)
+          if (!ghost.found && sig.flashlight > 0.22) {
             ghost.found = true;
             io.to(roomId).emit('ghost:found', {
               ghostId:    ghost.id,

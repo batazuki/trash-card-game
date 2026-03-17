@@ -344,17 +344,26 @@ const PREGAME_GAME_INFO = {
   ghost:         { icon: "👻", name: "Ghost Detective" },
 };
 
-function showPregame(roomId, players, isHost) {
+function showPregame(roomId, players, isHost, config) {
+  config = config || {};
   $("pregame-code-text").textContent = roomId;
-  const pgInfo = PREGAME_GAME_INFO[local.gameType] || { icon: "♠", name: "Game" };
-  const pgIcon = $("pregame-game-icon");
-  const pgName = $("pregame-game-name");
-  if (pgIcon) pgIcon.textContent = pgInfo.icon;
-  if (pgName) pgName.textContent = pgInfo.name;
-  updatePregamePlayers(players);
+  local.pregameIsHost = isHost;
+
+  // Show/hide host vs guest settings
+  const hostPanel = $("pregame-host-settings");
+  const guestPanel = $("pregame-guest-settings");
+  if (hostPanel) hostPanel.classList.toggle("hidden", !isHost);
+  if (guestPanel) guestPanel.classList.toggle("hidden", isHost);
+
+  if (isHost) buildPregameHostControls();
+  buildPregameAvatarPicker();
+  applyPregameConfig(config, isHost);
+  updatePregamePlayers(players, config.game);
+
   const startBtn = $("pregame-start-btn");
   const statusEl = $("pregame-status");
-  const minPlayers = local.gameType === "ghost" ? 1 : 2;
+  const game = config.game || local.gameType || "trash";
+  const minPlayers = game === "ghost" ? 1 : 2;
   if (isHost) {
     startBtn.classList.remove("hidden");
     startBtn.disabled = players.length < minPlayers;
@@ -364,15 +373,27 @@ function showPregame(roomId, players, isHost) {
     statusEl.textContent = "Waiting for host to start...";
   }
   showScreen("pregame-screen");
+  applyGameTheme(game);
+
+  // Tell server our avatar selection
+  if (local.roomId) {
+    socket.emit("lobbySetAvatar", { roomId: local.roomId, avatar: window._ghostAvatarSelection || 0 });
+  }
 }
 
-function updatePregamePlayers(players) {
+function updatePregamePlayers(players, game) {
   const list = $("pregame-player-list");
   if (!list) return;
   list.innerHTML = "";
+  const isGhost = (game || local.gameType) === "ghost";
   players.forEach((p, i) => {
     const li = document.createElement("li");
-    li.textContent = (i === 0 ? "👑 " : "") + p.name;
+    let prefix = i === 0 ? "👑 " : "";
+    if (isGhost && p.avatar !== undefined) {
+      const avDef = GHOST_AVATAR_DEFS[p.avatar] || GHOST_AVATAR_DEFS[0];
+      prefix += avDef.emoji + " ";
+    }
+    li.textContent = prefix + p.name;
     list.appendChild(li);
   });
   for (let i = players.length; i < 4; i++) {
@@ -381,6 +402,164 @@ function updatePregamePlayers(players) {
     li.classList.add("empty-slot");
     list.appendChild(li);
   }
+}
+
+let _pregameHostBuilt = false;
+function buildPregameHostControls() {
+  if (_pregameHostBuilt) return;
+  _pregameHostBuilt = true;
+
+  // Game pill clicks
+  document.querySelectorAll(".pregame-game-pill").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (!local.roomId) return;
+      document.querySelectorAll(".pregame-game-pill").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      socket.emit("lobbySetGame", { roomId: local.roomId, game: btn.dataset.game });
+    });
+  });
+
+  // Ghost area buttons
+  document.querySelectorAll(".pregame-area-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (!local.roomId) return;
+      document.querySelectorAll(".pregame-area-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      const area = btn.dataset.area === "random" ? null : btn.dataset.area;
+      socket.emit("lobbySetOption", { roomId: local.roomId, key: "ghostArea", value: area });
+    });
+  });
+
+  // Ghost count buttons
+  document.querySelectorAll(".pregame-count-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (!local.roomId) return;
+      document.querySelectorAll(".pregame-count-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      socket.emit("lobbySetOption", { roomId: local.roomId, key: "ghostCount", value: parseInt(btn.dataset.count) });
+    });
+  });
+
+  // Sketch option selects
+  ["pregame-sketch-rounds", "pregame-sketch-preview", "pregame-sketch-draw"].forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    const keyMap = {
+      "pregame-sketch-rounds":  "sketchMaxRounds",
+      "pregame-sketch-preview": "sketchPreviewTime",
+      "pregame-sketch-draw":    "sketchDrawTime",
+    };
+    el.addEventListener("change", () => {
+      if (!local.roomId) return;
+      socket.emit("lobbySetOption", { roomId: local.roomId, key: keyMap[id], value: parseInt(el.value) });
+    });
+  });
+}
+
+let _pregameAvatarBuilt = false;
+function buildPregameAvatarPicker() {
+  if (_pregameAvatarBuilt) return;
+  _pregameAvatarBuilt = true;
+  const grid = $("pregame-avatar-grid");
+  if (!grid) return;
+  GHOST_AVATAR_DEFS.forEach((av, idx) => {
+    const btn = document.createElement("button");
+    btn.className = "ghost-avatar-btn" + (idx === _ghostAvatar ? " active" : "");
+    btn.setAttribute("aria-label", av.name);
+    const cvs = document.createElement("canvas");
+    cvs.width = 44; cvs.height = 48;
+    const c = cvs.getContext("2d");
+    c.fillStyle = av.body;
+    c.beginPath(); c.arc(22, 28, 16, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = "rgba(255,255,255,0.3)"; c.lineWidth = 1.5; c.stroke();
+    c.font = "18px sans-serif"; c.textAlign = "center"; c.textBaseline = "middle";
+    c.fillText(av.emoji, 22, 20);
+    const label = document.createElement("span");
+    label.className = "ghost-avatar-name";
+    label.textContent = av.name;
+    const stats = document.createElement("div");
+    stats.className = "ghost-avatar-stats";
+    stats.innerHTML = buildAvatarStatHTML(av);
+    btn.appendChild(cvs); btn.appendChild(label); btn.appendChild(stats);
+    btn.addEventListener("click", () => {
+      _ghostAvatar = idx;
+      window._ghostAvatarSelection = idx;
+      localStorage.setItem("ghostAvatar", idx);
+      grid.querySelectorAll(".ghost-avatar-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      if (local.roomId) socket.emit("lobbySetAvatar", { roomId: local.roomId, avatar: idx });
+    });
+    grid.appendChild(btn);
+  });
+}
+
+function applyPregameConfig(config, isHost) {
+  const game = config.game || "trash";
+  local.gameType = game;
+  $("game-select").value = game;
+  applyGameTheme(game);
+  if (window._syncCarousel) window._syncCarousel(game);
+
+  // Update badge
+  const pgInfo = PREGAME_GAME_INFO[game] || { icon: "♠", name: "Game" };
+  const pgIcon = $("pregame-game-icon");
+  const pgName = $("pregame-game-name");
+  if (pgIcon) pgIcon.textContent = pgInfo.icon;
+  if (pgName) pgName.textContent = pgInfo.name;
+
+  const isGhost = game === "ghost";
+  const isSketch = game === "sketch";
+
+  // Show/hide avatar section
+  const avatarSec = $("pregame-avatar-section");
+  if (avatarSec) avatarSec.classList.toggle("hidden", !isGhost);
+
+  if (isHost) {
+    // Highlight the correct game pill
+    document.querySelectorAll(".pregame-game-pill").forEach(b => {
+      b.classList.toggle("active", b.dataset.game === game);
+    });
+    // Show correct options group
+    const sketchOpts = $("pregame-sketch-options");
+    const ghostOpts  = $("pregame-ghost-options");
+    if (sketchOpts) sketchOpts.classList.toggle("hidden", !isSketch);
+    if (ghostOpts)  ghostOpts.classList.toggle("hidden",  !isGhost);
+
+    // Sync ghost options
+    if (isGhost) {
+      const area = config.ghostArea || "random";
+      document.querySelectorAll(".pregame-area-btn").forEach(b => {
+        b.classList.toggle("active", b.dataset.area === area);
+      });
+      const count = config.ghostCount || 3;
+      document.querySelectorAll(".pregame-count-btn").forEach(b => {
+        b.classList.toggle("active", parseInt(b.dataset.count) === count);
+      });
+    }
+    // Sync sketch options
+    if (isSketch) {
+      const sr = $("pregame-sketch-rounds");
+      const sp = $("pregame-sketch-preview");
+      const sd = $("pregame-sketch-draw");
+      if (sr) sr.value = config.sketchRounds || 3;
+      if (sp) sp.value = config.sketchPreviewTime || 3;
+      if (sd) sd.value = config.sketchDrawTime || 15;
+    }
+  } else {
+    // Guest: build read-only summary text
+    let summary = `${pgInfo.icon} ${pgInfo.name}`;
+    if (isGhost) {
+      const areaLabel = { graveyard: "Graveyard", garden: "Garden", house: "Old House" };
+      const areaName = areaLabel[config.ghostArea] || "Random";
+      summary += ` · ${areaName} · ${config.ghostCount || 3} Ghosts`;
+    }
+    if (isSketch) {
+      summary += ` · ${config.sketchRounds || 3} Rounds`;
+    }
+    const el = $("pregame-settings-text");
+    if (el) el.textContent = summary;
+  }
+
 }
 
 $("pregame-start-btn").addEventListener("click", () => {
@@ -395,6 +574,12 @@ $("pregame-cancel-btn").addEventListener("click", () => {
   if (local.roomId) socket.emit("leaveRoom", { roomId: local.roomId });
   local.roomId = null;
   local.isHost = false;
+  local.pregameIsHost = false;
+  // Only reset the avatar picker (dynamic DOM). Host controls are on static DOM — resetting
+  // would re-attach listeners on next entry and cause duplicate socket emits.
+  _pregameAvatarBuilt = false;
+  const pgAvatarGrid = $("pregame-avatar-grid");
+  if (pgAvatarGrid) pgAvatarGrid.innerHTML = "";
   const currentGame = $("game-select").value || "trash";
   if (window._syncCarousel) window._syncCarousel(currentGame);
   setLobbyBusy(false);
@@ -550,12 +735,10 @@ $("game-select").addEventListener("change", e => {
 
 // ── Ghost avatar definitions (must be declared before updateLobbyForGame is called) ──
 const GHOST_AVATAR_DEFS = [
-  { name: 'Detective', body: '#2c3e6b', emoji: '🎩' },
-  { name: 'Witch',     body: '#3d1f5a', emoji: '🧙' },
-  { name: 'Explorer',  body: '#b85e28', emoji: '🌿' },
-  { name: 'Hunter',    body: '#1e4a52', emoji: '⚡' },
-  { name: 'Scientist', body: '#d8e8f0', emoji: '🔬' },
-  { name: 'Kid',       body: '#cc2222', emoji: '🧢' },
+  { name: 'Pirate',   body: '#2a3a6a', emoji: '🏴‍☠️', flashMult: 1.00, emfMult: 1.00, soundMult: 1.00 },
+  { name: 'Explorer', body: '#8b4a18', emoji: '🌿',    flashMult: 1.00, emfMult: 0.75, soundMult: 1.25 },
+  { name: 'Police',   body: '#1a2a5a', emoji: '👮',    flashMult: 1.25, emfMult: 1.00, soundMult: 0.75 },
+  { name: 'Doctor',   body: '#c8e4ef', emoji: '⚕️',   flashMult: 0.75, emfMult: 1.25, soundMult: 1.00 },
 ];
 let _ghostAvatar = Math.max(0, Math.min(GHOST_AVATAR_DEFS.length - 1, parseInt(localStorage.getItem("ghostAvatar") || "0") || 0));
 window._ghostAvatarSelection = _ghostAvatar;
@@ -588,7 +771,7 @@ function updateLobbyForGame(game) {
 updateLobbyForGame(localStorage.getItem("game") || "trash");
 
 function setLobbyBusy(busy) {
-  [$("vs-ai-btn"), $("create-room-btn"), $("join-room-btn"), $("play-game-btn")].forEach(btn => {
+  [$("vs-ai-btn"), $("create-room-btn"), $("join-room-btn"), $("play-game-btn"), $("create-lobby-main-btn")].forEach(btn => {
     if (btn) btn.disabled = busy;
   });
 }
@@ -597,6 +780,13 @@ function setLobbyBusy(busy) {
 $("play-game-btn").addEventListener("click", () => {
   $("lobby-main-view").classList.add("hidden");
   $("lobby-game-view").classList.remove("hidden");
+});
+
+$("create-lobby-main-btn").addEventListener("click", () => {
+  const name = $("player-name").value.trim() || "Player";
+  local.playerName = name;
+  setLobbyBusy(true);
+  socket.emit("createRoom", { playerName: name, game: "trash" });
 });
 $("back-to-main-btn").addEventListener("click", () => {
   $("room-code-display").classList.add("hidden");
@@ -630,6 +820,16 @@ function getSelectedGhostCount() {
   return active ? parseInt(active.dataset.count) || 3 : 3;
 }
 
+// ── Avatar stat HTML helper ────────────────────────────────────────────────
+function buildAvatarStatHTML(av) {
+  function statLabel(mult, icons) {
+    if (mult >= 1.2)  return `<span class="av-stat av-stat-up">${icons} +25%</span>`;
+    if (mult <= 0.8)  return `<span class="av-stat av-stat-dn">${icons} −25%</span>`;
+    return `<span class="av-stat av-stat-ok">${icons} norm</span>`;
+  }
+  return statLabel(av.flashMult, '🔦') + statLabel(av.emfMult, '📡') + statLabel(av.soundMult, '🎙️');
+}
+
 // ── Ghost avatar picker ────────────────────────────────────────────────────
 function buildGhostAvatarPicker() {
   const grid = $("ghost-avatar-grid");
@@ -643,11 +843,9 @@ function buildGhostAvatarPicker() {
     const cvs = document.createElement("canvas");
     cvs.width = 44; cvs.height = 48;
     const c = cvs.getContext("2d");
-    // Body circle
     c.fillStyle = av.body;
     c.beginPath(); c.arc(22, 28, 16, 0, Math.PI * 2); c.fill();
     c.strokeStyle = "rgba(255,255,255,0.3)"; c.lineWidth = 1.5; c.stroke();
-    // Avatar emoji
     c.font = "18px sans-serif"; c.textAlign = "center"; c.textBaseline = "middle";
     c.fillText(av.emoji, 22, 20);
 
@@ -655,8 +853,13 @@ function buildGhostAvatarPicker() {
     label.className = "ghost-avatar-name";
     label.textContent = av.name;
 
+    const stats = document.createElement("div");
+    stats.className = "ghost-avatar-stats";
+    stats.innerHTML = buildAvatarStatHTML(av);
+
     btn.appendChild(cvs);
     btn.appendChild(label);
+    btn.appendChild(stats);
     btn.addEventListener("click", () => {
       _ghostAvatar = idx;
       window._ghostAvatarSelection = idx;
@@ -786,18 +989,20 @@ $("back-lobby-btn").addEventListener("click", () => {
 
 // ═══ SOCKET EVENTS ═══
 
-socket.on("roomCreated", ({ roomId, players, token }) => {
+socket.on("roomCreated", ({ roomId, players, token, game, ghostArea, ghostCount, sketchRounds, sketchDrawTime, sketchPreviewTime }) => {
   local.roomId = roomId;
   local.isHost = true;
-  local.gameType = $("game-select").value || "trash";
-  if (token) sessionStorage.setItem("rejoinToken", token); // C2: store for rejoin auth
-  showPregame(roomId, players, true);
+  if (token) sessionStorage.setItem("rejoinToken", token);
+  const config = { game: game || "trash", ghostArea, ghostCount, sketchRounds, sketchDrawTime, sketchPreviewTime };
+  showPregame(roomId, players, true, config);
+  setLobbyBusy(false);
 });
 
-socket.on("playerJoined", ({ players }) => {
-  updatePregamePlayers(players);
+socket.on("playerJoined", ({ players, game, ghostArea, ghostCount, sketchRounds, sketchDrawTime, sketchPreviewTime }) => {
+  const config = { game: game || local.gameType || "trash", ghostArea, ghostCount, sketchRounds, sketchDrawTime, sketchPreviewTime };
+  updatePregamePlayers(players, config.game);
   if (local.isHost) {
-    const minPlayers = local.gameType === "ghost" ? 1 : 2;
+    const minPlayers = config.game === "ghost" ? 1 : 2;
     const btn = $("pregame-start-btn");
     if (btn) {
       btn.disabled = players.length < minPlayers;
@@ -808,18 +1013,26 @@ socket.on("playerJoined", ({ players }) => {
   }
 });
 
-socket.on("joinedRoom", ({ roomId, game, players, token }) => {
+socket.on("joinedRoom", ({ roomId, game, players, token, ghostArea, ghostCount, sketchRounds, sketchDrawTime, sketchPreviewTime }) => {
   local.roomId = roomId;
   local.isHost = false;
-  if (token) sessionStorage.setItem("rejoinToken", token); // C2: store for rejoin auth
-  if (game) {
-    local.gameType = game;
-    $("game-select").value = game;
-    applyGameTheme(game);
-    updateLobbyForGame(game);
-    if (window._syncCarousel) window._syncCarousel(game);
+  if (token) sessionStorage.setItem("rejoinToken", token);
+  const config = { game: game || "trash", ghostArea, ghostCount, sketchRounds, sketchDrawTime, sketchPreviewTime };
+  showPregame(roomId, players || [], false, config);
+  setLobbyBusy(false);
+});
+
+socket.on("lobbyUpdate", ({ players, game, ghostArea, ghostCount, sketchRounds, sketchDrawTime, sketchPreviewTime }) => {
+  const config = { game: game || local.gameType || "trash", ghostArea, ghostCount, sketchRounds, sketchDrawTime, sketchPreviewTime };
+  applyPregameConfig(config, local.isHost || false);
+  updatePregamePlayers(players, config.game);
+  // Update start button
+  if (local.isHost) {
+    const minPlayers = config.game === "ghost" ? 1 : 2;
+    const nonEmpty = (players || []).filter(p => p.name && p.name !== "Waiting...").length;
+    const startBtn = $("pregame-start-btn");
+    if (startBtn) startBtn.disabled = nonEmpty < minPlayers;
   }
-  showPregame(roomId, players || [], false);
 });
 
 socket.on("joinError", ({ message }) => {

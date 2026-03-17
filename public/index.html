@@ -56,7 +56,10 @@
         <input id="player-name" class="text-input" type="text"
                placeholder="Your name" maxlength="20" autocomplete="off">
 
-        <button class="btn btn-primary btn-full" id="play-game-btn">🎮 Choose a Game</button>
+        <div class="lobby-main-actions">
+          <button class="btn btn-primary btn-full" id="create-lobby-main-btn">🏠 Create Lobby</button>
+          <button class="btn btn-secondary btn-full" id="play-game-btn">🎮 Play Solo</button>
+        </div>
 
         <div class="lobby-join-card">
           <p class="lobby-join-label">Join with a room code</p>
@@ -170,7 +173,7 @@
 
   <!-- ═══ PRE-GAME LOBBY ═══ -->
   <div id="pregame-screen" class="screen hidden">
-    <div class="lobby-inner">
+    <div class="lobby-inner pregame-inner">
       <div id="pregame-game-badge" class="pregame-game-badge">
         <span id="pregame-game-icon" class="pregame-game-icon">♠</span>
         <span id="pregame-game-name" class="pregame-game-name">Trash</span>
@@ -180,9 +183,83 @@
         <div class="room-code" id="pregame-code-text"></div>
         <button class="btn btn-secondary btn-share" id="pregame-share-btn">Share</button>
       </div>
-      <p class="label" style="margin-top:16px">Players</p>
+
+      <!-- Host: interactive game + options selector -->
+      <div id="pregame-host-settings" class="pregame-section hidden">
+        <p class="label">Game</p>
+        <div id="pregame-game-pills" class="pregame-game-pills">
+          <button class="pregame-game-pill active" data-game="trash">🃏 Trash</button>
+          <button class="pregame-game-pill" data-game="trash-eleven">🃏 Eleven</button>
+          <button class="pregame-game-pill" data-game="war">⚔️ War</button>
+          <button class="pregame-game-pill" data-game="solitaire">🃏 Solitaire</button>
+          <button class="pregame-game-pill" data-game="hockey">🐾 Hockey</button>
+          <button class="pregame-game-pill" data-game="sketch">✏️ Sketch</button>
+          <button class="pregame-game-pill" data-game="ghost">👻 Ghost</button>
+        </div>
+        <!-- Sketch options -->
+        <div id="pregame-sketch-options" class="pregame-options-group hidden">
+          <div class="toggle-row">
+            <span class="toggle-label">Rounds</span>
+            <select id="pregame-sketch-rounds" class="game-select">
+              <option value="1">1 Round</option>
+              <option value="3" selected>3 Rounds</option>
+              <option value="5">5 Rounds</option>
+            </select>
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-label">Preview</span>
+            <select id="pregame-sketch-preview" class="game-select">
+              <option value="1">1 second</option>
+              <option value="2">2 seconds</option>
+              <option value="3" selected>3 seconds</option>
+            </select>
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-label">Draw time</span>
+            <select id="pregame-sketch-draw" class="game-select">
+              <option value="10">10 seconds</option>
+              <option value="15" selected>15 seconds</option>
+              <option value="20">20 seconds</option>
+            </select>
+          </div>
+        </div>
+        <!-- Ghost options -->
+        <div id="pregame-ghost-options" class="pregame-options-group hidden">
+          <div class="game-option-row">
+            <span class="toggle-label">Location</span>
+            <div class="ghost-area-btns" id="pregame-ghost-area-btns">
+              <button class="ghost-area-btn pregame-area-btn active" data-area="random">🎲 Random</button>
+              <button class="ghost-area-btn pregame-area-btn" data-area="graveyard">⚰️ Graveyard</button>
+              <button class="ghost-area-btn pregame-area-btn" data-area="garden">🌿 Garden</button>
+              <button class="ghost-area-btn pregame-area-btn" data-area="house">🏚️ Old House</button>
+            </div>
+          </div>
+          <div class="game-option-row">
+            <span class="toggle-label">Ghosts</span>
+            <div class="ghost-count-btns" id="pregame-ghost-count-btns">
+              <button class="ghost-count-btn pregame-count-btn active" data-count="3">3</button>
+              <button class="ghost-count-btn pregame-count-btn" data-count="4">4</button>
+              <button class="ghost-count-btn pregame-count-btn" data-count="5">5</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Non-host: read-only settings display -->
+      <div id="pregame-guest-settings" class="hidden">
+        <p id="pregame-settings-text" class="pregame-settings-text"></p>
+      </div>
+
+      <p class="label" style="margin-top:4px">Players</p>
       <ul id="pregame-player-list" class="pregame-player-list"></ul>
       <p id="pregame-status" class="waiting-msg" style="margin-top:8px;text-align:center"></p>
+
+      <!-- Ghost avatar picker (shown for all players when ghost is selected) -->
+      <div id="pregame-avatar-section" class="hidden">
+        <p class="label">Your Avatar</p>
+        <div class="ghost-avatar-grid" id="pregame-avatar-grid"></div>
+      </div>
+
       <button id="pregame-start-btn" class="btn btn-primary btn-full hidden" style="margin-top:16px" disabled>Start Game</button>
       <button id="pregame-cancel-btn" class="btn btn-secondary btn-full" style="margin-top:8px">Leave Room</button>
     </div>

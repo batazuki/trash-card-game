@@ -13,12 +13,18 @@
 
   // ── Avatar definitions ──────────────────────────────────────────────────
   const AVATARS = [
-    { name:'Detective', body:'#2c3e6b', hat:'#5c3a1e', acc:'#c8a060' },
-    { name:'Witch',     body:'#3d1f5a', hat:'#1a0a2e', acc:'#c47ed0' },
-    { name:'Explorer',  body:'#b85e28', hat:'#7a3a10', acc:'#f5c842' },
-    { name:'Hunter',    body:'#1e4a52', hat:'#0d2830', acc:'#2ec4d6' },
-    { name:'Scientist', body:'#d8e8f0', hat:'#8aaabb', acc:'#5b9bd5' },
-    { name:'Kid',       body:'#cc2222', hat:'#cc2222', acc:'#f0f0f0' },
+    { name:'Pirate',   body:'#2a3a6a', hat:'#1a2040', acc:'#c8a820' },
+    { name:'Explorer', body:'#8b4a18', hat:'#6a3510', acc:'#e8c840' },
+    { name:'Police',   body:'#1a2a5a', hat:'#0a1530', acc:'#6090d8' },
+    { name:'Doctor',   body:'#c8e4ef', hat:'#8ab4c8', acc:'#4488b0' },
+  ];
+
+  // Per-avatar stat multipliers (must match GHOST_AVATAR_DEFS in game.js and AVATAR_STATS in ghost.js)
+  const AVATAR_STATS = [
+    { flashMult: 1.00, emfMult: 1.00, soundMult: 1.00 },  // 0: Pirate
+    { flashMult: 1.00, emfMult: 0.75, soundMult: 1.25 },  // 1: Explorer
+    { flashMult: 1.25, emfMult: 1.00, soundMult: 0.75 },  // 2: Police
+    { flashMult: 0.75, emfMult: 1.25, soundMult: 1.00 },  // 3: Doctor
   ];
 
   // ── Area definitions (obstacle arrays must be identical to ghost.js) ─────
@@ -217,7 +223,9 @@
     persist: [],      // always-on oscillator nodes
     emfOsc: null, emfGain: null,
     sndOsc: null, sndGain: null,
+    presOsc: null, presGain: null,  // always-on ghost proximity oscillator
     timers: [],       // music scheduling setTimeout handles
+    lastMoanSig: 0,   // track signal level for moan trigger
   };
 
   function gaInit(area) {
@@ -272,6 +280,13 @@
       sndO.start(); GA.persist.push(sndO);
       GA.sndOsc = sndO; GA.sndGain = sndG;
 
+      // Ghost presence oscillator — always on, scales with proximity regardless of active tool
+      const presO = ctx.createOscillator(), presG = ctx.createGain();
+      presO.type = 'sine'; presO.frequency.value = 38; presG.gain.value = 0;
+      presO.connect(presG); presG.connect(master);
+      presO.start(); GA.persist.push(presO);
+      GA.presOsc = presO; GA.presGain = presG;
+
       // Hook so game.js toggleMusic() can mute/unmute ghost audio too
       window._ghostAudioSetMute = muted => {
         if (GA.master) GA.master.gain.setTargetAtTime(muted ? 0 : 0.38, GA.ctx.currentTime, 0.12);
@@ -287,7 +302,8 @@
   function gaStop() {
     GA.timers.forEach(clearTimeout); GA.timers = [];
     GA.persist.forEach(o => { try { o.stop(); } catch(_) {} }); GA.persist = [];
-    GA.emfOsc = GA.emfGain = GA.sndOsc = GA.sndGain = null;
+    GA.emfOsc = GA.emfGain = GA.sndOsc = GA.sndGain = GA.presOsc = GA.presGain = null;
+    GA.lastMoanSig = 0;
     if (GA.ctx) { GA.ctx.close().catch(() => {}); GA.ctx = null; GA.master = null; GA.delay = null; }
     window._ghostAudioSetMute = null;
   }
@@ -363,23 +379,55 @@
       Math.max(50, (t + dt - GA.ctx.currentTime - 0.4) * 1000)));
   }
 
-  // Called every frame — drives EMF/sound signal oscillators
+  // Ghost moan — triggered when signal crosses threshold
+  function gaGhostMoan() {
+    if (!GA.ctx) return;
+    const t = GA.ctx.currentTime;
+    // Low-pitched wavering moan
+    const o = GA.ctx.createOscillator(), g = GA.ctx.createGain();
+    const lfo = GA.ctx.createOscillator(), lg = GA.ctx.createGain();
+    o.type = 'sine'; o.frequency.value = 120;
+    lfo.type = 'sine'; lfo.frequency.value = 3.5; lg.gain.value = 18;
+    lfo.connect(lg); lg.connect(o.frequency);
+    o.connect(g); g.connect(GA.delay || GA.master);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.22, t + 0.4);
+    g.gain.setValueAtTime(0.22, t + 0.9);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 2.8);
+    lfo.start(t); o.start(t);
+    lfo.stop(t + 2.9); o.stop(t + 2.9);
+  }
+
+  // Called every frame — drives EMF/sound signal oscillators + ambient ghost presence
   function gaSignals(signals, tool) {
     if (!GA.ctx || !GA.emfGain || !GA.sndGain) return;
     const ct = GA.ctx.currentTime;
+
+    // Tool-gated EMF / sound instruments (higher volumes for audibility)
     if (tool === 'emf') {
       const sig = (signals.emf || 0) / 100;
-      GA.emfGain.gain.setTargetAtTime(sig * 0.11, ct, 0.07);
-      GA.emfOsc.frequency.setTargetAtTime(80 + sig * 180, ct, 0.07);
+      GA.emfGain.gain.setTargetAtTime(sig * 0.22, ct, 0.07);
+      GA.emfOsc.frequency.setTargetAtTime(80 + sig * 200, ct, 0.07);
       GA.sndGain.gain.setTargetAtTime(0, ct, 0.07);
     } else if (tool === 'sound') {
       const sig = (signals.sound || 0) / 100;
-      GA.sndGain.gain.setTargetAtTime(sig * 0.08, ct, 0.10);
-      GA.sndOsc.frequency.setTargetAtTime(40 + sig * 75, ct, 0.10);
+      GA.sndGain.gain.setTargetAtTime(sig * 0.18, ct, 0.10);
+      GA.sndOsc.frequency.setTargetAtTime(40 + sig * 80, ct, 0.10);
       GA.emfGain.gain.setTargetAtTime(0, ct, 0.07);
     } else {
       GA.emfGain.gain.setTargetAtTime(0, ct, 0.06);
       GA.sndGain.gain.setTargetAtTime(0, ct, 0.08);
+    }
+
+    // Always-on ghost proximity hum (strongest signal regardless of tool)
+    if (GA.presGain) {
+      const proxSig = Math.max((signals.emf || 0), (signals.sound || 0)) / 100;
+      GA.presGain.gain.setTargetAtTime(proxSig * 0.14, ct, 0.15);
+      if (GA.presOsc) GA.presOsc.frequency.setTargetAtTime(30 + proxSig * 28, ct, 0.15);
+
+      // Trigger moan when signal rises above 0.55 and was previously below 0.4
+      if (proxSig > 0.55 && GA.lastMoanSig < 0.4) gaGhostMoan();
+      GA.lastMoanSig = proxSig;
     }
   }
 
@@ -629,11 +677,12 @@
     S.cam.x = Math.max(0, Math.min(area.areaWidth  - cw, S.cam.x));
     S.cam.y = Math.max(0, Math.min(area.areaHeight - ch, S.cam.y));
 
-    // Update fog-of-war grid
+    // Update fog-of-war grid (reveal radii scaled by avatar stats)
     if (fogGrid) {
-      const emfReveal = S.hasEMFUpgrade ? 900 : 450;
-      const revR = S.activeTool === 'flashlight' ? FLASH_RANGE :
-                   S.activeTool === 'emf' ? emfReveal : 350;
+      const avSt = AVATAR_STATS[S.me.avatar || 0] || AVATAR_STATS[0];
+      const emfReveal = (S.hasEMFUpgrade ? 900 : 450) * avSt.emfMult;
+      const revR = S.activeTool === 'flashlight' ? FLASH_RANGE * avSt.flashMult :
+                   S.activeTool === 'emf' ? emfReveal : 350 * avSt.soundMult;
       const markCircle = (wx, wy, r) => {
         const gcx = Math.floor(wx / FOG_CELL), gcy = Math.floor(wy / FOG_CELL);
         const gcr = Math.ceil(r / FOG_CELL) + 1;
@@ -692,76 +741,69 @@
 
   function drawAvatarHat(ctx, idx, av, dir) {
     switch (idx) {
-      case 0: { // Detective - fedora
+      case 0: { // Pirate - tricorn hat
         ctx.fillStyle = av.hat;
-        ctx.beginPath(); ctx.ellipse(0, -3, 9, 2.5, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(0, -7, 5.5, Math.PI, Math.PI * 2); ctx.fill();
-        ctx.fillRect(-5.5, -7, 11, 4.5);
-        ctx.strokeStyle = av.acc; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.moveTo(-5.5, -5); ctx.lineTo(5.5, -5); ctx.stroke();
-        break;
-      }
-      case 1: { // Witch - tall pointy hat
-        ctx.fillStyle = av.hat;
-        ctx.beginPath(); ctx.ellipse(0, -3.5, 8.5, 2.5, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(-5, -4); ctx.lineTo(1, -18); ctx.lineTo(5.5, -4); ctx.closePath(); ctx.fill();
-        ctx.fillStyle = av.acc; ctx.fillRect(-5, -7, 10, 1.8);
-        // Star on cone
-        ctx.fillStyle = '#ffe066'; ctx.save(); ctx.translate(1, -13);
+        // Brim
+        ctx.beginPath(); ctx.ellipse(0, -3, 10, 2.8, 0, 0, Math.PI * 2); ctx.fill();
+        // Crown
         ctx.beginPath();
-        for (let i = 0; i < 5; i++) {
-          const a1 = (i * 2 / 5 - 0.5) * Math.PI;
-          const a2 = ((i * 2 + 1) / 5 - 0.5) * Math.PI;
-          if (i === 0) ctx.moveTo(Math.cos(a1) * 2.8, Math.sin(a1) * 2.8);
-          else ctx.lineTo(Math.cos(a1) * 2.8, Math.sin(a1) * 2.8);
-          ctx.lineTo(Math.cos(a2) * 1.1, Math.sin(a2) * 1.1);
-        }
-        ctx.closePath(); ctx.fill(); ctx.restore();
+        ctx.moveTo(-6, -4); ctx.lineTo(-7, -12); ctx.lineTo(0, -15); ctx.lineTo(7, -12); ctx.lineTo(6, -4);
+        ctx.closePath(); ctx.fill();
+        // Gold band
+        ctx.strokeStyle = av.acc; ctx.lineWidth = 1.8;
+        ctx.beginPath(); ctx.moveTo(-6, -7); ctx.lineTo(6, -7); ctx.stroke();
+        // Skull & crossbones (tiny)
+        ctx.fillStyle = av.acc; ctx.font = 'bold 7px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('☠', 0, -9.5);
         break;
       }
-      case 2: { // Explorer - wide safari hat
+      case 1: { // Explorer - pith helmet
         ctx.fillStyle = av.hat;
-        ctx.beginPath(); ctx.ellipse(0, -3.5, 11, 3, 0, 0, Math.PI * 2); ctx.fill();
+        // Wide brim
+        ctx.beginPath(); ctx.ellipse(0, -3, 11, 3.2, 0, 0, Math.PI * 2); ctx.fill();
+        // Dome crown
+        ctx.beginPath(); ctx.arc(0, -7, 7, Math.PI, Math.PI * 2); ctx.fill();
+        ctx.fillRect(-7, -7, 14, 4);
+        // Center ridge line
+        ctx.strokeStyle = av.acc; ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.moveTo(0, -14); ctx.lineTo(0, -3); ctx.stroke();
+        // Side vent dots
         ctx.fillStyle = av.acc;
-        ctx.beginPath(); ctx.ellipse(0, -6.5, 7, 4, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = av.hat; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.arc(0, -5.5, 7, Math.PI * 0.1, Math.PI * 0.9); ctx.stroke();
+        ctx.beginPath(); ctx.arc(-4, -8, 1, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(4, -8, 1, 0, Math.PI * 2); ctx.fill();
         break;
       }
-      case 3: { // Ghost Hunter - tactical helmet
+      case 2: { // Police - peaked cap
         ctx.fillStyle = av.hat;
-        ctx.beginPath(); ctx.arc(0, -5.5, 7, Math.PI, Math.PI * 2); ctx.fill();
-        ctx.fillRect(-7, -5.5, 14, 2.5);
-        ctx.fillStyle = av.acc; ctx.globalAlpha = 0.75;
-        ctx.beginPath(); ctx.ellipse(0, -6.5, 5, 2.5, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.globalAlpha = 1;
-        break;
-      }
-      case 4: { // Scientist - goggles + messy hair
-        ctx.fillStyle = '#3a2010';
-        ctx.beginPath(); ctx.arc(-3, -6.5, 3.5, Math.PI * 1.1, Math.PI * 1.9); ctx.fill();
-        ctx.beginPath(); ctx.arc(3, -6.5, 3.5, Math.PI * 1.1, Math.PI * 1.9); ctx.fill();
-        ctx.beginPath(); ctx.arc(0, -7.5, 3.2, Math.PI, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = av.hat; ctx.lineWidth = 2;
-        ctx.fillStyle = av.acc; ctx.globalAlpha = 0.6;
-        ctx.beginPath(); ctx.arc(-2.5, -1.5, 3, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(2.5, -1.5, 3, 0, Math.PI * 2); ctx.fill();
-        ctx.globalAlpha = 1;
-        ctx.beginPath(); ctx.arc(-2.5, -1.5, 3, 0, Math.PI * 2); ctx.stroke();
-        ctx.beginPath(); ctx.arc(2.5, -1.5, 3, 0, Math.PI * 2); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(-8, -1.5); ctx.lineTo(-5.5, -1.5); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(5.5, -1.5); ctx.lineTo(8, -1.5); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(-0.5, -1.5); ctx.lineTo(0.5, -1.5); ctx.stroke();
-        break;
-      }
-      case 5: { // Kid - baseball cap
-        const billDir = (dir === 'left') ? -1 : 1;
-        ctx.fillStyle = av.hat;
-        ctx.beginPath(); ctx.arc(0, -6, 7, Math.PI, Math.PI * 2); ctx.fill();
-        ctx.fillRect(-7, -6, 14, 3);
-        ctx.beginPath(); ctx.ellipse(billDir * 6, -4, 5, 2, 0, 0, Math.PI * 2); ctx.fill();
+        // Crown
+        ctx.beginPath(); ctx.arc(0, -7, 6.5, Math.PI, Math.PI * 2); ctx.fill();
+        ctx.fillRect(-6.5, -7, 13, 4);
+        // Peak brim (direction aware)
+        const peakDir = (dir === 'left') ? -1 : 1;
+        ctx.beginPath(); ctx.ellipse(peakDir * 5.5, -3.5, 5.5, 2, 0, 0, Math.PI * 2); ctx.fill();
+        // Hat band
         ctx.fillStyle = av.acc;
-        ctx.beginPath(); ctx.arc(0, -8.5, 1.5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillRect(-6.5, -5, 13, 1.8);
+        // Badge
+        ctx.fillStyle = '#ffe040';
+        ctx.beginPath(); ctx.arc(0, -9, 2.2, 0, Math.PI * 2); ctx.fill();
+        break;
+      }
+      case 3: { // Doctor - surgical cap + headband
+        ctx.fillStyle = av.hat;
+        // Soft cap dome
+        ctx.beginPath(); ctx.arc(0, -7, 7, Math.PI, Math.PI * 2); ctx.fill();
+        ctx.fillRect(-7, -7, 14, 5);
+        // Headband (contrasting color)
+        ctx.fillStyle = av.acc;
+        ctx.fillRect(-7, -3, 14, 2.5);
+        // Cap fold line
+        ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(-7, -7); ctx.lineTo(7, -7); ctx.stroke();
+        // Tiny red cross emblem
+        ctx.fillStyle = '#e83040';
+        ctx.fillRect(-1, -10, 2, 6);
+        ctx.fillRect(-3, -8, 6, 2);
         break;
       }
     }
@@ -1259,16 +1301,17 @@
 
     dc.globalCompositeOperation = 'destination-out';
 
-    // Flashlight cone
+    // Flashlight cone (range scaled by avatar flashMult)
     if (S.activeTool === 'flashlight') {
-      const grad = dc.createRadialGradient(sx, sy, 0, sx, sy, FLASH_RANGE);
+      const avFlash = FLASH_RANGE * (AVATAR_STATS[S.me.avatar || 0] || AVATAR_STATS[0]).flashMult;
+      const grad = dc.createRadialGradient(sx, sy, 0, sx, sy, avFlash);
       grad.addColorStop(0,   'rgba(255,255,255,1)');
       grad.addColorStop(0.5, 'rgba(255,255,255,0.9)');
       grad.addColorStop(1,   'rgba(255,255,255,0)');
       dc.fillStyle = grad;
       dc.beginPath();
       dc.moveTo(sx, sy);
-      dc.arc(sx, sy, FLASH_RANGE, S.me.facing - FLASH_ANGLE, S.me.facing + FLASH_ANGLE);
+      dc.arc(sx, sy, avFlash, S.me.facing - FLASH_ANGLE, S.me.facing + FLASH_ANGLE);
       dc.closePath();
       dc.fill();
     }
