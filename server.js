@@ -163,7 +163,7 @@ io.on("connection", socket => {
   ghostGame.registerEvents(socket, rooms);
 
   // ── Create Room ──
-  socket.on("createRoom", ({ playerName, game, rounds, drawTime, previewTime, ghostArea }) => {
+  socket.on("createRoom", ({ playerName, game, rounds, drawTime, previewTime, ghostArea, ghostCount }) => {
     let roomId;
     try { roomId = generateRoomId(); }
     catch(e) { socket.emit("joinError", { message: "Server is full, try again later." }); return; }
@@ -188,6 +188,7 @@ io.on("connection", socket => {
       sketchDrawTime:    isSketch ? Math.min(20, Math.max(10, parseInt(drawTime)    || 15)) : undefined,
       sketchPreviewTime: isSketch ? Math.min(3,  Math.max(1,  parseInt(previewTime) || 3))  : undefined,
       ghostArea:         safeGame === 'ghost' ? (ghostArea || null) : undefined,
+      ghostCount:        safeGame === 'ghost' ? (parseInt(ghostCount) || 3) : undefined,
       players: [creator],
       deck: [],
       discardPile: [],
@@ -247,7 +248,7 @@ io.on("connection", socket => {
   });
 
   // ── Play vs AI (or solo for Solitaire) ──
-  socket.on("playVsAI", ({ playerName, game, ghostArea }) => {
+  socket.on("playVsAI", ({ playerName, game, ghostArea, ghostCount }) => {
     if (game === "sketch") {
       socket.emit("joinError", { message: "Sketch It requires two real players. Create a room and share the code!" });
       return;
@@ -269,7 +270,8 @@ io.on("connection", socket => {
       roomId,
       phase: "lobby",
       game: safeGame,
-      ghostArea: safeGame === 'ghost' ? (ghostArea || null) : undefined,
+      ghostArea:  safeGame === 'ghost' ? (ghostArea || null) : undefined,
+      ghostCount: safeGame === 'ghost' ? (parseInt(ghostCount) || 3) : undefined,
       players,
       deck: [],
       discardPile: [],
@@ -371,6 +373,14 @@ io.on("connection", socket => {
     // M2: reset rematch votes so a pre-existing "Rematch" click doesn't auto-start the new game
     state.players.forEach(p => { p.wantsRematch = false; });
     io.to(roomId).emit("gameChanged", { game });
+  });
+
+  // Ghost: update area/count config (used before a rematch)
+  socket.on("ghost:set_config", ({ roomId, ghostArea, ghostCount }) => {
+    const state = rooms.get(roomId);
+    if (!state || state.phase !== "ended") return;
+    if (ghostArea !== undefined) state.ghostArea = ghostArea || null;
+    if (ghostCount !== undefined) state.ghostCount = parseInt(ghostCount) || 3;
   });
 
   // ── Reaction Emoji ──

@@ -134,6 +134,15 @@
           </div>
         </div>
 
+        <div id="ghost-count-row" class="game-option-row hidden">
+          <span class="toggle-label">Ghosts</span>
+          <div class="ghost-count-btns">
+            <button class="ghost-count-btn active" data-count="3">3</button>
+            <button class="ghost-count-btn" data-count="4">4</button>
+            <button class="ghost-count-btn" data-count="5">5</button>
+          </div>
+        </div>
+
         <div id="ghost-avatar-row" class="game-option-row hidden">
           <span class="toggle-label">Avatar</span>
           <div class="ghost-avatar-grid" id="ghost-avatar-grid">
@@ -249,6 +258,26 @@
           <option value="ghost">Ghost Detective</option>
         </select>
       </label>
+
+      <div id="ghost-rematch-config" class="hidden">
+        <div class="ghost-rematch-section">
+          <span class="ghost-rematch-label">Location</span>
+          <div class="ghost-area-btns">
+            <button class="ghost-area-btn ghost-rematch-area active" data-area="random">🎲 Random</button>
+            <button class="ghost-area-btn ghost-rematch-area" data-area="graveyard">⚰️ Graveyard</button>
+            <button class="ghost-area-btn ghost-rematch-area" data-area="garden">🌿 Garden</button>
+            <button class="ghost-area-btn ghost-rematch-area" data-area="house">🏚️ Old House</button>
+          </div>
+        </div>
+        <div class="ghost-rematch-section">
+          <span class="ghost-rematch-label">Ghosts</span>
+          <div class="ghost-count-btns">
+            <button class="ghost-count-btn ghost-rematch-count active" data-count="3">3</button>
+            <button class="ghost-count-btn ghost-rematch-count" data-count="4">4</button>
+            <button class="ghost-count-btn ghost-rematch-count" data-count="5">5</button>
+          </div>
+        </div>
+      </div>
 
       <div class="end-buttons">
         <button class="btn btn-primary btn-end-primary" id="play-again-btn">Play Again</button>
@@ -426,7 +455,7 @@
       <div id="help-ghost" class="modal-section">
         <div class="modal-rule">
           <strong>Goal</strong>
-          Find and identify all 3 ghosts haunting the area by spelling their name on the Ouija board.
+          Find and identify all the ghosts haunting the area by spelling their name on the Ouija board. The host can choose 3, 4, or 5 ghosts when starting.
         </div>
         <div class="modal-rule">
           <strong>Movement</strong>

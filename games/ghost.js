@@ -415,10 +415,10 @@ module.exports = function(io, helpers) {
   }
 
   // ─── Spawn ghosts ─────────────────────────────────────────────────────────
-  function spawnGhosts(areaData) {
+  function spawnGhosts(areaData, count) {
     const ghosts = [];
     const usedPersonalities = [];
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < count; i++) {
       let personality;
       do {
         personality = PERSONALITIES[Math.floor(Math.random() * PERSONALITIES.length)];
@@ -629,7 +629,8 @@ module.exports = function(io, helpers) {
     const areaData = AREAS[areaKey];
 
     // Spawn ghosts
-    const ghosts = spawnGhosts(areaData);
+    const ghostCount = (state.ghostCount >= 3 && state.ghostCount <= 5) ? state.ghostCount : 3;
+    const ghosts = spawnGhosts(areaData, ghostCount);
 
     // Generate POIs and pickup positions
     const pois = generatePOIs(areaKey, areaData);
@@ -643,7 +644,7 @@ module.exports = function(io, helpers) {
       ouijaTimers:    {},
       tickRef:        null,
       identifiedCount: 0,
-      totalGhosts:    3,
+      totalGhosts:    ghostCount,
       pois,
       keyPos,
       powerupPos,
@@ -674,7 +675,7 @@ module.exports = function(io, helpers) {
           areaHeight:  areaData.areaHeight,
           obstacles:   areaData.obstacles,
           playerStart: areaData.playerStart,
-          ghostCount:  3,
+          ghostCount:  ghostCount,
           bgColor:     areaData.bgColor,
           label:       areaData.label,
           pois,

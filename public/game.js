@@ -577,6 +577,8 @@ function updateLobbyForGame(game) {
   });
   const ghostAreaRow = document.getElementById("ghost-area-row");
   if (ghostAreaRow) ghostAreaRow.classList.toggle("hidden", !isGhost);
+  const ghostCountRow = document.getElementById("ghost-count-row");
+  if (ghostCountRow) ghostCountRow.classList.toggle("hidden", !isGhost);
   const ghostAvatarRow = document.getElementById("ghost-avatar-row");
   if (ghostAvatarRow) {
     ghostAvatarRow.classList.toggle("hidden", !isGhost);
@@ -604,17 +606,28 @@ $("back-to-main-btn").addEventListener("click", () => {
   $("lobby-main-view").classList.remove("hidden");
 });
 
-// Ghost area selection buttons
-document.querySelectorAll(".ghost-area-btn").forEach(btn => {
+// Ghost area selection buttons (lobby)
+document.querySelectorAll("#ghost-area-row .ghost-area-btn").forEach(btn => {
   btn.addEventListener("click", () => {
-    document.querySelectorAll(".ghost-area-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll("#ghost-area-row .ghost-area-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+  });
+});
+// Ghost count selection buttons (lobby)
+document.querySelectorAll("#ghost-count-row .ghost-count-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("#ghost-count-row .ghost-count-btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
   });
 });
 function getSelectedGhostArea() {
-  const active = document.querySelector(".ghost-area-btn.active");
+  const active = document.querySelector("#ghost-area-row .ghost-area-btn.active");
   const area = active ? active.dataset.area : "random";
   return area === "random" ? null : area;
+}
+function getSelectedGhostCount() {
+  const active = document.querySelector("#ghost-count-row .ghost-count-btn.active");
+  return active ? parseInt(active.dataset.count) || 3 : 3;
 }
 
 // ── Ghost avatar picker ────────────────────────────────────────────────────
@@ -665,7 +678,10 @@ $("vs-ai-btn").addEventListener("click", () => {
   local.vsAI = true;
   setLobbyBusy(true);
   const payload = { playerName: name, game: $("game-select").value };
-  if ($("game-select").value === "ghost") payload.ghostArea = getSelectedGhostArea();
+  if ($("game-select").value === "ghost") {
+    payload.ghostArea  = getSelectedGhostArea();
+    payload.ghostCount = getSelectedGhostCount();
+  }
   socket.emit("playVsAI", payload);
 });
 
@@ -679,7 +695,10 @@ $("create-room-btn").addEventListener("click", () => {
     roomPayload.drawTime = parseInt($("sketch-draw-time").value) || 15;
     roomPayload.previewTime = parseInt($("sketch-preview-time").value) || 3;
   }
-  if (selectedGame === "ghost") roomPayload.ghostArea = getSelectedGhostArea();
+  if (selectedGame === "ghost") {
+    roomPayload.ghostArea  = getSelectedGhostArea();
+    roomPayload.ghostCount = getSelectedGhostCount();
+  }
   setLobbyBusy(true);
   socket.emit("createRoom", roomPayload);
 });
@@ -698,8 +717,38 @@ $("join-code").addEventListener("keydown", e => {
 });
 
 // ═══ END SCREEN HANDLERS ═══
+// Ghost rematch config buttons
+document.querySelectorAll(".ghost-rematch-area").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".ghost-rematch-area").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+  });
+});
+document.querySelectorAll(".ghost-rematch-count").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".ghost-rematch-count").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+  });
+});
+function getRematchGhostArea() {
+  const active = document.querySelector(".ghost-rematch-area.active");
+  const area = active ? active.dataset.area : "random";
+  return area === "random" ? null : area;
+}
+function getRematchGhostCount() {
+  const active = document.querySelector(".ghost-rematch-count.active");
+  return active ? parseInt(active.dataset.count) || 3 : 3;
+}
+
 $("play-again-btn").addEventListener("click", () => {
   if (local.roomId) {
+    if (local.gameType === "ghost") {
+      socket.emit("ghost:set_config", {
+        roomId: local.roomId,
+        ghostArea:  getRematchGhostArea(),
+        ghostCount: getRematchGhostCount(),
+      });
+    }
     socket.emit("requestRematch", { roomId: local.roomId });
     $("play-again-btn").disabled = true;
     $("play-again-btn").textContent = "Waiting...";
@@ -729,6 +778,7 @@ $("back-lobby-btn").addEventListener("click", () => {
   $("score-display").classList.add("hidden");
   $("shared-reaction-bar").classList.add("hidden");
   $("end-game-switch").classList.add("hidden");
+  $("ghost-rematch-config").classList.add("hidden");
   if (window._syncCarousel) window._syncCarousel(savedGame);
   setLobbyBusy(false);
   showLobbyScreen();
@@ -783,6 +833,7 @@ socket.on("gameStart", (data) => {
   local.myPlayerIndex = myPlayerIndex;
   local.gameType = game || "trash";
   local.vsAI = players.some(p => p.isAI);
+  if (game === "ghost" && data.ghost) local.ghostTotalCount = data.ghost.ghostCount || 3;
 
   const me = players[myPlayerIndex];
   const opp = players.length > 1 ? players[1 - myPlayerIndex] : null;
@@ -838,11 +889,13 @@ socket.on("gameOver", ({ winnerIndex, winnerName, scores, gamesPlayed, playerNam
     solitaire: "Congratulations!",
     hockey: didWin ? "Purrfect victory!" : "The yarn got away...",
     sketch: didWin ? "Your drawings were more recognizable!" : "Keep practicing your shapes!",
-    ghost: "All 3 ghosts have been identified! The haunting is over.",
+    ghost: `All ${local.ghostTotalCount || 3} ghosts have been identified! The haunting is over.`,
   };
   $("result-sub").textContent = subTexts[local.gameType] || (didWin ? "Nice job!" : "Better luck next time.");
   $("play-again-btn").disabled = false;
   $("play-again-btn").textContent = (local.vsAI || local.gameType === "solitaire") ? "Play Again" : "Rematch";
+  const ghostRematchCfg = $("ghost-rematch-config");
+  if (ghostRematchCfg) ghostRematchCfg.classList.toggle("hidden", local.gameType !== "ghost");
   $("see-cards-btn").classList.toggle("hidden", !local.gameType.startsWith("trash"));
   // Hide hockey from physics cleanup (already handled by clearInterval on server)
 
@@ -896,6 +949,7 @@ socket.on("opponentLeft", () => {
   $("play-again-btn").disabled = false;
   $("play-again-btn").textContent = "Play Again";
   $("end-game-switch").classList.add("hidden");
+  $("ghost-rematch-config").classList.add("hidden");
   $("result-sub").textContent = "Opponent left the room.";
 });
 
