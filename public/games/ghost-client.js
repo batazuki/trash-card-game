@@ -179,6 +179,166 @@
     return o;
   }
 
+  function buildHotelObs() {
+    const o = [];
+    // Outer walls
+    o.push(rect(0,0,80,1,'stone'), rect(0,79,80,1,'stone'));
+    o.push(rect(0,0,1,80,'stone'), rect(79,0,1,80,'stone'));
+    // Interior side walls separating lobby back office from main lobby
+    o.push(rect(20,1,1,13,'stone'), rect(59,1,1,13,'stone'));
+    // Back office wall
+    o.push(rect(21,6,38,1,'stone'));
+    // Back office furniture
+    o.push(rect(22,2,7,3,'table'), rect(50,2,7,3,'table'));
+    o.push(rect(31,2,1,4,'shelf'), rect(47,2,1,4,'shelf'));
+    // Reception counter
+    o.push(rect(31,8,18,3,'counter'));
+    // Grand entrance columns
+    o.push(rect(7,5,2,4,'pillar'), rect(13,5,2,4,'pillar'));
+    o.push(rect(63,5,2,4,'pillar'), rect(69,5,2,4,'pillar'));
+    // Lobby sofas
+    o.push(rect(3,7,5,3,'sofa'), rect(72,7,5,3,'sofa'));
+    // Coffee tables
+    o.push(rect(4,10,3,2,'table'), rect(73,10,3,2,'table'));
+    // Staircase banks
+    o.push(rect(38,8,4,5,'stairs'), rect(44,8,4,5,'stairs'));
+    // Elevators
+    o.push(rect(28,8,4,5,'elevator'), rect(49,8,4,5,'elevator'));
+    // Lobby candelabras (non-collidable)
+    o.push(rect(22,8,1,1,'candle'), rect(57,8,1,1,'candle'));
+    // Lobby divider wall with passages
+    o.push(rect(1,14,19,1,'stone'));   // left solid
+    // passage x=20-27
+    o.push(rect(28,14,24,1,'stone'));  // center solid
+    // passage x=53-59
+    o.push(rect(60,14,19,1,'stone')); // right solid
+
+    // ── WING A — left rooms (x=1-19, y=15-58) ─────────────────────────────
+    o.push(rect(19,15,1,44,'stone'));  // right wall
+    // Room 101 (y=15-20)
+    o.push(rect(1,21,18,1,'stone'));
+    o.push(rect(2,16,7,3,'bed')); o.push(rect(14,16,3,3,'mirror')); o.push(rect(14,19,2,1,'table'));
+    // Room 102 (y=22-27)
+    o.push(rect(1,28,18,1,'stone'));
+    o.push(rect(2,23,7,3,'bed')); o.push(rect(14,23,3,3,'mirror')); o.push(rect(14,26,2,1,'table')); o.push(rect(11,27,2,1,'chair'));
+    // Room 103 (y=29-34)
+    o.push(rect(1,35,18,1,'stone'));
+    o.push(rect(2,30,7,3,'bed')); o.push(rect(14,30,3,3,'mirror')); o.push(rect(14,33,2,1,'table'));
+    // Room 104 (y=36-41)
+    o.push(rect(1,42,18,1,'stone'));
+    o.push(rect(2,37,7,3,'bed')); o.push(rect(14,37,3,3,'mirror')); o.push(rect(14,40,2,1,'table')); o.push(rect(11,41,2,1,'chair'));
+    // Room 105 (y=43-48)
+    o.push(rect(1,49,18,1,'stone'));
+    o.push(rect(2,44,7,3,'bed')); o.push(rect(14,44,3,3,'mirror')); o.push(rect(14,47,2,1,'table'));
+    // Room 106 (y=50-55)
+    o.push(rect(1,56,18,1,'stone'));
+    o.push(rect(2,51,7,3,'bed')); o.push(rect(14,51,3,3,'mirror')); o.push(rect(14,54,2,1,'table')); o.push(rect(11,55,2,1,'chair'));
+
+    // ── WING B — right rooms (x=61-79, y=15-58) ───────────────────────────
+    o.push(rect(60,15,1,44,'stone')); // left wall
+    // Room 201 (y=15-20)
+    o.push(rect(61,21,18,1,'stone'));
+    o.push(rect(70,16,7,3,'bed')); o.push(rect(62,16,3,3,'mirror')); o.push(rect(62,19,2,1,'table'));
+    // Room 202 (y=22-27)
+    o.push(rect(61,28,18,1,'stone'));
+    o.push(rect(70,23,7,3,'bed')); o.push(rect(62,23,3,3,'mirror')); o.push(rect(62,26,2,1,'table')); o.push(rect(66,27,2,1,'chair'));
+    // Room 203 (y=29-34)
+    o.push(rect(61,35,18,1,'stone'));
+    o.push(rect(70,30,7,3,'bed')); o.push(rect(62,30,3,3,'mirror')); o.push(rect(62,33,2,1,'table'));
+    // Room 204 (y=36-41)
+    o.push(rect(61,42,18,1,'stone'));
+    o.push(rect(70,37,7,3,'bed')); o.push(rect(62,37,3,3,'mirror')); o.push(rect(62,40,2,1,'table')); o.push(rect(66,41,2,1,'chair'));
+    // Room 205 (y=43-48)
+    o.push(rect(61,49,18,1,'stone'));
+    o.push(rect(70,44,7,3,'bed')); o.push(rect(62,44,3,3,'mirror')); o.push(rect(62,47,2,1,'table'));
+    // Room 206 (y=50-55)
+    o.push(rect(61,56,18,1,'stone'));
+    o.push(rect(70,51,7,3,'bed')); o.push(rect(62,51,3,3,'mirror')); o.push(rect(62,54,2,1,'table')); o.push(rect(66,55,2,1,'chair'));
+
+    // ── CENTRAL BALLROOM (x=20-59, y=15-37) ───────────────────────────────
+    o.push(rect(20,37,40,1,'stone'));    // ballroom bottom wall
+    // Corner pillars
+    o.push(rect(21,16,2,3,'pillar'), rect(56,16,2,3,'pillar'));
+    o.push(rect(21,33,2,3,'pillar'), rect(56,33,2,3,'pillar'));
+    // Ballroom tables (4 cols × 3 rows)
+    o.push(rect(24,18,3,3,'table'), rect(33,18,3,3,'table'), rect(42,18,3,3,'table'), rect(51,18,3,3,'table'));
+    o.push(rect(24,25,3,3,'table'), rect(33,25,3,3,'table'), rect(42,25,3,3,'table'), rect(51,25,3,3,'table'));
+    o.push(rect(24,32,3,3,'table'), rect(33,32,3,3,'table'), rect(42,32,3,3,'table'), rect(51,32,3,3,'table'));
+    // Chairs (representative)
+    o.push(rect(23,19,1,1,'chair'), rect(27,19,1,1,'chair'), rect(25,17,1,1,'chair'), rect(25,21,1,1,'chair'));
+    o.push(rect(32,19,1,1,'chair'), rect(36,19,1,1,'chair'), rect(34,17,1,1,'chair'), rect(34,21,1,1,'chair'));
+    o.push(rect(41,19,1,1,'chair'), rect(45,19,1,1,'chair'), rect(43,17,1,1,'chair'), rect(43,21,1,1,'chair'));
+    o.push(rect(50,19,1,1,'chair'), rect(54,19,1,1,'chair'), rect(52,17,1,1,'chair'), rect(52,21,1,1,'chair'));
+    o.push(rect(23,26,1,1,'chair'), rect(27,26,1,1,'chair'), rect(25,24,1,1,'chair'), rect(25,28,1,1,'chair'));
+    o.push(rect(32,26,1,1,'chair'), rect(36,26,1,1,'chair'), rect(34,24,1,1,'chair'), rect(34,28,1,1,'chair'));
+    o.push(rect(41,26,1,1,'chair'), rect(45,26,1,1,'chair'), rect(43,24,1,1,'chair'), rect(43,28,1,1,'chair'));
+    o.push(rect(50,26,1,1,'chair'), rect(54,26,1,1,'chair'), rect(52,24,1,1,'chair'), rect(52,28,1,1,'chair'));
+    // Ballroom chandeliers (non-collidable candles mark positions)
+    o.push(rect(39,16,1,1,'candle'), rect(39,24,1,1,'candle'), rect(39,32,1,1,'candle'));
+
+    // ── POOL ROOM (x=20-59, y=38-59) ──────────────────────────────────────
+    o.push(rect(20,59,40,1,'stone'));   // pool room bottom wall
+    // Swimming pool (non-collidable)
+    o.push(rect(27,40,26,16,'pool'));
+    // Lounge chairs
+    o.push(rect(21,43,3,1,'chair'), rect(21,48,3,1,'chair'), rect(21,53,3,1,'chair'));
+    o.push(rect(56,43,3,1,'chair'), rect(56,48,3,1,'chair'), rect(56,53,3,1,'chair'));
+    o.push(rect(31,38,3,1,'chair'), rect(39,38,3,1,'chair'), rect(47,38,3,1,'chair'));
+    o.push(rect(31,57,3,1,'chair'), rect(39,57,3,1,'chair'), rect(47,57,3,1,'chair'));
+    // Potted plants near pool
+    o.push(rect(21,40,2,2,'shrub'), rect(57,40,2,2,'shrub'));
+    o.push(rect(21,56,2,2,'shrub'), rect(57,56,2,2,'shrub'));
+
+    // ── LOWER SECTION (y=60-79) ─────────────────────────────────────────────
+    // Wing A lower: service/laundry (x=1-19, y=60-79)
+    o.push(rect(19,60,1,19,'stone'));   // right wall continues
+    o.push(rect(1,66,18,1,'stone'));    // room divider
+    o.push(rect(9,60,1,6,'stone'));     // vertical divider
+    o.push(rect(2,61,5,3,'table'), rect(11,61,6,3,'table'));
+    o.push(rect(2,64,1,5,'shelf'), rect(5,64,1,5,'shelf'));
+    o.push(rect(11,67,4,2,'table'));
+
+    // BAR (x=20-39, y=60-79)
+    o.push(rect(39,60,1,19,'stone'));   // right wall of bar
+    o.push(rect(21,61,16,3,'counter')); // main bar counter
+    o.push(rect(21,64,3,8,'counter'));  // return counter
+    o.push(rect(21,61,1,3,'shelf'));    // back bar shelf
+    // Bar stools
+    o.push(rect(24,64,2,1,'chair'), rect(27,64,2,1,'chair'), rect(30,64,2,1,'chair'), rect(33,64,2,1,'chair'));
+    // Lounge seating
+    o.push(rect(25,69,4,3,'sofa'), rect(31,69,4,3,'sofa'));
+    o.push(rect(27,73,5,2,'table'));
+    // Candles
+    o.push(rect(36,67,1,1,'candle'), rect(36,73,1,1,'candle'));
+
+    // DINING ROOM (x=40-59, y=60-79)
+    o.push(rect(59,60,1,19,'stone'));   // right wall of dining
+    o.push(rect(40,66,20,1,'stone'));   // room divider
+    o.push(rect(41,61,5,3,'table'), rect(50,61,5,3,'table'));
+    o.push(rect(41,67,5,3,'table'), rect(50,67,5,3,'table'));
+    o.push(rect(41,73,5,3,'table'), rect(50,73,5,3,'table'));
+    o.push(rect(40,62,1,1,'chair'), rect(46,62,1,1,'chair'), rect(47,62,1,1,'chair'), rect(55,62,1,1,'chair'));
+    o.push(rect(40,68,1,1,'chair'), rect(46,68,1,1,'chair'), rect(47,68,1,1,'chair'), rect(55,68,1,1,'chair'));
+    o.push(rect(40,74,1,1,'chair'), rect(46,74,1,1,'chair'), rect(47,74,1,1,'chair'), rect(55,74,1,1,'chair'));
+    o.push(rect(48,65,1,1,'candle'));
+
+    // Wing B lower: storage/utility (x=61-79, y=60-79)
+    o.push(rect(60,60,1,19,'stone'));
+    o.push(rect(61,66,18,1,'stone'));
+    o.push(rect(70,60,1,6,'stone'));
+    o.push(rect(62,61,6,3,'table'), rect(72,61,5,3,'table'));
+    o.push(rect(62,64,1,5,'shelf'), rect(65,64,1,5,'shelf'));
+
+    // Bottom staircases
+    o.push(rect(2,75,4,3,'stairs'), rect(73,75,4,3,'stairs'));
+
+    // Corridor mirrors
+    o.push(rect(19,25,1,3,'mirror'));
+    o.push(rect(60,25,1,3,'mirror'));
+
+    return o;
+  }
+
   const AREA_DEFS = {
     graveyard: {
       areaWidth: 2560, areaHeight: 1920, bgColor: '#1a2e1a', label: 'Graveyard',
@@ -204,10 +364,19 @@
                    stairs:'#5a4838', default:'#3a2a1a' },
       pathColor: '#251c14',
     },
+    hotel: {
+      areaWidth: 2560, areaHeight: 2560, bgColor: '#18121e', label: 'Hotel',
+      playerStart: { x:1280, y:352 }, obstacles: buildHotelObs(),
+      obsColors: { stone:'#3a3050', counter:'#5a4038', bed:'#6a3a5a', sofa:'#7a3848',
+                   elevator:'#5a5870', pillar:'#c8b878', table:'#7a5030', chair:'#5a3a28',
+                   shelf:'#3a2810', mirror:'#8080b8', stairs:'#504860', shrub:'#2a4820',
+                   pool:'#1848a0', default:'#3a2a40' },
+      pathColor: '#22182e',
+    },
   };
 
   // ── Collision ────────────────────────────────────────────────────────────
-  const NON_COLLIDABLE = new Set(['torch', 'candle']);
+  const NON_COLLIDABLE = new Set(['torch', 'candle', 'pool']);
   function isBlocked(x, y, r, obstacles) {
     for (const o of obstacles) {
       if (NON_COLLIDABLE.has(o.type)) continue;
@@ -242,7 +411,7 @@
   let animFrame = null;
   let lastTs = 0;
   let posSendAccum = 0;
-  let cssW = 0, cssH = 0, dpr = 1;
+  let cssW = 0, cssH = 0;
   let mmOpen = true;
   let fogGrid = null, fogGridW = 0, fogGridH = 0;
   const FOG_CELL = 64;
@@ -283,6 +452,7 @@
         graveyard: [[36.71, 0.060, 0.048], [51.91, 0.036, 0.073]], // D1+Ab1 — classic unease
         garden:    [[41.20, 0.050, 0.052], [55.00, 0.032, 0.065]], // E1+A1  — eerie pastoral
         house:     [[30.87, 0.065, 0.041], [46.25, 0.040, 0.079]], // B0+Bb1 — deep dread
+        hotel:     [[43.65, 0.058, 0.044], [61.74, 0.038, 0.069]], // F1+B1  — tritone dread
       };
       const dronePair = DRONE_PAIRS[GA.area] || DRONE_PAIRS.graveyard;
       dronePair.forEach(([f, vol, lfoHz]) => {
@@ -370,6 +540,12 @@
       bells:  [246.94, 311.13, 369.99, 493.88, 622.25, 739.99], // B3 Eb4 F#4 B4 Eb5 F#5
       chords: [[123.47,155.56,184.99],[185.00,220.00,261.63],[246.94,311.13,369.99]],
       bassInterval: [2.5, 4.5], bellInterval: [5.0, 11.0], chordInterval: [12, 18],
+    },
+    hotel: {
+      bass:   [43.65, 58.27, 87.31],                             // F1 Bb1 F2 — Fm
+      bells:  [174.61, 207.65, 261.63, 311.13, 349.23, 415.30], // F3 Ab3 C4 Eb4 F4 Ab4
+      chords: [[87.31,103.83,130.81],[130.81,155.56,174.61],[174.61,207.65,261.63]],
+      bassInterval: [2.0, 4.0], bellInterval: [4.0, 9.0], chordInterval: [10, 16],
     },
   };
 
@@ -625,13 +801,18 @@
 
     if (S.ouija) { handleOuijaTap(tx, ty, cw, ch); return; }
 
-    // Signal button
-    const sbX2 = 128, sbY2 = 8, sbW2 = 52, sbH2 = 32;
-    if (tx >= sbX2 && tx <= sbX2+sbW2 && ty >= sbY2 && ty <= sbY2+sbH2) {
+    // ── Layout mirrors drawHUD ─────────────────────────────────────────
+    const topH = 44;
+    const panW = 76, panMargin = 8, panX = cw - panW - panMargin;
+    const toolH = 52, toolGap = 6;
+    const toolsY = Math.round(ch * 0.54 - 62);
+    const sigH = 36, sigY = toolsY - sigH - toolGap;
+
+    // Signal button (right panel, above tools)
+    if (tx >= panX && tx <= panX + panW && ty >= sigY && ty <= sigY + sigH) {
       if (!S.signalCooldown || S.signalCooldown <= 0) {
         socket.emit('ghost:signal', { roomId: S.roomId });
         S.signalCooldown = 12000;
-        // Show a brief flash on your own screen
         S.attemptsMsg = '📣 Signal sent!';
         clearTimeout(S.attemptsMsgTimer);
         S.attemptsMsgTimer = setTimeout(() => { if (S) S.attemptsMsg = null; }, 1500);
@@ -639,37 +820,34 @@
       return;
     }
 
-    // Journal button (top-right)
-    const jbX = cw - 44, jbY = 8, jbW = 36, jbH = 32;
-    if (tx >= jbX && tx <= jbX+jbW && ty >= jbY && ty <= jbY+jbH) {
+    // Journal button (top bar, right)
+    const jbW = 38, jbH = 32, jbX = cw - jbW - 6, jbY = (topH - jbH) / 2;
+    if (tx >= jbX && tx <= jbX + jbW && ty >= jbY && ty <= jbY + jbH) {
       S.journal = !S.journal; return;
     }
     // If journal open, any other tap closes it
     if (S.journal) { S.journal = false; return; }
 
-    // Map toggle button
-    const tbW = 28, tbH = 22, tbX = cw - tbW - 6, tbY = ch - tbH - 6;
-    if (tx >= tbX && tx <= tbX+tbW && ty >= tbY && ty <= tbY+tbH) {
+    // Minimap toggle (top-right, below top bar)
+    const mmTglW = 36, mmTglH = 26, mmTglX = cw - mmTglW - 6, mmTglY = topH + 4;
+    if (tx >= mmTglX && tx <= mmTglX + mmTglW && ty >= mmTglY && ty <= mmTglY + mmTglH) {
       mmOpen = !mmOpen; return;
     }
 
-    // Tool bar (bottom-center)
+    // Tool buttons (vertical stack in right panel)
     const tools = ['flashlight','emf','sound'];
-    const bw = 70, bh = 52, gap = 8;
-    const barW = tools.length * bw + (tools.length-1) * gap;
-    const barX = (cw - barW) / 2, barY = ch - bh - 10;
     tools.forEach((t, i) => {
-      const bx = barX + i*(bw+gap);
-      if (tx >= bx && tx <= bx+bw && ty >= barY && ty <= barY+bh) {
+      const bx = panX, by = toolsY + i * (toolH + toolGap);
+      if (tx >= bx && tx <= bx + panW && ty >= by && ty <= by + toolH) {
         if (S.activeTool !== t) { gaSfxTool(); S.activeTool = t; }
       }
     });
 
-    // Place board button
+    // Place board button (above signal, right-aligned)
     if (S.nearGhost && !S.nearGhost.claimedBy) {
-      const btnW = 160, btnH = 42;
-      const btnX = (cw - btnW) / 2, btnY = ch - bh - 10 - btnH - 12;
-      if (tx >= btnX && tx <= btnX+btnW && ty >= btnY && ty <= btnY+btnH) {
+      const pbW = 130, pbH = 40;
+      const pbX = cw - pbW - panMargin, pbY = sigY - pbH - toolGap;
+      if (tx >= pbX && tx <= pbX + pbW && ty >= pbY && ty <= pbY + pbH) {
         socket.emit('ghost:place_board', { roomId: S.roomId, ghostId: S.nearGhost.id });
       }
     }
@@ -757,6 +935,9 @@
 
     // Tick signal cooldown
     if (S.signalCooldown > 0) S.signalCooldown = Math.max(0, S.signalCooldown - dt * 1000);
+
+    // Update alligators (hotel only)
+    if (S.area === 'hotel') updateAlligators(dt);
 
     // Check POI proximity
     S.activePoi = null;
@@ -1270,11 +1451,327 @@
     ctx.fillStyle = area.bgColor;
     ctx.fillRect(64, 64, area.areaWidth-128, area.areaHeight-128);
 
+    drawGroundTexture(S.area, area, now);
+
     for (const ob of area.obstacles) {
       drawObstacle(ob, area, now);
     }
     drawPOIs();
     drawPickups();
+    drawAmbientParticles(S.area, area, now);
+  }
+
+  function drawGroundTexture(areaName, area, now) {
+    const aw = area.areaWidth, ah = area.areaHeight;
+
+    if (areaName === 'graveyard') {
+      // Scattered dirt patches (deterministic via sine hash — no flicker)
+      ctx.fillStyle = 'rgba(0,0,0,0.13)';
+      for (let i = 0; i < 28; i++) {
+        const px = 96 + (Math.sin(i * 7.31) * 0.5 + 0.5) * (aw - 192);
+        const py = 96 + (Math.sin(i * 5.17) * 0.5 + 0.5) * (ah - 192);
+        const rx = 14 + (Math.sin(i * 4.09) * 0.5 + 0.5) * 22;
+        const ry =  6 + (Math.sin(i * 3.71) * 0.5 + 0.5) * 9;
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(Math.sin(i * 2.33) * Math.PI);
+        ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+      // Worn path lines between tombstone clusters
+      ctx.save();
+      ctx.strokeStyle = 'rgba(140,120,70,0.09)';
+      ctx.lineWidth = 24;
+      ctx.lineCap = 'round';
+      const pathPts = [
+        [1280,640, 896,576], [1280,640, 1760,384],
+        [1280,640,  832,1280], [1280,640, 1792,1408], [1280,640, 1280,1472],
+      ];
+      for (const [x1,y1,x2,y2] of pathPts) {
+        ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    else if (areaName === 'garden') {
+      // Grass tufts (deterministic)
+      ctx.save();
+      ctx.strokeStyle = 'rgba(55,115,28,0.32)';
+      ctx.lineWidth = 1.5;
+      ctx.lineCap = 'round';
+      for (let i = 0; i < 80; i++) {
+        const gx = 96 + (Math.sin(i * 7.13) * 0.5 + 0.5) * (aw - 192);
+        const gy = 96 + (Math.sin(i * 4.97) * 0.5 + 0.5) * (ah - 192);
+        const len = 5 + (Math.sin(i * 3.41) * 0.5 + 0.5) * 6;
+        const a1 = Math.sin(i * 2.17) * 0.5;
+        ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx + Math.sin(a1)*len,       gy - Math.cos(a1)*len);       ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx + Math.sin(a1+0.4)*len*0.7, gy - Math.cos(a1+0.4)*len*0.7); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx + Math.sin(a1-0.4)*len*0.7, gy - Math.cos(a1-0.4)*len*0.7); ctx.stroke();
+      }
+      ctx.restore();
+      // Worn stone paths toward fountain and between landmarks
+      ctx.save();
+      ctx.strokeStyle = 'rgba(180,160,100,0.10)';
+      ctx.lineWidth = 30;
+      ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(1120,1120); ctx.lineTo(1600,1120); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(1600,1120); ctx.lineTo(1600,320);  ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(1600,1120); ctx.lineTo(1600,1920); ctx.stroke();
+      ctx.restore();
+    }
+
+    else if (areaName === 'house') {
+      // Floorboard stripes — alternating tint every 2 tiles
+      for (let fy = 64; fy < ah - 64; fy += 64) {
+        ctx.fillStyle = (Math.floor(fy / 64) % 2 === 0)
+          ? 'rgba(255,190,90,0.022)' : 'rgba(0,0,0,0.032)';
+        ctx.fillRect(64, fy, aw - 128, 64);
+      }
+      // Window glow patches in main rooms
+      const wglows = [
+        {cx:160, cy:160}, {cx:960, cy:160}, {cx:1440,cy:160},
+        {cx:160, cy:700}, {cx:960, cy:700},
+      ];
+      for (const wg of wglows) {
+        const gr = ctx.createRadialGradient(wg.cx, wg.cy, 0, wg.cx, wg.cy, 120);
+        gr.addColorStop(0, 'rgba(255,200,80,0.055)');
+        gr.addColorStop(1, 'rgba(255,200,80,0)');
+        ctx.fillStyle = gr;
+        ctx.fillRect(wg.cx - 120, wg.cy - 120, 240, 240);
+      }
+    }
+
+    else if (areaName === 'hotel') {
+      // Zone-differentiated floor overlays
+      // Grand lobby entrance (y=32-448 = tiles 1-14)
+      ctx.fillStyle = 'rgba(200,160,80,0.06)';
+      ctx.fillRect(64, 32, aw - 128, 448 - 32);
+      // Wing A rooms corridor tint (x=32-608, y=480-1888)
+      ctx.fillStyle = 'rgba(100,20,40,0.08)';
+      ctx.fillRect(32, 480, 608 - 32, 1888 - 480);
+      // Wing B rooms corridor tint (x=1920-2528, y=480-1888)
+      ctx.fillStyle = 'rgba(100,20,40,0.08)';
+      ctx.fillRect(1920, 480, 2528 - 1920, 1888 - 480);
+      // Ballroom marble tint (x=640-1888, y=480-1184)
+      ctx.fillStyle = 'rgba(220,210,190,0.035)';
+      ctx.fillRect(640, 480, 1888 - 640, 1184 - 480);
+      // Pool room aqua tint (x=640-1888, y=1216-1888)
+      ctx.fillStyle = 'rgba(20,80,120,0.07)';
+      ctx.fillRect(640, 1216, 1888 - 640, 1888 - 1216);
+      // Bar area warm amber (x=640-1248, y=1920-2528)
+      ctx.fillStyle = 'rgba(120,60,10,0.07)';
+      ctx.fillRect(640, 1920, 1248 - 640, 2528 - 1920);
+      // Dining area warm tint (x=1280-1888, y=1920-2528)
+      ctx.fillStyle = 'rgba(80,40,20,0.05)';
+      ctx.fillRect(1280, 1920, 1888 - 1280, 2528 - 1920);
+
+      // Carpet tile grid — subtle cross-hatch (whole hotel)
+      ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+      ctx.lineWidth = 1;
+      for (let gx = 96; gx < aw - 64; gx += 96) {
+        ctx.beginPath(); ctx.moveTo(gx, 64); ctx.lineTo(gx, ah - 64); ctx.stroke();
+      }
+      for (let gy = 96; gy < ah - 64; gy += 96) {
+        ctx.beginPath(); ctx.moveTo(64, gy); ctx.lineTo(aw - 64, gy); ctx.stroke();
+      }
+
+      // Ballroom checkerboard dance floor (tiles 24-56 x 15-37 → px 768-1792 x 480-1184)
+      const bfX = 768, bfY = 480, bfW = 1024, bfH = 704, tSz = 64;
+      for (let tx = 0; tx < bfW; tx += tSz) {
+        for (let ty = 0; ty < bfH; ty += tSz) {
+          ctx.fillStyle = ((Math.floor(tx/tSz) + Math.floor(ty/tSz)) % 2 === 0)
+            ? 'rgba(255,255,255,0.045)' : 'rgba(0,0,0,0.06)';
+          ctx.fillRect(bfX + tx, bfY + ty, tSz, tSz);
+        }
+      }
+
+      // Lobby entrance medallion (concentric rings + 8-point star at center px 1280,224)
+      const mx = 1280, my = 224;
+      ctx.strokeStyle = 'rgba(200,160,80,0.14)';
+      ctx.lineWidth = 2;
+      for (let r = 30; r <= 110; r += 20) {
+        ctx.beginPath(); ctx.arc(mx, my, r, 0, Math.PI * 2); ctx.stroke();
+      }
+      ctx.fillStyle = 'rgba(200,160,80,0.07)';
+      for (let pt = 0; pt < 8; pt++) {
+        const a1 = (pt / 8) * Math.PI * 2;
+        const a2 = ((pt + 0.5) / 8) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(mx, my);
+        ctx.lineTo(mx + Math.cos(a1) * 110, my + Math.sin(a1) * 110);
+        ctx.lineTo(mx + Math.cos(a2) * 60,  my + Math.sin(a2) * 60);
+        ctx.closePath(); ctx.fill();
+      }
+
+      // Wing corridor carpet runners (thin herringbone-ish diagonal lines)
+      ctx.save();
+      ctx.strokeStyle = 'rgba(180,60,80,0.07)';
+      ctx.lineWidth = 1;
+      // Wing A corridor (x=32-608)
+      for (let d = -200; d < 2560; d += 28) {
+        ctx.beginPath(); ctx.moveTo(32, 480 + d); ctx.lineTo(608, 480 + d - 576); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(32, 480 + d); ctx.lineTo(608, 480 + d + 576); ctx.stroke();
+      }
+      // Wing B corridor (x=1920-2528)
+      for (let d = -200; d < 2560; d += 28) {
+        ctx.beginPath(); ctx.moveTo(1920, 480 + d); ctx.lineTo(2528, 480 + d - 576); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(1920, 480 + d); ctx.lineTo(2528, 480 + d + 576); ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
+  function drawAmbientParticles(areaName, area, now) {
+    const aw = area.areaWidth, ah = area.areaHeight;
+
+    if (areaName === 'graveyard') {
+      // Drifting fog wisps
+      for (let i = 0; i < 8; i++) {
+        const bx = 128 + (Math.sin(i * 5.31) * 0.5 + 0.5) * (aw - 256);
+        const by = 128 + (Math.sin(i * 3.77) * 0.5 + 0.5) * (ah - 256);
+        const dx = Math.sin(now * 0.00028 + i * 1.37) * 90;
+        const dy = Math.cos(now * 0.00021 + i * 0.94) * 45;
+        const alpha = 0.055 + 0.03 * Math.sin(now * 0.0015 + i * 2.1);
+        const rx = 55 + 20 * Math.sin(i * 2.7);
+        const ry = 18 + 8 * Math.cos(i * 3.1);
+        ctx.fillStyle = `rgba(170,215,175,${alpha.toFixed(3)})`;
+        ctx.save();
+        ctx.translate(bx + dx, by + dy);
+        ctx.rotate(Math.sin(i) * 0.9);
+        ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    else if (areaName === 'garden') {
+      // Fountain — drawn on top of stone obstacle so water is visible
+      const fx = 1600, fy = 1120; // center of fountain (tile 50,35)
+      const fRipple = (now * 0.0012) % 1;
+      ctx.fillStyle = '#183898';
+      ctx.beginPath(); ctx.arc(fx, fy, 108, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#1e50b8';
+      ctx.beginPath(); ctx.arc(fx, fy, 90, 0, Math.PI * 2); ctx.fill();
+      for (let r = 0; r < 3; r++) {
+        const rp = (fRipple + r / 3) % 1;
+        ctx.strokeStyle = `rgba(150,205,255,${(0.5*(1-rp)).toFixed(3)})`;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.arc(fx, fy, 12 + rp * 72, 0, Math.PI * 2); ctx.stroke();
+      }
+      ctx.fillStyle = 'rgba(200,235,255,0.5)';
+      ctx.beginPath(); ctx.arc(fx, fy, 10, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#8a7a50'; ctx.lineWidth = 7;
+      ctx.beginPath(); ctx.arc(fx, fy, 108, 0, Math.PI * 2); ctx.stroke();
+      // Fireflies
+      for (let i = 0; i < 10; i++) {
+        const bx = 128 + (Math.sin(i * 6.13) * 0.5 + 0.5) * (aw - 256);
+        const by = 128 + (Math.sin(i * 4.51) * 0.5 + 0.5) * (ah - 256);
+        const px = bx + Math.sin(now * 0.00082 + i * 2.3) * 60;
+        const py = by + Math.cos(now * 0.00065 + i * 1.7) * 40;
+        const twinkle = 0.5 + 0.5 * Math.sin(now * 0.006 + i * 1.9);
+        ctx.fillStyle = `rgba(200,255,110,${(twinkle * 0.8).toFixed(3)})`;
+        ctx.beginPath(); ctx.arc(px, py, 2.5, 0, Math.PI * 2); ctx.fill();
+        if (twinkle > 0.68) {
+          const fg = ctx.createRadialGradient(px, py, 0, px, py, 11);
+          fg.addColorStop(0, `rgba(200,255,110,${(twinkle * 0.32).toFixed(3)})`);
+          fg.addColorStop(1, 'rgba(200,255,110,0)');
+          ctx.fillStyle = fg;
+          ctx.beginPath(); ctx.arc(px, py, 11, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+    }
+
+    else if (areaName === 'house') {
+      // Floating dust motes drifting upward
+      for (let i = 0; i < 14; i++) {
+        const bx = 80 + (Math.sin(i * 6.21) * 0.5 + 0.5) * (aw - 160);
+        const yOff = (now * 0.015 + i * (ah / 14)) % ah;
+        const py = ah - 80 - yOff;
+        const alpha = 0.07 + 0.055 * Math.sin(now * 0.002 + i * 1.5);
+        const wobX = Math.sin(now * 0.0018 + i * 2.7) * 22;
+        ctx.fillStyle = `rgba(220,200,155,${alpha.toFixed(3)})`;
+        ctx.beginPath(); ctx.arc(bx + wobX, py, 1.8, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+
+    else if (areaName === 'hotel') {
+      // Chandelier glow pools (3 positions in ballroom: tiles 39,16 / 39,24 / 39,32)
+      const chandelierPositions = [
+        { x: 39 * 32 + 16, y: 16 * 32 + 16 },
+        { x: 39 * 32 + 16, y: 24 * 32 + 16 },
+        { x: 39 * 32 + 16, y: 32 * 32 + 16 },
+      ];
+      for (const ch of chandelierPositions) {
+        const flicker = 0.88 + 0.12 * Math.sin(now * 0.0032 + ch.y * 0.001);
+        const cg = ctx.createRadialGradient(ch.x, ch.y, 0, ch.x, ch.y, 160 * flicker);
+        cg.addColorStop(0, `rgba(255,220,100,${(0.09 * flicker).toFixed(3)})`);
+        cg.addColorStop(0.5, `rgba(255,180,60,${(0.04 * flicker).toFixed(3)})`);
+        cg.addColorStop(1, 'rgba(255,160,40,0)');
+        ctx.fillStyle = cg;
+        ctx.beginPath(); ctx.arc(ch.x, ch.y, 160 * flicker, 0, Math.PI * 2); ctx.fill();
+        // Light shaft — narrow column of soft light descending
+        const sg = ctx.createLinearGradient(ch.x, ch.y - 60, ch.x, ch.y + 200);
+        sg.addColorStop(0, 'rgba(255,220,140,0)');
+        sg.addColorStop(0.25, `rgba(255,220,140,${(0.025 * flicker).toFixed(3)})`);
+        sg.addColorStop(1, 'rgba(255,220,140,0)');
+        ctx.fillStyle = sg;
+        ctx.fillRect(ch.x - 18, ch.y - 60, 36, 260);
+      }
+
+      // Wall sconce glow patches along wing corridors (midpoint of each room section)
+      // Wing A sconces (x≈480px, every ~192px from y=576 to y=1792)
+      // Wing B sconces (x≈2112px)
+      const sconceYPositions = [576 + 96, 576 + 96*3, 576 + 96*5, 576 + 96*7, 576 + 96*9, 576 + 96*11];
+      for (let si = 0; si < sconceYPositions.length; si++) {
+        const sy2 = sconceYPositions[si];
+        const sflicker = 0.82 + 0.18 * Math.sin(now * 0.0025 + si * 1.7);
+        for (const sx2 of [96, aw - 96]) {
+          const sg2 = ctx.createRadialGradient(sx2, sy2, 0, sx2, sy2, 70 * sflicker);
+          sg2.addColorStop(0, `rgba(255,180,80,${(0.07 * sflicker).toFixed(3)})`);
+          sg2.addColorStop(1, 'rgba(255,180,80,0)');
+          ctx.fillStyle = sg2;
+          ctx.beginPath(); ctx.arc(sx2, sy2, 70 * sflicker, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+
+      // Bar candle ambient glow (tiles 36,67 and 36,73 → px 1152+16,2144+16 and 1152+16,2336+16)
+      const barCandlePositions = [
+        { x: 36 * 32 + 16, y: 67 * 32 + 16 },
+        { x: 36 * 32 + 16, y: 73 * 32 + 16 },
+      ];
+      for (const bc of barCandlePositions) {
+        const bf = 0.78 + 0.22 * Math.sin(now * 0.0045 + bc.y * 0.002);
+        const bg2 = ctx.createRadialGradient(bc.x, bc.y, 0, bc.x, bc.y, 52 * bf);
+        bg2.addColorStop(0, `rgba(255,160,50,${(0.09 * bf).toFixed(3)})`);
+        bg2.addColorStop(1, 'rgba(255,140,30,0)');
+        ctx.fillStyle = bg2;
+        ctx.beginPath(); ctx.arc(bc.x, bc.y, 52 * bf, 0, Math.PI * 2); ctx.fill();
+      }
+
+      // Pool steam wisps (rising vapor above pool tiles 27-53 × 40-56 → px 864-1696 × 1280-1792)
+      for (let i = 0; i < 10; i++) {
+        const bx = 864 + (Math.sin(i * 6.71) * 0.5 + 0.5) * (1696 - 864);
+        const baseY = 1792;
+        const yOff = (now * 0.022 + i * (512 / 10)) % 512;
+        const py2 = baseY - yOff;
+        const alpha = 0.06 * (1 - yOff / 512) * (0.6 + 0.4 * Math.sin(now * 0.003 + i * 1.4));
+        const wobX = Math.sin(now * 0.0014 + i * 2.1) * 14;
+        ctx.fillStyle = `rgba(180,220,240,${alpha.toFixed(3)})`;
+        ctx.save();
+        ctx.translate(bx + wobX, py2);
+        ctx.beginPath(); ctx.ellipse(0, 0, 5 + yOff * 0.018, 7, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+
+      // General hotel corridor dust (subtle, more of them than before)
+      for (let i = 0; i < 14; i++) {
+        const bx = 80 + (Math.sin(i * 5.91) * 0.5 + 0.5) * (aw - 160);
+        const yOff = (now * 0.007 + i * (ah / 14)) % ah;
+        const py2 = ah - 80 - yOff;
+        const alpha = 0.03 + 0.02 * Math.sin(now * 0.0014 + i * 1.9);
+        ctx.fillStyle = `rgba(200,175,220,${alpha.toFixed(3)})`;
+        ctx.beginPath(); ctx.arc(bx, py2, 1.5, 0, Math.PI * 2); ctx.fill();
+      }
+    }
   }
 
   function drawPOIs() {
@@ -1349,6 +1846,8 @@
     const colors = area.obsColors || {};
     const col = colors[type] || colors.default || '#5a5a5a';
     switch (type) {
+      case 'stone':    drawStone(x, y, w, h, col); break;
+      case 'hedge':    drawHedge(x, y, w, h, col); break;
       case 'cross':    drawCross(x, y, w, h, col); break;
       case 'fence':    drawFence(x, y, w, h, col); break;
       case 'well':     drawWell(x, y, w, h, col); break;
@@ -1366,14 +1865,68 @@
       case 'shelf':    drawShelf(x, y, w, h, col); break;
       case 'fireplace':drawFireplace(x, y, w, h, col, now); break;
       case 'clock':    drawClock(x, y, w, h, col); break;
-      case 'mirror':   drawMirror(x, y, w, h, col); break;
+      case 'mirror':   drawMirror(x, y, w, h, col, now); break;
       case 'stairs':   drawStairs(x, y, w, h, col); break;
+      case 'bed':      drawBed(x, y, w, h, col); break;
+      case 'counter':  drawCounter(x, y, w, h, col); break;
+      case 'sofa':     drawSofa(x, y, w, h, col); break;
+      case 'pool':     drawPool(x, y, w, h, col, now); break;
+      case 'elevator': drawElevator(x, y, w, h, col, now); break;
       default:
         ctx.fillStyle = col;
         ctx.fillRect(x, y, w, h);
         ctx.fillStyle = 'rgba(255,255,255,0.1)';
         ctx.fillRect(x, y, w, 2);
     }
+  }
+
+  function drawStone(x, y, w, h, col) {
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y, w, h);
+    // Border walls (aspect ratio > 4:1) get brick texture
+    if (w >= h * 4 || h >= w * 4) {
+      const bw = Math.min(44, Math.max(20, Math.round(Math.max(w, h) / 16)));
+      const bh = Math.min(20, Math.max(8, Math.round(Math.min(w, h) * 0.55)));
+      ctx.fillStyle = 'rgba(255,255,255,0.055)';
+      for (let bx2 = x; bx2 < x + w; bx2 += bw * 2) {
+        for (let by2 = y; by2 < y + h; by2 += bh) {
+          const off = (Math.floor((by2 - y) / bh) % 2) * bw;
+          ctx.fillRect(bx2 + off + 1, by2 + 1, bw - 2, bh - 2);
+        }
+      }
+      ctx.fillStyle = 'rgba(0,0,0,0.15)';
+      ctx.fillRect(x, y + h, w, 3);
+    } else {
+      ctx.fillStyle = 'rgba(255,255,255,0.10)';
+      ctx.fillRect(x, y, w, 2);
+    }
+  }
+
+  function drawHedge(x, y, w, h, col) {
+    // Cast shadow (south + east)
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+    ctx.fillRect(x + 4, y + h, w, 5);
+    ctx.fillRect(x + w, y + 4, 5, h);
+    // Dark base
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y, w, h);
+    // Leafy bump clusters (top-down foliage texture)
+    const bR = Math.min(9, Math.max(3, Math.min(w, h) * 0.28));
+    const cols = Math.max(1, Math.round(w / (bR * 2)));
+    const rows = Math.max(1, Math.round(h / (bR * 2)));
+    const lighter = '#3a7520', darker = '#142e0a';
+    for (let c = 0; c < cols; c++) {
+      for (let r = 0; r < rows; r++) {
+        const bx2 = x + (c + 0.5) * (w / cols);
+        const by2 = y + (r + 0.5) * (h / rows);
+        ctx.fillStyle = ((c + r) % 2 === 0) ? lighter : darker;
+        ctx.beginPath(); ctx.arc(bx2, by2, bR * 0.82, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    // Top-left highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.07)';
+    ctx.fillRect(x, y, w, 2);
+    ctx.fillRect(x, y, 2, h);
   }
 
   function drawCross(x, y, w, h, col) {
@@ -1433,17 +1986,18 @@
   }
 
   function drawShrub(x, y, w, h, col) {
+    // Drop shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+    ctx.beginPath(); ctx.arc(x + w*0.4+4,  y + h*0.65+5, w*0.38, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + w*0.68+4, y + h*0.60+5, w*0.35, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + w*0.52+3, y + h*0.38+4, w*0.32, 0, Math.PI*2); ctx.fill();
+    // Foliage
     ctx.fillStyle = col;
-    ctx.beginPath();
-    ctx.arc(x + w*0.35, y + h*0.6, w*0.38, 0, Math.PI*2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(x + w*0.65, y + h*0.55, w*0.35, 0, Math.PI*2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(x + w*0.5, y + h*0.35, w*0.32, 0, Math.PI*2);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.beginPath(); ctx.arc(x + w*0.35, y + h*0.6,  w*0.38, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + w*0.65, y + h*0.55, w*0.35, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + w*0.5,  y + h*0.35, w*0.32, 0, Math.PI*2); ctx.fill();
+    // Highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
     ctx.beginPath(); ctx.arc(x + w*0.4, y + h*0.3, w*0.15, 0, Math.PI*2); ctx.fill();
   }
 
@@ -1469,15 +2023,25 @@
 
   function drawLamp(x, y, w, h, col, now) {
     const flicker = 0.85 + 0.15 * Math.sin(now * 0.005 + x * 0.01);
+    const hcx = x + w / 2;
+    // Ground glow pool beneath lamp
+    const glowR = 58 * flicker;
+    const gg = ctx.createRadialGradient(hcx, y + h * 0.6, 0, hcx, y + h * 0.6, glowR);
+    gg.addColorStop(0, `rgba(255,220,100,${(0.16 * flicker).toFixed(3)})`);
+    gg.addColorStop(1, 'rgba(255,220,100,0)');
+    ctx.fillStyle = gg;
+    ctx.beginPath(); ctx.arc(hcx, y + h * 0.6, glowR, 0, Math.PI * 2); ctx.fill();
+    // Pole
     ctx.fillStyle = '#3a3a3a';
-    ctx.fillRect(x + w/2 - 3, y + 10, 5, h - 10);
+    ctx.fillRect(hcx - 3, y + 10, 5, h - 10);
     ctx.fillRect(x + 2, y + h - 6, w - 4, 4);
+    // Lamp head
     ctx.fillStyle = col;
-    ctx.beginPath(); ctx.arc(x + w/2, y + 7, 8, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(hcx, y + 7, 8, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = `rgba(255,230,120,${(0.7 * flicker).toFixed(2)})`;
-    ctx.beginPath(); ctx.arc(x + w/2, y + 7, 5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(hcx, y + 7, 5, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = '#808060'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.arc(x + w/2, y + 7, 8, 0, Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(hcx, y + 7, 8, 0, Math.PI * 2); ctx.stroke();
   }
 
   function drawStatue(x, y, w, h, col) {
@@ -1507,8 +2071,18 @@
     ctx.fillRect(x + (w-pw)/2, y + 4, pw, h - 8);
     ctx.fillRect(x, y, w, 5);
     ctx.fillRect(x, y + h - 5, w, 5);
-    ctx.fillStyle = 'rgba(255,255,255,0.2)';
-    ctx.fillRect(x + (w-pw)/2, y + 4, 2, h - 8);
+    // Fluting (vertical grooves) on shaft
+    const flutes = Math.max(2, Math.floor(pw / 4));
+    const fw = pw / flutes;
+    for (let f = 0; f < flutes; f++) {
+      const fx2 = x + (w-pw)/2 + f * fw;
+      ctx.fillStyle = (f % 2 === 0) ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.12)';
+      ctx.fillRect(fx2 + 1, y + 6, fw - 1, h - 12);
+    }
+    // Capital highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.22)';
+    ctx.fillRect(x, y, w, 2);
+    ctx.fillRect(x, y + h - 5, w, 2);
   }
 
   function drawTable(x, y, w, h, col) {
@@ -1579,13 +2153,22 @@
     ctx.fillRect(x, y, w, 2);
   }
 
-  function drawMirror(x, y, w, h, col) {
+  function drawMirror(x, y, w, h, col, now) {
     ctx.fillStyle = col;
     ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = 'rgba(180,200,220,0.45)';
+    // Mirror glass with ghostly shimmer
+    const shimmer = now !== undefined ? (0.35 + 0.1 * Math.sin(now * 0.0018 + x * 0.003)) : 0.45;
+    ctx.fillStyle = `rgba(180,200,220,${shimmer.toFixed(3)})`;
     ctx.fillRect(x + 3, y + 3, w - 6, h - 6);
+    // Vertical highlight streak
     ctx.fillStyle = 'rgba(255,255,255,0.25)';
     ctx.fillRect(x + 4, y + 4, 4, h - 8);
+    // Ghostly tint sweep
+    if (now !== undefined) {
+      const gt = 0.5 + 0.5 * Math.sin(now * 0.0009 + x * 0.005);
+      ctx.fillStyle = `rgba(160,200,255,${(gt * 0.07).toFixed(3)})`;
+      ctx.fillRect(x + 3, y + 3, w - 6, h - 6);
+    }
   }
 
   function drawStairs(x, y, w, h, col) {
@@ -1597,6 +2180,292 @@
       ctx.fillRect(x + i*sw, y + (h - h*(i+1)/nSteps), sw, h*(i+1)/nSteps);
       ctx.fillStyle = 'rgba(255,255,255,0.1)';
       ctx.fillRect(x + i*sw, y + (h - h*(i+1)/nSteps), sw, 2);
+    }
+  }
+
+  function drawBed(x, y, w, h, col) {
+    // Bed frame
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y, w, h);
+    // Headboard
+    ctx.fillStyle = '#4a2a3a';
+    ctx.fillRect(x, y, w, Math.max(4, Math.round(h * 0.22)));
+    // Pillow(s)
+    const pw = Math.max(8, Math.round(w * 0.28));
+    const ph = Math.max(5, Math.round(h * 0.20));
+    const py2 = y + Math.round(h * 0.24);
+    ctx.fillStyle = '#e8daf0';
+    ctx.fillRect(x + 4, py2, pw, ph);
+    if (w > 60) ctx.fillRect(x + w - pw - 4, py2, pw, ph);
+    // Sheets
+    ctx.fillStyle = '#c8b8d4';
+    ctx.fillRect(x + 2, py2 + ph + 2, w - 4, h - (ph + 2 + Math.round(h*0.24)) - 4);
+    // Sheet fold
+    ctx.fillStyle = '#d4c8e0';
+    ctx.fillRect(x + 2, py2 + ph + 2, w - 4, 4);
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.fillRect(x, y, w, 2);
+  }
+
+  function drawCounter(x, y, w, h, col) {
+    // Counter body
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y, w, h);
+    // Top surface (darker wood)
+    ctx.fillStyle = '#6a4828';
+    ctx.fillRect(x, y, w, Math.max(3, Math.round(h * 0.2)));
+    // Front panel insets
+    const insetW = Math.max(10, Math.round(w * 0.2));
+    const nInsets = Math.max(1, Math.floor(w / (insetW + 6)));
+    const spacing = w / nInsets;
+    for (let i = 0; i < nInsets; i++) {
+      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+      ctx.fillRect(x + i * spacing + 3, y + Math.round(h * 0.3), insetW, Math.round(h * 0.55));
+    }
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fillRect(x, y, w, 2);
+  }
+
+  function drawSofa(x, y, w, h, col) {
+    // Base
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y, w, h);
+    // Back cushion
+    ctx.fillStyle = '#8a2840';
+    ctx.fillRect(x, y, w, Math.max(4, Math.round(h * 0.35)));
+    // Seat cushions
+    const cw2 = Math.floor((w - 8) / 2);
+    ctx.fillStyle = '#aa3850';
+    ctx.fillRect(x + 3, y + Math.round(h * 0.38), cw2, Math.round(h * 0.5));
+    ctx.fillRect(x + 5 + cw2, y + Math.round(h * 0.38), cw2, Math.round(h * 0.5));
+    // Armrests
+    ctx.fillStyle = '#6a2030';
+    ctx.fillRect(x, y, 4, h);
+    ctx.fillRect(x + w - 4, y, 4, h);
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.fillRect(x, y, w, 2);
+  }
+
+  function drawPool(x, y, w, h, col, now) {
+    // Pool basin (deep blue)
+    const shimmer = 0.7 + 0.3 * Math.sin(now * 0.002 + x * 0.001);
+    ctx.fillStyle = '#1040b0';
+    ctx.fillRect(x, y, w, h);
+    // Water shimmer gradient
+    const pg = ctx.createLinearGradient(x, y, x + w, y + h);
+    pg.addColorStop(0, `rgba(40,120,220,${(0.45 * shimmer).toFixed(3)})`);
+    pg.addColorStop(0.5, `rgba(80,160,255,${(0.3 * shimmer).toFixed(3)})`);
+    pg.addColorStop(1, `rgba(20,80,180,${(0.5 * shimmer).toFixed(3)})`);
+    ctx.fillStyle = pg;
+    ctx.fillRect(x, y, w, h);
+    // Pool lane lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 2;
+    const nLanes = 3;
+    const laneH = h / nLanes;
+    for (let i = 1; i < nLanes; i++) {
+      ctx.beginPath();
+      ctx.moveTo(x + 8, y + i * laneH);
+      ctx.lineTo(x + w - 8, y + i * laneH);
+      ctx.stroke();
+    }
+    // Pool edge/border
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+    // Caustic light refraction — drifting diagonal beams
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.clip();
+    const causticT = now * 0.00045;
+    for (let c = 0; c < 6; c++) {
+      const drift = Math.sin(causticT + c * 1.1) * w * 0.12;
+      const cx2 = x + (c / 6) * w + drift;
+      const alpha = 0.055 + 0.035 * Math.sin(causticT * 1.7 + c * 0.9);
+      ctx.strokeStyle = `rgba(160,230,255,${alpha.toFixed(3)})`;
+      ctx.lineWidth = 3 + 2 * Math.sin(causticT + c * 0.7);
+      ctx.beginPath();
+      ctx.moveTo(cx2 - h * 0.18, y);
+      ctx.lineTo(cx2 + h * 0.18, y + h);
+      ctx.stroke();
+    }
+    ctx.restore();
+    // Animated ripples
+    const rippleT = (now * 0.001) % 1;
+    for (let i = 0; i < 3; i++) {
+      const rp = (rippleT + i / 3) % 1;
+      const rx = x + w * (0.25 + i * 0.25);
+      const ry = y + h * 0.5;
+      const rr = rp * Math.min(w, h) * 0.2;
+      ctx.strokeStyle = `rgba(200,240,255,${(0.3 * (1 - rp)).toFixed(3)})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.ellipse(rx, ry, rr, rr * 0.35, 0, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+
+  function drawElevator(x, y, w, h, col, now) {
+    // Frame
+    ctx.fillStyle = '#3a3850';
+    ctx.fillRect(x, y, w, h);
+    // Door panels (two panels with gap)
+    const doorW = Math.floor((w - 6) / 2);
+    ctx.fillStyle = '#5a5878';
+    ctx.fillRect(x + 2, y + 2, doorW, h - 4);
+    ctx.fillRect(x + w - 2 - doorW, y + 2, doorW, h - 4);
+    // Door gap
+    ctx.fillStyle = '#1a1828';
+    ctx.fillRect(x + w / 2 - 1, y + 2, 2, h - 4);
+    // Button panel — animated pulse
+    const pulse = now !== undefined ? (0.5 + 0.5 * Math.sin(now * 0.0028 + x * 0.01)) : 0.5;
+    ctx.fillStyle = '#8080a0';
+    ctx.beginPath(); ctx.arc(x + w / 2, y + 8, 3, 0, Math.PI * 2); ctx.fill();
+    // Button glow
+    const btnGlow = ctx.createRadialGradient(x + w / 2, y + 8, 0, x + w / 2, y + 8, 6);
+    btnGlow.addColorStop(0, `rgba(255,220,80,${(0.8 * pulse).toFixed(3)})`);
+    btnGlow.addColorStop(1, 'rgba(255,220,80,0)');
+    ctx.fillStyle = btnGlow;
+    ctx.beginPath(); ctx.arc(x + w / 2, y + 8, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = `rgba(255,240,${Math.floor(80 + pulse * 100)},${(0.6 + 0.4 * pulse).toFixed(2)})`;
+    ctx.beginPath(); ctx.arc(x + w / 2, y + 8, 1.5, 0, Math.PI * 2); ctx.fill();
+    // Reflection highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.fillRect(x + 2, y + 2, 3, h - 4);
+    ctx.fillRect(x + w - 2 - doorW, y + 2, 3, h - 4);
+  }
+
+  // ── Alligator system ─────────────────────────────────────────────────────
+  const ALLIGATOR_SPEED = 55;
+  const ALLIGATOR_DETECT_RANGE = 280;
+  // Alligators roam within the pool section of the hotel
+  const ALLIGATOR_BOUNDS = { x1: 672, y1: 1216, x2: 1888, y2: 1920 };
+
+  function initAlligators() {
+    S.alligators = [
+      { x: 1200, y: 1450, angle: 0,            stateTimer: 0,    isFollowing: false, targetX: 1200, targetY: 1450, walkPhase: 0   },
+      { x:  960, y: 1540, angle: Math.PI / 3,  stateTimer: 1000, isFollowing: false, targetX:  960, targetY: 1540, walkPhase: 0.5 },
+      { x: 1520, y: 1380, angle: Math.PI,      stateTimer: 2000, isFollowing: false, targetX: 1520, targetY: 1380, walkPhase: 1.0 },
+    ];
+  }
+
+  function updateAlligators(dt) {
+    if (!S || !S.alligators) return;
+    const bounds = ALLIGATOR_BOUNDS;
+    for (const al of S.alligators) {
+      al.stateTimer -= dt * 1000;
+      // Find nearest player
+      let nearDist = Infinity, nearX = al.x, nearY = al.y;
+      const pts = [{ x: S.me.x, y: S.me.y }];
+      for (const p of Object.values(S.otherPlayers)) pts.push({ x: p.x, y: p.y });
+      for (const p of pts) {
+        const d = Math.hypot(p.x - al.x, p.y - al.y);
+        if (d < nearDist) { nearDist = d; nearX = p.x; nearY = p.y; }
+      }
+      // State transitions
+      if (nearDist < ALLIGATOR_DETECT_RANGE) {
+        al.isFollowing = true;
+        al.targetX = nearX;
+        al.targetY = nearY;
+      } else if (al.stateTimer <= 0) {
+        al.isFollowing = false;
+        al.targetX = bounds.x1 + Math.random() * (bounds.x2 - bounds.x1);
+        al.targetY = bounds.y1 + Math.random() * (bounds.y2 - bounds.y1);
+        al.stateTimer = 2000 + Math.random() * 3000;
+      }
+      // Move toward target
+      const dx = al.targetX - al.x;
+      const dy = al.targetY - al.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > 6) {
+        const spd = al.isFollowing ? ALLIGATOR_SPEED * 1.3 : ALLIGATOR_SPEED * 0.55;
+        const step = Math.min(spd * dt, dist);
+        al.x += (dx / dist) * step;
+        al.y += (dy / dist) * step;
+        al.angle = Math.atan2(dy, dx);
+        al.walkPhase += step * 0.008;
+      }
+      // Clamp to roam bounds
+      al.x = Math.max(bounds.x1, Math.min(bounds.x2, al.x));
+      al.y = Math.max(bounds.y1, Math.min(bounds.y2, al.y));
+    }
+  }
+
+  function drawAlligator(cx, cy, angle, walkPhase) {
+    ctx.save();
+    ctx.translate(Math.round(cx), Math.round(cy));
+    ctx.rotate(angle);
+
+    const bodyLen = 26, bodyW = 11;
+    const waddle = Math.sin(walkPhase * Math.PI * 2) * 2;
+
+    // Shadow
+    ctx.globalAlpha = 0.2;
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.ellipse(2, 14, bodyLen * 0.85, 4, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Tail
+    ctx.fillStyle = '#2d5a18';
+    ctx.beginPath();
+    ctx.moveTo(-bodyLen * 0.45, -3 + waddle);
+    ctx.lineTo(-bodyLen * 1.35, waddle * 0.5);
+    ctx.lineTo(-bodyLen * 0.45, 3 + waddle);
+    ctx.closePath(); ctx.fill();
+
+    // Body
+    ctx.fillStyle = '#3d7a22';
+    ctx.beginPath(); ctx.ellipse(2, 0, bodyLen * 0.55, bodyW * 0.52, 0, 0, Math.PI * 2); ctx.fill();
+
+    // Scale bumps along spine
+    ctx.fillStyle = '#2d5a18';
+    for (let i = -2; i <= 2; i++) {
+      ctx.beginPath(); ctx.arc(i * 7 + 2, -bodyW * 0.35, 2.5, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // Legs (4 stubby)
+    const legPhase = Math.sin(walkPhase * Math.PI * 2);
+    ctx.fillStyle = '#3d7a22';
+    ctx.fillRect( 6,  -bodyW * 0.5 + legPhase * 2.5,  7, 4);
+    ctx.fillRect( 6,   bodyW * 0.5 - 3 - legPhase * 2.5, 7, 4);
+    ctx.fillRect(-10, -bodyW * 0.5 - legPhase * 2.5,  7, 4);
+    ctx.fillRect(-10,  bodyW * 0.5 - 3 + legPhase * 2.5, 7, 4);
+
+    // Head
+    ctx.fillStyle = '#3d7a22';
+    ctx.beginPath(); ctx.ellipse(bodyLen * 0.55, 0, bodyLen * 0.26, bodyW * 0.44, 0, 0, Math.PI * 2); ctx.fill();
+
+    // Snout
+    ctx.fillStyle = '#4d9a2a';
+    ctx.beginPath();
+    ctx.moveTo(bodyLen * 0.68, -5);
+    ctx.lineTo(bodyLen * 1.08, waddle * 0.3);
+    ctx.lineTo(bodyLen * 0.68,  5);
+    ctx.closePath(); ctx.fill();
+
+    // Nostrils
+    ctx.fillStyle = '#1a3a08';
+    ctx.beginPath(); ctx.arc(bodyLen * 1.0, -1.5, 1.2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(bodyLen * 1.0,  1.5, 1.2, 0, Math.PI * 2); ctx.fill();
+
+    // Eyes
+    ctx.fillStyle = '#d0b000';
+    ctx.beginPath(); ctx.arc(bodyLen * 0.64, -4, 2.8, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(bodyLen * 0.64,  4, 2.8, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#1a0800';
+    ctx.beginPath(); ctx.arc(bodyLen * 0.64, -4, 1.2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(bodyLen * 0.64,  4, 1.2, 0, Math.PI * 2); ctx.fill();
+    // Eye highlight
+    ctx.fillStyle = 'rgba(255,255,200,0.6)';
+    ctx.beginPath(); ctx.arc(bodyLen * 0.64 + 0.8, -4.5, 0.7, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(bodyLen * 0.64 + 0.8,  3.5, 0.7, 0, Math.PI * 2); ctx.fill();
+
+    ctx.restore();
+  }
+
+  function drawAlligators() {
+    if (!S || !S.alligators) return;
+    for (const al of S.alligators) {
+      drawAlligator(al.x, al.y, al.angle, al.walkPhase);
     }
   }
 
@@ -1663,6 +2532,9 @@
 
     // Player (self)
     drawAvatar(ctx, S.me.x, S.me.y, facingToDir(S.me.facing), walkPhase, meMoving ? 0 : idleBob, S.me.avatar || 0, true, getShockAmt(shockStart));
+
+    // Alligators (hotel only)
+    if (S.area === 'hotel') drawAlligators();
   }
 
   function applyDarkness(cw, ch) {
@@ -1753,36 +2625,87 @@
 
   function drawHUD(cw, ch) {
     const tools = ['flashlight','emf','sound'];
-    const icons = { flashlight:'🔦', emf:'📡', sound:'🎙️' };
-    const bw = 70, bh = 52, gap = 8;
-    const barW = tools.length*bw + (tools.length-1)*gap;
-    const barX = (cw - barW) / 2, barY = ch - bh - 10;
+    const icons  = { flashlight:'🔦', emf:'📡', sound:'🎙️' };
+    const labels = { flashlight:'FLASH', sound:'SOUND' };
 
-    // Tool buttons
+    // ── Layout constants (mirrored in handleTap) ───────────────────────
+    const topH = 44;
+    const panW = 76, panMargin = 8;
+    const panX = cw - panW - panMargin;
+    const toolH = 52, toolGap = 6;
+    const toolsH = tools.length * toolH + (tools.length - 1) * toolGap;
+    const toolsY = Math.round(ch * 0.54 - 62);
+    const sigH = 36;
+    const sigY = toolsY - sigH - toolGap;
+
+    // ── Top info bar ───────────────────────────────────────────────────
+    ctx.fillStyle = 'rgba(0,0,0,0.68)';
+    ctx.fillRect(0, 0, cw, topH);
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    ctx.fillRect(0, topH - 1, cw, 1);  // subtle glass edge
+
+    // Ghost progress (left)
+    ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 13px monospace'; ctx.textAlign = 'left';
+    ctx.fillText(`👻 ${S.identified}/${S.totalGhosts}`, 14, 27);
+
+    // Area label (center)
+    ctx.fillStyle = '#94a3b8'; ctx.font = '12px monospace'; ctx.textAlign = 'center';
+    ctx.fillText(AREA_DEFS[S.area]?.label || '', cw / 2, 27);
+
+    // Journal toggle button (right, inside top bar)
+    const jbW = 38, jbH = 32, jbX = cw - jbW - 6, jbY = (topH - jbH) / 2;
+    ctx.fillStyle = S.journal ? 'rgba(124,58,237,0.85)' : 'rgba(255,255,255,0.08)';
+    rrect(ctx, jbX, jbY, jbW, jbH, 8); ctx.fill();
+    if (S.journal) { ctx.strokeStyle = '#a78bfa'; ctx.lineWidth = 1.5; rrect(ctx, jbX, jbY, jbW, jbH, 8); ctx.stroke(); }
+    ctx.font = '16px serif'; ctx.textAlign = 'center';
+    ctx.fillText('📒', jbX + jbW / 2, jbY + 22);
+
+    // ── Right action panel ─────────────────────────────────────────────
+
+    // Signal button (above tool cluster)
+    const sigCool = S.signalCooldown > 0;
+    ctx.fillStyle = sigCool ? 'rgba(20,20,30,0.82)' : 'rgba(160,50,10,0.90)';
+    rrect(ctx, panX, sigY, panW, sigH, 10); ctx.fill();
+    if (!sigCool) { ctx.strokeStyle = '#ff8040'; ctx.lineWidth = 1.5; rrect(ctx, panX, sigY, panW, sigH, 10); ctx.stroke(); }
+    ctx.font = '14px serif'; ctx.textAlign = 'center';
+    ctx.fillText('📣', panX + panW / 2, sigY + 14);
+    ctx.fillStyle = sigCool ? '#666' : '#ffaa60'; ctx.font = 'bold 9px monospace';
+    ctx.fillText(sigCool ? `${Math.ceil(S.signalCooldown / 1000)}s` : 'SIGNAL', panX + panW / 2, sigY + 28);
+
+    // Place Board button (above signal, right-aligned, when near ghost)
+    if (S.nearGhost && !S.nearGhost.claimedBy) {
+      const pbW = 130, pbH = 40;
+      const pbX = cw - pbW - panMargin, pbY = sigY - pbH - toolGap;
+      ctx.fillStyle = 'rgba(140,70,220,0.9)'; rrect(ctx, pbX, pbY, pbW, pbH, 12); ctx.fill();
+      ctx.strokeStyle = '#c084fc'; ctx.lineWidth = 1.5; rrect(ctx, pbX, pbY, pbW, pbH, 12); ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 13px monospace'; ctx.textAlign = 'center';
+      ctx.fillText('✦ Place Board', pbX + pbW / 2, pbY + 26);
+    }
+
+    // Tool buttons (vertical stack)
     tools.forEach((t, i) => {
-      const bx = barX + i*(bw+gap);
+      const bx = panX;
+      const by = toolsY + i * (toolH + toolGap);
       const active = S.activeTool === t;
       const sig = S.signals[t] || 0;
 
       if (t === 'emf') {
-        // EMF gets a distinct look: dark green background, segmented bars indicator
         ctx.fillStyle = active ? 'rgba(0,80,30,0.92)' : 'rgba(0,30,10,0.82)';
-        rrect(ctx, bx, barY, bw, bh, 10); ctx.fill();
-        if (active) { ctx.strokeStyle = '#00ff88'; ctx.lineWidth = 2; rrect(ctx, bx, barY, bw, bh, 10); ctx.stroke(); }
-        // EMF label
+        rrect(ctx, bx, by, panW, toolH, 10); ctx.fill();
+        if (active) { ctx.strokeStyle = '#00ff88'; ctx.lineWidth = 2; rrect(ctx, bx, by, panW, toolH, 10); ctx.stroke(); }
         ctx.fillStyle = active ? '#00ff88' : '#44bb77'; ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center';
-        ctx.fillText('EMF', bx+bw/2, barY+13);
+        ctx.fillText('EMF', bx + panW / 2, by + 13);
         if (S.hasEMFUpgrade) {
           ctx.fillStyle = '#ffdd00'; ctx.font = 'bold 8px monospace';
-          ctx.fillText('2×', bx + bw - 10, barY + 11);
+          ctx.fillText('2×', bx + panW - 10, by + 13);
         }
         // 5 segmented bars
         const nbars = 5, barH = [6,8,10,12,14];
         const litBars = Math.round((sig / 100) * nbars);
         const segW = 8, segGap = 3;
-        const totalW = nbars * segW + (nbars-1) * segGap;
-        const startX = bx + (bw - totalW) / 2;
-        const baseY = barY + bh - 5;
+        const totalW = nbars * segW + (nbars - 1) * segGap;
+        const startX = bx + (panW - totalW) / 2;
+        const baseY = by + toolH - 5;
         for (let b = 0; b < nbars; b++) {
           const sx = startX + b * (segW + segGap);
           const sh = barH[b];
@@ -1791,75 +2714,37 @@
           ctx.fillStyle = lit ? barColor : 'rgba(255,255,255,0.12)';
           ctx.fillRect(sx, baseY - sh, segW, sh);
         }
-        // Pulsing ring when active and signal > 0
         if (active && sig > 0) {
           const pulse = (Math.sin(Date.now() / 180) + 1) / 2;
           ctx.strokeStyle = `rgba(0,255,136,${0.2 + pulse * 0.5})`;
           ctx.lineWidth = 1.5;
-          ctx.beginPath(); ctx.arc(bx+bw/2, barY+28, 10 + pulse * 4, 0, Math.PI*2); ctx.stroke();
+          ctx.beginPath(); ctx.arc(bx + panW / 2, by + 28, 10 + pulse * 4, 0, Math.PI * 2); ctx.stroke();
         }
-        ctx.font = '16px serif'; ctx.fillText('📡', bx+bw/2, barY+34);
+        ctx.font = '16px serif'; ctx.textAlign = 'center';
+        ctx.fillText('📡', bx + panW / 2, by + 34);
       } else {
         ctx.fillStyle = active ? 'rgba(96,165,250,0.85)' : 'rgba(20,20,30,0.78)';
-        rrect(ctx, bx, barY, bw, bh, 10); ctx.fill();
-        if (active) { ctx.strokeStyle = '#60a5fa'; ctx.lineWidth = 2; rrect(ctx, bx, barY, bw, bh, 10); ctx.stroke(); }
-        ctx.font = '22px serif'; ctx.textAlign = 'center';
-        ctx.fillText(icons[t], bx+bw/2, barY+26);
+        rrect(ctx, bx, by, panW, toolH, 10); ctx.fill();
+        if (active) { ctx.strokeStyle = '#60a5fa'; ctx.lineWidth = 2; rrect(ctx, bx, by, panW, toolH, 10); ctx.stroke(); }
+        ctx.font = '20px serif'; ctx.textAlign = 'center';
+        ctx.fillText(icons[t], bx + panW / 2, by + 23);
+        ctx.fillStyle = active ? '#93c5fd' : '#64748b'; ctx.font = 'bold 8px monospace';
+        ctx.fillText(labels[t], bx + panW / 2, by + 35);
         // Signal bar
         ctx.fillStyle = 'rgba(255,255,255,0.18)';
-        ctx.fillRect(bx+6, barY+bh-9, bw-12, 4);
+        ctx.fillRect(bx + 6, by + toolH - 9, panW - 12, 4);
         ctx.fillStyle = sig > 70 ? '#ef4444' : sig > 40 ? '#f97316' : sig > 15 ? '#eab308' : '#4ade80';
-        ctx.fillRect(bx+6, barY+bh-9, (bw-12)*(sig/100), 4);
+        ctx.fillRect(bx + 6, by + toolH - 9, (panW - 12) * (sig / 100), 4);
       }
     });
 
-    // Ghost progress
-    ctx.fillStyle = 'rgba(0,0,0,0.55)'; rrect(ctx, 10, 10, 110, 32, 8); ctx.fill();
-    ctx.fillStyle = '#e2e8f0'; ctx.font = '13px monospace'; ctx.textAlign = 'left';
-    ctx.fillText(`👻 ${S.identified}/${S.totalGhosts}`, 20, 31);
-
-    // Signal button (top-left, beside ghost counter)
-    const sigCool = S.signalCooldown > 0;
-    const sbX = 128, sbY = 8, sbW = 52, sbH = 32;
-    ctx.fillStyle = sigCool ? 'rgba(20,20,30,0.78)' : 'rgba(160,50,10,0.90)';
-    rrect(ctx, sbX, sbY, sbW, sbH, 8); ctx.fill();
-    if (!sigCool) { ctx.strokeStyle = '#ff8040'; ctx.lineWidth = 1.5; rrect(ctx, sbX, sbY, sbW, sbH, 8); ctx.stroke(); }
-    ctx.font = '14px serif'; ctx.textAlign = 'center';
-    ctx.fillText('📣', sbX + sbW/2, sbY + 13);
-    ctx.fillStyle = sigCool ? '#555' : '#ffaa60'; ctx.font = '9px monospace';
-    ctx.fillText(sigCool ? `${Math.ceil(S.signalCooldown/1000)}s` : 'SIGNAL', sbX + sbW/2, sbY + 27);
-    ctx.textAlign = 'left';
-
-    // Area label
-    ctx.fillStyle = 'rgba(0,0,0,0.55)'; rrect(ctx, cw/2-70, 10, 140, 30, 8); ctx.fill();
-    ctx.fillStyle = '#cbd5e1'; ctx.font = '13px monospace'; ctx.textAlign = 'center';
-    ctx.fillText(AREA_DEFS[S.area]?.label || '', cw/2, 30);
-
-    // Journal toggle button (top-right)
-    const jbX = cw - 44, jbY = 8, jbW = 36, jbH = 32;
-    ctx.fillStyle = S.journal ? 'rgba(124,58,237,0.85)' : 'rgba(20,20,30,0.78)';
-    rrect(ctx, jbX, jbY, jbW, jbH, 8); ctx.fill();
-    if (S.journal) { ctx.strokeStyle = '#a78bfa'; ctx.lineWidth = 1.5; rrect(ctx, jbX, jbY, jbW, jbH, 8); ctx.stroke(); }
-    ctx.font = '16px serif'; ctx.textAlign = 'center';
-    ctx.fillText('📒', jbX+jbW/2, jbY+22);
-
-    // Place Board button
-    if (S.nearGhost && !S.nearGhost.claimedBy) {
-      const btnW = 160, btnH = 42;
-      const btnX = (cw - btnW) / 2, btnY = barY - btnH - 12;
-      ctx.fillStyle = 'rgba(140,70,220,0.9)'; rrect(ctx, btnX, btnY, btnW, btnH, 12); ctx.fill();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 14px monospace'; ctx.textAlign = 'center';
-      ctx.fillText('✦ Place Board', cw/2, btnY + 27);
-    }
-
-    // Wrong name flash
+    // ── Wrong guess flash / message ────────────────────────────────────
     if (S.wrongFlash > 0) {
       ctx.fillStyle = `rgba(239,68,68,${S.wrongFlash * 0.4})`;
       ctx.fillRect(0, 0, cw, ch);
       S.wrongFlash = Math.max(0, S.wrongFlash - 0.05);
     }
 
-    // Wrong-guess message
     if (S.attemptsMsg) {
       const msgW = Math.min(cw - 24, 300), msgH = 34;
       const msgX = (cw - msgW) / 2, msgY = ch / 2 - 60;
@@ -1875,7 +2760,7 @@
 
     // Direction arrow (signal tool pointing toward ghost)
     drawDirectionArrow(cw, ch);
-    // Minimap (bottom-right)
+    // Minimap (top-right)
     drawMinimap(cw, ch);
     // Evidence journal overlay
     drawJournal(cw, ch);
@@ -1884,12 +2769,9 @@
   function drawPOIPanel(cw, ch) {
     if (!S.activePoi) return;
     const poi = S.activePoi;
-    const pw = Math.min(cw - 32, 290), ph = 92;
-    const px = (cw - pw) / 2;
-    const barH = 52, gap = 8;
-    const barW = 3 * 70 + 2 * gap;
-    const barY = ch - barH - 10;
-    const py = barY - ph - 10;
+    // Left-aligned in bottom zone, clear of right action panel
+    const pw = Math.min(cw / 2 - 20, 240), ph = 92;
+    const px = 12, py = ch - ph - 18;
     ctx.fillStyle = 'rgba(8,4,18,0.93)';
     rrect(ctx, px, py, pw, ph, 12); ctx.fill();
     ctx.strokeStyle = '#8855cc'; ctx.lineWidth = 1.5;
@@ -2144,55 +3026,6 @@
     }
   }
 
-  // ── Ouija name input overlay ─────────────────────────────────────────────
-  function openNameInput(ghostId) {
-    closeNameInput();
-    const wrap = document.createElement('div');
-    wrap.id = 'ouija-name-input';
-    wrap.style.cssText = [
-      'position:fixed;bottom:10%;left:50%;transform:translateX(-50%)',
-      'z-index:9500;display:flex;gap:8px;align-items:center',
-      'background:rgba(10,5,25,0.92);padding:10px 14px;border-radius:12px',
-      'border:2px solid #7040c0',
-    ].join(';');
-
-    const inp = document.createElement('input');
-    inp.type = 'text';
-    inp.placeholder = "Ghost's name…";
-    inp.maxLength = 24;
-    inp.autocomplete = 'off';
-    inp.autocapitalize = 'off';
-    inp.spellcheck = false;
-    inp.style.cssText = [
-      'font-family:monospace;font-size:17px;padding:7px 10px',
-      'background:rgba(30,15,60,0.95);color:#d4a840',
-      'border:1px solid #6040a0;border-radius:8px;outline:none;width:150px',
-    ].join(';');
-
-    const btn = document.createElement('button');
-    btn.textContent = 'Identify!';
-    btn.style.cssText = [
-      'font-family:monospace;font-size:14px;font-weight:bold;padding:7px 14px',
-      'background:linear-gradient(135deg,#6030b0,#3a1870);color:#fff',
-      'border:none;border-radius:8px;cursor:pointer;white-space:nowrap',
-    ].join(';');
-
-    function doSubmit() {
-      const name = inp.value.trim();
-      if (!name) { inp.focus(); return; }
-      socket.emit('ghost:submit_name', { roomId: S.roomId, ghostId, name });
-      closeOuija('submit');
-    }
-
-    btn.addEventListener('click', doSubmit);
-    inp.addEventListener('keydown', e => { if (e.key === 'Enter') doSubmit(); });
-
-    wrap.appendChild(inp);
-    wrap.appendChild(btn);
-    document.body.appendChild(wrap);
-    setTimeout(() => inp.focus(), 80);
-  }
-
   function closeNameInput() {
     const el = document.getElementById('ouija-name-input');
     if (el) el.remove();
@@ -2241,18 +3074,19 @@
     if (!S.cam) return;
     const area = AREA_DEFS[S.area];
 
-    // Toggle button
-    const tbW = 28, tbH = 22, tbX = cw - tbW - 6, tbY = ch - tbH - 6;
+    // Toggle button (top-right, just below the top bar)
+    const topH = 44;
+    const tbW = 36, tbH = 26, tbX = cw - tbW - 6, tbY = topH + 4;
     ctx.fillStyle = mmOpen ? 'rgba(40,60,40,0.85)' : 'rgba(20,20,30,0.80)';
     rrect(ctx, tbX, tbY, tbW, tbH, 5); ctx.fill();
-    ctx.fillStyle = '#94a3b8'; ctx.font = '12px monospace'; ctx.textAlign = 'center';
-    ctx.fillText('[M]', tbX + tbW/2, tbY + 14);
+    ctx.fillStyle = '#94a3b8'; ctx.font = '11px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('[M]', tbX + tbW / 2, tbY + 17);
 
     if (!mmOpen) return;
 
-    const mmW = Math.min(70, Math.round(cw * 0.18));
+    const mmW = Math.min(80, Math.round(cw * 0.20));
     const mmH = Math.round(mmW * area.areaHeight / area.areaWidth);
-    const mmX = cw - mmW - 6, mmY = ch - mmH - tbH - 10;
+    const mmX = cw - mmW - 6, mmY = tbY + tbH + 4;
     const sc  = mmW / area.areaWidth;
 
     ctx.fillStyle = 'rgba(0,0,0,0.82)';
@@ -2551,10 +3385,13 @@
     socket.on('ghost:respawn', ({ ghostId }) => {
       if (!S) return;
       delete S.ghosts[ghostId];
-      // Show notification for all players (guesser's ghost:wrong_name will override)
-      S.attemptsMsg = '👻 Ghost fled! Find it again.';
-      clearTimeout(S.attemptsMsgTimer);
-      S.attemptsMsgTimer = setTimeout(() => { if (S) S.attemptsMsg = null; }, 2500);
+      // Only show generic message if ghost:wrong_name hasn't already set a message
+      // (guesser receives both events; wrong_name fires first with the more specific msg)
+      if (!S.attemptsMsg) {
+        S.attemptsMsg = '👻 Ghost fled! Find it again.';
+        clearTimeout(S.attemptsMsgTimer);
+        S.attemptsMsgTimer = setTimeout(() => { if (S) S.attemptsMsg = null; }, 2500);
+      }
     });
 
     socket.on('ghost:signal_broadcast', ({ playerIndex, x, y }) => {
@@ -2650,6 +3487,9 @@
       playerSignals: {},
       signalCooldown: 0,
     };
+
+    // Init alligators for hotel
+    if ((gd.area || 'graveyard') === 'hotel') initAlligators();
 
     // Init fog grid
     const areaForFog = AREA_DEFS[S.area] || AREA_DEFS.graveyard;

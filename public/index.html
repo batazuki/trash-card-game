@@ -134,6 +134,7 @@
             <button class="ghost-area-btn" data-area="graveyard">⚰️ Graveyard</button>
             <button class="ghost-area-btn" data-area="garden">🌿 Garden</button>
             <button class="ghost-area-btn" data-area="house">🏚️ Old House</button>
+            <button class="ghost-area-btn" data-area="hotel">🏨 Hotel</button>
           </div>
         </div>
 
@@ -232,6 +233,7 @@
               <button class="ghost-area-btn pregame-area-btn" data-area="graveyard">⚰️ Graveyard</button>
               <button class="ghost-area-btn pregame-area-btn" data-area="garden">🌿 Garden</button>
               <button class="ghost-area-btn pregame-area-btn" data-area="house">🏚️ Old House</button>
+              <button class="ghost-area-btn pregame-area-btn" data-area="hotel">🏨 Hotel</button>
             </div>
           </div>
           <div class="game-option-row">
@@ -344,6 +346,7 @@
             <button class="ghost-area-btn ghost-rematch-area" data-area="graveyard">⚰️ Graveyard</button>
             <button class="ghost-area-btn ghost-rematch-area" data-area="garden">🌿 Garden</button>
             <button class="ghost-area-btn ghost-rematch-area" data-area="house">🏚️ Old House</button>
+            <button class="ghost-area-btn ghost-rematch-area" data-area="hotel">🏨 Hotel</button>
           </div>
         </div>
         <div class="ghost-rematch-section">
@@ -589,6 +592,16 @@
   <!-- ═══ SHARE TOAST ═══ -->
   <div id="share-toast" class="share-toast"></div>
 
+  <!-- Version mismatch blocking overlay -->
+  <div id="version-update-overlay" class="hidden">
+    <div class="version-update-box">
+      <div class="version-update-icon">🔄</div>
+      <h2 class="version-update-title">Update Required</h2>
+      <p class="version-update-msg">A new version of Tiny Tiny Games is available. Please update to continue playing.</p>
+      <button class="version-update-btn" onclick="window.location.reload(true)">Update Now</button>
+    </div>
+  </div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script src="game.js"></script>
   <script src="games/trash-client.js"></script>
@@ -599,7 +612,25 @@
   <script src="games/ghost-client.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
+      navigator.serviceWorker.register('/sw.js').then(reg => {
+        // If a new SW is already waiting, it means the page is stale — show update prompt
+        if (reg.waiting) {
+          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // New SW installed and old one still controlling — page is stale
+              newWorker.postMessage({ type: 'SKIP_WAITING' });
+            }
+          });
+        });
+        // When SW takes control, reload to get fresh assets
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          window.location.reload();
+        });
+      }).catch(() => {});
     }
   </script>
 </body>

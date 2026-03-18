@@ -48,6 +48,16 @@ module.exports = function(io, helpers) {
       { title: 'The Faceless Statue',       text: 'This figure once had a face. The groundskeeper removed it in 1952. He refuses to explain why.' },
       { title: 'Sealed Well Notice, 1903',  text: 'A surveyor heard voices from inside. The official report cites "echo effects from underground chambers."' },
     ],
+    hotel: [
+      { title: 'Guest Logbook, 1987',    text: 'Room 312 has been listed as occupied for 34 consecutive years. Housekeeping stopped knocking in 1991.' },
+      { title: 'Pool Closure Notice',    text: '"Closed due to unexplained activity." The posted date has been scratched away. The water is still warm.' },
+      { title: 'Room Service Ticket',    text: '"One rare steak, two glasses of wine, candles." Room 218. Order placed in 1978. Never collected. Never canceled.' },
+      { title: 'Staff Bulletin Board',   text: '"Do NOT use elevator C between 3am and 5am. It will take you to the wrong floor." — No one knows who posted it.' },
+      { title: 'Lobby Piano Placard',    text: '"This instrument has not been tuned since 1965." Night staff report hearing it play itself during quiet evenings.' },
+      { title: 'Lost & Found Ledger',    text: 'Entry 47 reads: "One child\'s shoe. No matching shoe found. No child reported missing." Entry 48 is torn out.' },
+      { title: 'Ballroom Dance Card',    text: 'New Year\'s Eve, 1959. Every dance slot is filled — in the same handwriting. The owner\'s name is left blank.' },
+      { title: 'Maintenance Log',        text: '"Replaced mirror in Room 206 for the seventh time this year. Glass arrives facing inward. Cause unknown."' },
+    ],
     house: [
       { title: 'Faded Letter',              text: '"Do not go into the east wing after sundown. We did not ask why. Now we know." — Unsigned.' },
       { title: 'Guest Register',            text: 'Last entry: "Room 4, party of 3, checking out Monday." Monday was a Wednesday that year. They never checked out.' },
@@ -159,6 +169,111 @@ module.exports = function(io, helpers) {
     return obs;
   }
 
+  function buildHotelObstacles() {
+    const obs = [];
+    // Outer walls
+    obs.push(rect(0,0,80,1,'stone'), rect(0,79,80,1,'stone'));
+    obs.push(rect(0,0,1,80,'stone'), rect(79,0,1,80,'stone'));
+    // Interior side walls
+    obs.push(rect(20,1,1,13,'stone'), rect(59,1,1,13,'stone'));
+    obs.push(rect(21,6,38,1,'stone'));
+    // Back office furniture
+    obs.push(rect(22,2,7,3,'table'), rect(50,2,7,3,'table'));
+    obs.push(rect(31,2,1,4,'shelf'), rect(47,2,1,4,'shelf'));
+    // Reception counter
+    obs.push(rect(31,8,18,3,'counter'));
+    // Columns
+    obs.push(rect(7,5,2,4,'pillar'), rect(13,5,2,4,'pillar'));
+    obs.push(rect(63,5,2,4,'pillar'), rect(69,5,2,4,'pillar'));
+    // Sofas and tables in lobby
+    obs.push(rect(3,7,5,3,'sofa'), rect(72,7,5,3,'sofa'));
+    obs.push(rect(4,10,3,2,'table'), rect(73,10,3,2,'table'));
+    // Stairs and elevators
+    obs.push(rect(38,8,4,5,'stairs'), rect(44,8,4,5,'stairs'));
+    obs.push(rect(28,8,4,5,'elevator'), rect(49,8,4,5,'elevator'));
+    // Lobby divider wall with passages
+    obs.push(rect(1,14,19,1,'stone'), rect(28,14,24,1,'stone'), rect(60,14,19,1,'stone'));
+    // Wing A right wall
+    obs.push(rect(19,15,1,44,'stone'));
+    // Wing A rooms (walls and furniture)
+    obs.push(rect(1,21,18,1,'stone'));
+    obs.push(rect(2,16,7,3,'bed'), rect(14,16,3,3,'mirror'), rect(14,19,2,1,'table'));
+    obs.push(rect(1,28,18,1,'stone'));
+    obs.push(rect(2,23,7,3,'bed'), rect(14,23,3,3,'mirror'), rect(14,26,2,1,'table'), rect(11,27,2,1,'chair'));
+    obs.push(rect(1,35,18,1,'stone'));
+    obs.push(rect(2,30,7,3,'bed'), rect(14,30,3,3,'mirror'), rect(14,33,2,1,'table'));
+    obs.push(rect(1,42,18,1,'stone'));
+    obs.push(rect(2,37,7,3,'bed'), rect(14,37,3,3,'mirror'), rect(14,40,2,1,'table'), rect(11,41,2,1,'chair'));
+    obs.push(rect(1,49,18,1,'stone'));
+    obs.push(rect(2,44,7,3,'bed'), rect(14,44,3,3,'mirror'), rect(14,47,2,1,'table'));
+    obs.push(rect(1,56,18,1,'stone'));
+    obs.push(rect(2,51,7,3,'bed'), rect(14,51,3,3,'mirror'), rect(14,54,2,1,'table'), rect(11,55,2,1,'chair'));
+    // Wing B left wall
+    obs.push(rect(60,15,1,44,'stone'));
+    // Wing B rooms
+    obs.push(rect(61,21,18,1,'stone'));
+    obs.push(rect(70,16,7,3,'bed'), rect(62,16,3,3,'mirror'), rect(62,19,2,1,'table'));
+    obs.push(rect(61,28,18,1,'stone'));
+    obs.push(rect(70,23,7,3,'bed'), rect(62,23,3,3,'mirror'), rect(62,26,2,1,'table'), rect(66,27,2,1,'chair'));
+    obs.push(rect(61,35,18,1,'stone'));
+    obs.push(rect(70,30,7,3,'bed'), rect(62,30,3,3,'mirror'), rect(62,33,2,1,'table'));
+    obs.push(rect(61,42,18,1,'stone'));
+    obs.push(rect(70,37,7,3,'bed'), rect(62,37,3,3,'mirror'), rect(62,40,2,1,'table'), rect(66,41,2,1,'chair'));
+    obs.push(rect(61,49,18,1,'stone'));
+    obs.push(rect(70,44,7,3,'bed'), rect(62,44,3,3,'mirror'), rect(62,47,2,1,'table'));
+    obs.push(rect(61,56,18,1,'stone'));
+    obs.push(rect(70,51,7,3,'bed'), rect(62,51,3,3,'mirror'), rect(62,54,2,1,'table'), rect(66,55,2,1,'chair'));
+    // Ballroom bottom wall and pillars
+    obs.push(rect(20,37,40,1,'stone'));
+    obs.push(rect(21,16,2,3,'pillar'), rect(56,16,2,3,'pillar'));
+    obs.push(rect(21,33,2,3,'pillar'), rect(56,33,2,3,'pillar'));
+    // Ballroom tables
+    obs.push(rect(24,18,3,3,'table'), rect(33,18,3,3,'table'), rect(42,18,3,3,'table'), rect(51,18,3,3,'table'));
+    obs.push(rect(24,25,3,3,'table'), rect(33,25,3,3,'table'), rect(42,25,3,3,'table'), rect(51,25,3,3,'table'));
+    obs.push(rect(24,32,3,3,'table'), rect(33,32,3,3,'table'), rect(42,32,3,3,'table'), rect(51,32,3,3,'table'));
+    // Ballroom chairs
+    obs.push(rect(23,19,1,1,'chair'), rect(27,19,1,1,'chair'), rect(25,17,1,1,'chair'), rect(25,21,1,1,'chair'));
+    obs.push(rect(32,19,1,1,'chair'), rect(36,19,1,1,'chair'), rect(34,17,1,1,'chair'), rect(34,21,1,1,'chair'));
+    obs.push(rect(41,19,1,1,'chair'), rect(45,19,1,1,'chair'), rect(43,17,1,1,'chair'), rect(43,21,1,1,'chair'));
+    obs.push(rect(50,19,1,1,'chair'), rect(54,19,1,1,'chair'), rect(52,17,1,1,'chair'), rect(52,21,1,1,'chair'));
+    obs.push(rect(23,26,1,1,'chair'), rect(27,26,1,1,'chair'), rect(25,24,1,1,'chair'), rect(25,28,1,1,'chair'));
+    obs.push(rect(32,26,1,1,'chair'), rect(36,26,1,1,'chair'), rect(34,24,1,1,'chair'), rect(34,28,1,1,'chair'));
+    obs.push(rect(41,26,1,1,'chair'), rect(45,26,1,1,'chair'), rect(43,24,1,1,'chair'), rect(43,28,1,1,'chair'));
+    obs.push(rect(50,26,1,1,'chair'), rect(54,26,1,1,'chair'), rect(52,24,1,1,'chair'), rect(52,28,1,1,'chair'));
+    // Pool room bottom wall (pool itself is non-collidable, so skip)
+    obs.push(rect(20,59,40,1,'stone'));
+    // Lounge chairs around pool
+    obs.push(rect(21,43,3,1,'chair'), rect(21,48,3,1,'chair'), rect(21,53,3,1,'chair'));
+    obs.push(rect(56,43,3,1,'chair'), rect(56,48,3,1,'chair'), rect(56,53,3,1,'chair'));
+    obs.push(rect(31,38,3,1,'chair'), rect(39,38,3,1,'chair'), rect(47,38,3,1,'chair'));
+    obs.push(rect(31,57,3,1,'chair'), rect(39,57,3,1,'chair'), rect(47,57,3,1,'chair'));
+    // Shrubs near pool
+    obs.push(rect(21,40,2,2,'shrub'), rect(57,40,2,2,'shrub'));
+    obs.push(rect(21,56,2,2,'shrub'), rect(57,56,2,2,'shrub'));
+    // Lower section
+    obs.push(rect(19,60,1,19,'stone'), rect(1,66,18,1,'stone'), rect(9,60,1,6,'stone'));
+    obs.push(rect(2,61,5,3,'table'), rect(11,61,6,3,'table'), rect(11,67,4,2,'table'));
+    obs.push(rect(2,64,1,5,'shelf'), rect(5,64,1,5,'shelf'));
+    obs.push(rect(39,60,1,19,'stone'));
+    obs.push(rect(21,61,16,3,'counter'), rect(21,64,3,8,'counter'));
+    obs.push(rect(21,61,1,3,'shelf'));
+    obs.push(rect(24,64,2,1,'chair'), rect(27,64,2,1,'chair'), rect(30,64,2,1,'chair'), rect(33,64,2,1,'chair'));
+    obs.push(rect(25,69,4,3,'sofa'), rect(31,69,4,3,'sofa'), rect(27,73,5,2,'table'));
+    obs.push(rect(59,60,1,19,'stone'), rect(40,66,20,1,'stone'));
+    obs.push(rect(41,61,5,3,'table'), rect(50,61,5,3,'table'));
+    obs.push(rect(41,67,5,3,'table'), rect(50,67,5,3,'table'));
+    obs.push(rect(41,73,5,3,'table'), rect(50,73,5,3,'table'));
+    obs.push(rect(40,62,1,1,'chair'), rect(46,62,1,1,'chair'), rect(47,62,1,1,'chair'), rect(55,62,1,1,'chair'));
+    obs.push(rect(40,68,1,1,'chair'), rect(46,68,1,1,'chair'), rect(47,68,1,1,'chair'), rect(55,68,1,1,'chair'));
+    obs.push(rect(40,74,1,1,'chair'), rect(46,74,1,1,'chair'), rect(47,74,1,1,'chair'), rect(55,74,1,1,'chair'));
+    obs.push(rect(60,60,1,19,'stone'), rect(61,66,18,1,'stone'), rect(70,60,1,6,'stone'));
+    obs.push(rect(62,61,6,3,'table'), rect(72,61,5,3,'table'));
+    obs.push(rect(62,64,1,5,'shelf'), rect(65,64,1,5,'shelf'));
+    obs.push(rect(2,75,4,3,'stairs'), rect(73,75,4,3,'stairs'));
+    obs.push(rect(19,25,1,3,'mirror'), rect(60,25,1,3,'mirror'));
+    return obs;
+  }
+
   const AREAS = {
     graveyard: {
       label: 'Graveyard',
@@ -200,6 +315,22 @@ module.exports = function(io, helpers) {
         { x: 1024, y: 1344, w: 512, h: 512 },// basement right
       ],
       playerStart: { x: 960, y: 640 },
+    },
+    hotel: {
+      label: 'Hotel',
+      bgColor: '#18121e',
+      areaWidth:  80 * T,  // 2560
+      areaHeight: 80 * T,  // 2560
+      obstacles: buildHotelObstacles(),
+      spawnZones: [
+        { x:  96, y:  512, w: 416, h: 384 },  // wing A rooms
+        { x: 1984, y:  512, w: 416, h: 384 }, // wing B rooms
+        { x:  704, y:  512, w: 896, h: 640 }, // ballroom area
+        { x:  704, y: 1280, w: 896, h: 512 }, // pool area
+        { x:  128, y: 1984, w: 512, h: 512 }, // lower section left
+        { x: 1280, y: 1984, w: 896, h: 512 }, // lower section right
+      ],
+      playerStart: { x: 1280, y: 352 },
     },
   };
 
@@ -642,7 +773,7 @@ module.exports = function(io, helpers) {
     clearAllTimers(state.ghost);
 
     // Pick area (respect host's selection if valid, otherwise random)
-    const areaKeys = ['graveyard', 'garden', 'house'];
+    const areaKeys = ['graveyard', 'garden', 'house', 'hotel'];
     const areaKey  = (state.ghostArea && AREAS[state.ghostArea]) ? state.ghostArea
                    : areaKeys[Math.floor(Math.random() * areaKeys.length)];
     const areaData = AREAS[areaKey];

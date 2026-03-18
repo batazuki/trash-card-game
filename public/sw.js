@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ttg-v9';
+const CACHE_NAME = 'ttg-v10';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -20,6 +20,11 @@ self.addEventListener('install', e => {
       .then(cache => cache.addAll(STATIC_ASSETS))
       .then(() => self.skipWaiting())
   );
+});
+
+// Message: allow page to trigger skipWaiting
+self.addEventListener('message', e => {
+  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 // Activate: clean old caches

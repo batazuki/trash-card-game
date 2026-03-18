@@ -4,6 +4,19 @@
 
 const socket = io();
 
+// ═══ VERSION CHECK ═══
+const CLIENT_VERSION = '10';
+
+socket.on("serverVersion", ({ version }) => {
+  // Always reply with our version so the server can validate us
+  socket.emit("clientVersion", { version: CLIENT_VERSION });
+});
+
+socket.on("versionMismatch", () => {
+  const overlay = document.getElementById("version-update-overlay");
+  if (overlay) overlay.classList.remove("hidden");
+});
+
 // ═══ SPLASH SCREEN ═══
 (function dismissSplash() {
   const splash = document.getElementById("splash-screen");
@@ -549,7 +562,7 @@ function applyPregameConfig(config, isHost) {
     // Guest: build read-only summary text
     let summary = `${pgInfo.icon} ${pgInfo.name}`;
     if (isGhost) {
-      const areaLabel = { graveyard: "Graveyard", garden: "Garden", house: "Old House" };
+      const areaLabel = { graveyard: "Graveyard", garden: "Garden", house: "Old House", hotel: "Hotel" };
       const areaName = areaLabel[config.ghostArea] || "Random";
       summary += ` · ${areaName} · ${config.ghostCount || 3} Ghosts`;
     }

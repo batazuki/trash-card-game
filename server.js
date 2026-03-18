@@ -163,6 +163,11 @@ function startGame(state, roomId) {
 const ALLOWED_EMOJIS = new Set(["👍","😂","😮","🔥","💀","😬","🦍","6️⃣7️⃣"]);
 
 // ═══════════════════════════════════════════════
+// VERSION CHECK
+// ═══════════════════════════════════════════════
+const CLIENT_VERSION = '10';
+
+// ═══════════════════════════════════════════════
 // SOCKET EVENTS
 // ═══════════════════════════════════════════════
 
@@ -171,6 +176,9 @@ io.on("connection", socket => {
   // Per-socket reaction rate-limit bucket (max 5 per 15 s)
   const reactionTimestamps = [];
 
+  // Send server version immediately on connection
+  socket.emit("serverVersion", { version: CLIENT_VERSION });
+
   // Register game-specific socket events
   warGame.registerEvents(socket, rooms);
   solitaireGame.registerEvents(socket, rooms);
@@ -178,8 +186,28 @@ io.on("connection", socket => {
   sketchGame.registerEvents(socket, rooms);
   ghostGame.registerEvents(socket, rooms);
 
+  // Version check — track whether this socket has confirmed a matching version
+  let socketVersionOk = false;
+  socket.on("clientVersion", ({ version }) => {
+    if (version === CLIENT_VERSION) {
+      socketVersionOk = true;
+    } else {
+      socket.emit("versionMismatch", { serverVersion: CLIENT_VERSION });
+    }
+  });
+
+  function requireVersion(cb) {
+    return (...args) => {
+      if (!socketVersionOk) {
+        socket.emit("versionMismatch", { serverVersion: CLIENT_VERSION });
+        return;
+      }
+      cb(...args);
+    };
+  }
+
   // ── Create Room ──
-  socket.on("createRoom", ({ playerName, game, rounds, drawTime, previewTime, ghostArea, ghostCount }) => {
+  socket.on("createRoom", requireVersion(({ playerName, game, rounds, drawTime, previewTime, ghostArea, ghostCount }) => {
     let roomId;
     try { roomId = generateRoomId(); }
     catch(e) { socket.emit("joinError", { message: "Server is full, try again later." }); return; }
@@ -220,10 +248,10 @@ io.on("connection", socket => {
     rooms.set(roomId, state);
     socket.join(roomId);
     socket.emit("roomCreated", { roomId, players: [{ name: creator.name }], token, ...getLobbyConfig(state) }); // C2: send token
-  });
+  }));
 
   // ── Join Room ──
-  socket.on("joinRoom", ({ roomId, playerName }) => {
+  socket.on("joinRoom", requireVersion(({ roomId, playerName }) => {
     const state = rooms.get(roomId);
     if (!state) {
       socket.emit("joinError", { message: "Room not found." });
@@ -251,7 +279,7 @@ io.on("connection", socket => {
     const playerList = state.players.map(p => ({ name: p.name, avatar: p.lobbyAvatar || 0 }));
     socket.emit("joinedRoom", { roomId, players: playerList, token, ...getLobbyConfig(state) }); // C2: send token
     io.to(roomId).emit("playerJoined", { players: playerList, ...getLobbyConfig(state) });
-  });
+  }));
 
   // ── Host requests game start (from pre-game lobby) ──
   socket.on("hostStartGame", ({ roomId }) => {

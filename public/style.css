@@ -2902,3 +2902,69 @@ body.game-ghost .pregame-settings-text {
   border-color: rgba(76,175,80,0.3);
   color: #c8e6c9;
 }
+
+/* ═══════════════════════════════════════════════
+   VERSION UPDATE OVERLAY
+   ═══════════════════════════════════════════════ */
+#version-update-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(10, 10, 20, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(6px);
+}
+
+#version-update-overlay.hidden {
+  display: none;
+}
+
+.version-update-box {
+  background: #1a1a2e;
+  border: 1px solid rgba(244, 114, 182, 0.4);
+  border-radius: 20px;
+  padding: 40px 36px 36px;
+  max-width: 340px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+}
+
+.version-update-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.version-update-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #f9fafb;
+  margin: 0 0 12px;
+}
+
+.version-update-msg {
+  font-size: 14px;
+  color: rgba(249, 250, 251, 0.7);
+  line-height: 1.5;
+  margin: 0 0 28px;
+}
+
+.version-update-btn {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #ec4899, #a855f7);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.version-update-btn:hover {
+  opacity: 0.9;
+}
