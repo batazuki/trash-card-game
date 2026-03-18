@@ -366,7 +366,7 @@
     },
     hotel: {
       areaWidth: 2560, areaHeight: 2560, bgColor: '#18121e', label: 'Hotel',
-      playerStart: { x:1280, y:352 }, obstacles: buildHotelObs(),
+      playerStart: { x:1280, y:520 }, obstacles: buildHotelObs(),
       obsColors: { stone:'#3a3050', counter:'#5a4038', bed:'#6a3a5a', sofa:'#7a3848',
                    elevator:'#5a5870', pillar:'#c8b878', table:'#7a5030', chair:'#5a3a28',
                    shelf:'#3a2810', mirror:'#8080b8', stairs:'#504860', shrub:'#2a4820',

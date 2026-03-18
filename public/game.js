@@ -401,6 +401,8 @@ function updatePregamePlayers(players, game) {
   const isGhost = (game || local.gameType) === "ghost";
   players.forEach((p, i) => {
     const li = document.createElement("li");
+    li.classList.add("player-slide-in");
+    li.style.animationDelay = `${i * 60}ms`;
     let prefix = i === 0 ? "👑 " : "";
     if (isGhost && p.avatar !== undefined) {
       const avDef = GHOST_AVATAR_DEFS[p.avatar] || GHOST_AVATAR_DEFS[0];

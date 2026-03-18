@@ -330,7 +330,7 @@ module.exports = function(io, helpers) {
         { x:  128, y: 1984, w: 512, h: 512 }, // lower section left
         { x: 1280, y: 1984, w: 896, h: 512 }, // lower section right
       ],
-      playerStart: { x: 1280, y: 352 },
+      playerStart: { x: 1280, y: 520 },
     },
   };
 
