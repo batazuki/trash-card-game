@@ -11,6 +11,23 @@
   const POS_SEND_MS   = 60;
   const T             = 32;    // tile size
 
+  // ── Noise-based flicker system ───────────────────────────────────────────
+  const FLICKER_NOISE = new Float32Array(256);
+  for (let i = 0; i < 256; i++) FLICKER_NOISE[i] = Math.random();
+  function flickerNoise(t, speed, seed) {
+    const idx = ((t * speed + seed) | 0) & 255;
+    const next = (idx + 1) & 255;
+    const frac = (t * speed + seed) - Math.floor(t * speed + seed);
+    return FLICKER_NOISE[idx] * (1 - frac) + FLICKER_NOISE[next] * frac;
+  }
+  function getFlicker(now, seed) {
+    const t = now * 0.001;
+    return 0.65
+      + flickerNoise(t, 8.0, seed)      * 0.15   // fast jitter
+      + flickerNoise(t, 2.5, seed + 50) * 0.12   // medium wave
+      + flickerNoise(t, 0.7, seed + 99) * 0.08;  // slow drift
+  }
+
   // ── Avatar pixel-art palettes ────────────────────────────────────────────
   const PIXEL = 2; // real pixels per art unit
 
@@ -978,7 +995,22 @@
       S.me.x = Math.max(PLAYER_R, Math.min(area.areaWidth  - PLAYER_R, S.me.x));
       S.me.y = Math.max(PLAYER_R, Math.min(area.areaHeight - PLAYER_R, S.me.y));
       S.me.facing = joy.angle;
+      const prevPhase = walkPhase;
       walkPhase += spd * dt * 0.12;
+      // Emit a footstep dust particle at each half-step crossing
+      if (Math.floor(prevPhase * 2) !== Math.floor(walkPhase * 2)) {
+        if (!S.footsteps) S.footsteps = [];
+        S.footsteps.push({ x: S.me.x, y: S.me.y + 10, age: 0 });
+        if (S.footsteps.length > 40) S.footsteps.shift();
+      }
+    }
+
+    // Age footstep particles
+    if (S.footsteps) {
+      for (let fi = S.footsteps.length - 1; fi >= 0; fi--) {
+        S.footsteps[fi].age += dt;
+        if (S.footsteps[fi].age > 0.55) S.footsteps.splice(fi, 1);
+      }
     }
 
     // Camera (smooth follow)
@@ -1536,6 +1568,40 @@
     vg.addColorStop(1, 'rgba(0,0,0,0.30)');
     ctx.fillStyle = vg;
     ctx.fillRect(0, 0, cw, ch);
+
+    // Chromatic aberration — red/blue screen-blend gradients when cold signal is strong
+    if (S.coldSignal > 0.08) {
+      const caInt = Math.min(1, (S.coldSignal - 0.08) / 0.72);
+      const caShift = caInt * 8;
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      // Red channel shifted left
+      const rg = ctx.createLinearGradient(0, 0, cw, 0);
+      rg.addColorStop(0, `rgba(80,0,0,${(caInt * 0.12).toFixed(3)})`);
+      rg.addColorStop(0.5, 'rgba(0,0,0,0)');
+      rg.addColorStop(1, `rgba(80,0,0,${(caInt * 0.06).toFixed(3)})`);
+      ctx.fillStyle = rg;
+      ctx.fillRect(-caShift, 0, cw, ch);
+      // Blue channel shifted right
+      const bg2 = ctx.createLinearGradient(0, 0, cw, 0);
+      bg2.addColorStop(0, `rgba(0,0,80,${(caInt * 0.06).toFixed(3)})`);
+      bg2.addColorStop(0.5, 'rgba(0,0,0,0)');
+      bg2.addColorStop(1, `rgba(0,0,80,${(caInt * 0.12).toFixed(3)})`);
+      ctx.fillStyle = bg2;
+      ctx.fillRect(caShift, 0, cw, ch);
+      ctx.restore();
+    }
+
+    // Film grain — 500 random 1.5px dots, alternating light/dark
+    ctx.save();
+    for (let g = 0; g < 500; g++) {
+      const gx = Math.random() * cw;
+      const gy = Math.random() * ch;
+      ctx.fillStyle = (g & 1) ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.022)';
+      ctx.fillRect(gx, gy, 1.5, 1.5);
+    }
+    ctx.restore();
+
     drawHUD(cw, ch);
     drawPOIPanel(cw, ch);
     drawPlayerSignals(cw, ch);
@@ -1556,13 +1622,66 @@
 
     drawGroundTexture(S.area, area, now);
 
-    // #2 Contact shadows — soft south-edge ground shadow grounds large obstacles
-    ctx.fillStyle = 'rgba(0,0,0,0.16)';
+    // Footstep dust trails (drawn before obstacles so they appear on ground)
+    if (S.footsteps && S.footsteps.length > 0) {
+      for (const fs of S.footsteps) {
+        const t = fs.age / 0.55;
+        const fsAlpha = (1 - t) * 0.22;
+        const fsRX = 5 + t * 6;
+        const fsRY = 2.5 + t * 3;
+        ctx.save();
+        ctx.globalAlpha = fsAlpha;
+        ctx.fillStyle = 'rgba(200,180,140,1)';
+        ctx.beginPath();
+        ctx.ellipse(fs.x, fs.y, fsRX, fsRY, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    // --- Ambient occlusion halos ---
+    const _aoSkip = new Set(['torch','candle','sandpit','pool','flower','cross','fence','lamp','pillar']);
+    for (const ob of area.obstacles) {
+      if (_aoSkip.has(ob.type)) continue;
+      const aoCx = ob.x + ob.w / 2;
+      const aoCy = ob.y + ob.h;
+      const aoRx = ob.w * 0.7;
+      const aoRy = Math.min(ob.h * 0.3, 18);
+      ctx.save();
+      ctx.translate(aoCx, aoCy);
+      ctx.scale(1, aoRy / aoRx);
+      const aoGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, aoRx);
+      aoGrad.addColorStop(0, 'rgba(0,0,0,0.18)');
+      aoGrad.addColorStop(0.5, 'rgba(0,0,0,0.07)');
+      aoGrad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = aoGrad;
+      ctx.beginPath();
+      ctx.arc(0, 0, aoRx, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // #2 Contact shadows — soft radial gradient shadow ellipse below each obstacle
     for (const ob of area.obstacles) {
       if (ob.w < 32 || ob.h < 32) continue;
       const _t = ob.type;
-      if (_t==='chair'||_t==='candle'||_t==='torch'||_t==='lamp'||_t==='cross'||_t==='fence'||_t==='pillar'||_t==='flower'||_t==='pool') continue;
-      ctx.fillRect(ob.x + 2, ob.y + ob.h, ob.w - 4, 5);
+      if (_t==='chair'||_t==='candle'||_t==='torch'||_t==='lamp'||_t==='cross'||_t==='fence'||_t==='pillar'||_t==='flower'||_t==='pool'||_t==='sandpit') continue;
+      const cx = ob.x + ob.w / 2;
+      const cy = ob.y + ob.h + 4;
+      const rx = ob.w * 0.65;
+      const ry = Math.min(ob.h * 0.25, 14);
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(1, ry / rx);
+      const shadowGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
+      shadowGrad.addColorStop(0, 'rgba(0,0,0,0.22)');
+      shadowGrad.addColorStop(0.6, 'rgba(0,0,0,0.08)');
+      shadowGrad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = shadowGrad;
+      ctx.beginPath();
+      ctx.arc(0, 0, rx, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
     }
 
     for (const ob of area.obstacles) {
@@ -1960,11 +2079,25 @@
   function drawPOIs() {
     if (!S.pois) return;
     const now = Date.now();
-    for (const poi of S.pois) {
+    for (let poiIndex = 0; poiIndex < S.pois.length; poiIndex++) {
+      const poi = S.pois[poiIndex];
       const sx = poi.x;   // already in world space (inside ctx.translate)
       const sy = poi.y;
       const pulse = 0.6 + 0.4 * Math.sin(now * 0.0025 + poi.id * 1.3);
       const alpha = poi.read ? 0.35 : pulse;
+
+      // Expanding ping ring
+      if (!poi.read) {
+        const pingPhase = ((now * 0.0008) + poiIndex * 0.37) % 1.0;
+        const pingR = 18 + pingPhase * 28;
+        const pingAlpha = (1.0 - pingPhase) * 0.55;
+        ctx.save();
+        ctx.strokeStyle = `rgba(200,160,255,${pingAlpha.toFixed(3)})`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(sx, sy, pingR, 0, Math.PI * 2); ctx.stroke();
+        ctx.restore();
+      }
+
       ctx.save();
       ctx.globalAlpha = alpha;
       // Glow ring
@@ -2045,6 +2178,13 @@
     ctx.fillStyle = 'rgba(255,255,255,0.09)';
     ctx.fillRect(x, y, w, 2);
     ctx.fillRect(x, y, 2, h);
+    // Inner depth lines
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x+1, y+h-1); ctx.lineTo(x+1, y+1); ctx.lineTo(x+w-1, y+1); ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x+w-1, y+1); ctx.lineTo(x+w-1, y+h-1); ctx.lineTo(x+1, y+h-1); ctx.stroke();
+    ctx.restore();
   }
 
   function drawObelisk(x, y, w, h, col) {
@@ -2088,6 +2228,13 @@
     ctx.fillStyle = 'rgba(220,180,50,0.35)';
     const ccx = x + w/2, ccy = y + h/2;
     ctx.beginPath(); ctx.arc(ccx, ccy, Math.min(w,h)*0.18, 0, Math.PI*2); ctx.fill();
+    // Inner depth lines
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x+1, y+h-1); ctx.lineTo(x+1, y+1); ctx.lineTo(x+w-1, y+1); ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x+w-1, y+1); ctx.lineTo(x+w-1, y+h-1); ctx.lineTo(x+1, y+h-1); ctx.stroke();
+    ctx.restore();
   }
 
   function drawUrn(x, y, w, h, col) {
@@ -2164,10 +2311,41 @@
         ctx.fillRect(x, y, w, h);
         ctx.fillStyle = 'rgba(255,255,255,0.1)';
         ctx.fillRect(x, y, w, 2);
+        // Wood/bed/other wooden types: horizontal grain lines
+        if (type === 'wood' || type === 'bed') {
+          ctx.strokeStyle = 'rgba(80,45,15,0.06)';
+          ctx.lineWidth = 1;
+          const dgSpacing = Math.max(4, Math.round(h / 5));
+          for (let gi = 1; gi <= 4; gi++) {
+            const gy = y + gi * dgSpacing;
+            if (gy < y + h - 1) {
+              ctx.beginPath(); ctx.moveTo(x + 1, gy); ctx.lineTo(x + w - 1, gy); ctx.stroke();
+            }
+          }
+        }
+        // Inner depth lines for wood and similar solid types
+        if (type === 'wood') {
+          ctx.save();
+          ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(x + 1, y + h - 1);
+          ctx.lineTo(x + 1, y + 1);
+          ctx.lineTo(x + w - 1, y + 1);
+          ctx.stroke();
+          ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+          ctx.beginPath();
+          ctx.moveTo(x + 1, y + h - 1);
+          ctx.lineTo(x + w - 1, y + h - 1);
+          ctx.lineTo(x + w - 1, y + 1);
+          ctx.stroke();
+          ctx.restore();
+        }
     }
   }
 
   function drawStone(x, y, w, h, col) {
+    if (w <= 0 || h <= 0) return;
     ctx.fillStyle = col;
     ctx.fillRect(x, y, w, h);
     // Border walls (aspect ratio > 4:1) get brick texture
@@ -2186,14 +2364,26 @@
     } else {
       ctx.fillStyle = 'rgba(255,255,255,0.10)';
       ctx.fillRect(x, y, w, 2);
+      // Deterministic dot scatter interior texture
+      ctx.fillStyle = 'rgba(0,0,0,0.07)';
+      const nDots = Math.max(2, Math.round(w * h / 400));
+      for (let di = 0; di < nDots; di++) {
+        const dx = x + 3 + (Math.sin(di * 7.31 + x * 0.01) * 0.5 + 0.5) * (w - 6);
+        const dy2 = y + 3 + (Math.sin(di * 5.17 + y * 0.01) * 0.5 + 0.5) * (h - 6);
+        ctx.fillRect(Math.round(dx), Math.round(dy2), 2, 2);
+      }
     }
+    // Inner depth lines
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x+1, y+h-1); ctx.lineTo(x+1, y+1); ctx.lineTo(x+w-1, y+1); ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x+w-1, y+1); ctx.lineTo(x+w-1, y+h-1); ctx.lineTo(x+1, y+h-1); ctx.stroke();
+    ctx.restore();
   }
 
   function drawHedge(x, y, w, h, col) {
-    // Cast shadow (south + east)
-    ctx.fillStyle = 'rgba(0,0,0,0.22)';
-    ctx.fillRect(x + 4, y + h, w, 5);
-    ctx.fillRect(x + w, y + 4, 5, h);
+    if (w <= 0 || h <= 0) return;
     // Dark base
     ctx.fillStyle = col;
     ctx.fillRect(x, y, w, h);
@@ -2210,10 +2400,31 @@
         ctx.beginPath(); ctx.arc(bx2, by2, bR * 0.82, 0, Math.PI * 2); ctx.fill();
       }
     }
+    // Leaf ellipse texture overlay
+    ctx.fillStyle = 'rgba(0,0,0,0.09)';
+    const nLeaves = Math.max(3, Math.round(w * h / 300));
+    for (let li = 0; li < nLeaves; li++) {
+      const lx2 = x + 2 + (Math.sin(li * 6.13 + x * 0.02) * 0.5 + 0.5) * (w - 4);
+      const ly2 = y + 2 + (Math.sin(li * 4.77 + y * 0.02) * 0.5 + 0.5) * (h - 4);
+      const lr = 3 + (Math.sin(li * 3.41) * 0.5 + 0.5) * 4;
+      const la = Math.sin(li * 2.09) * Math.PI;
+      ctx.save();
+      ctx.translate(Math.round(lx2), Math.round(ly2));
+      ctx.rotate(la);
+      ctx.beginPath(); ctx.ellipse(0, 0, lr, lr * 0.45, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
     // Top-left highlight
     ctx.fillStyle = 'rgba(255,255,255,0.07)';
     ctx.fillRect(x, y, w, 2);
     ctx.fillRect(x, y, 2, h);
+    // Inner depth lines
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x+1, y+h-1); ctx.lineTo(x+1, y+1); ctx.lineTo(x+w-1, y+1); ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x+w-1, y+1); ctx.lineTo(x+w-1, y+h-1); ctx.lineTo(x+1, y+h-1); ctx.stroke();
+    ctx.restore();
   }
 
   function drawCross(x, y, w, h, col) {
@@ -2255,10 +2466,19 @@
     ctx.fillRect(x+2, y-10, w-4, 5);
     ctx.fillStyle = 'rgba(255,255,255,0.12)';
     ctx.fillRect(x, y+8, w, 2);
+    // Specular highlight
+    ctx.save();
+    const specX = x + w * 0.2, specY = y + h * 0.15;
+    const specGrad = ctx.createRadialGradient(specX, specY, 0, specX, specY, Math.min(w, h) * 0.3);
+    specGrad.addColorStop(0, 'rgba(255,255,255,0.38)');
+    specGrad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = specGrad;
+    ctx.beginPath(); ctx.arc(specX, specY, Math.min(w, h) * 0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
   }
 
   function drawTorch(x, y, w, h, now) {
-    const flicker = 0.7 + 0.3 * Math.sin(now * 0.008 + x);
+    const flicker = getFlicker(now, x + y);
     const cx2 = x + w/2;
     ctx.fillStyle = '#5a3a1a';
     ctx.fillRect(cx2 - 3, y + h*0.3, 5, h*0.7);
@@ -2306,10 +2526,17 @@
     ctx.fillRect(x + w - 10, y + h - 6, 6, 6);
     ctx.fillStyle = 'rgba(255,255,255,0.15)';
     ctx.fillRect(x, y + 2, w, 2);
+    // Inner depth lines
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x+1, y+h-7); ctx.lineTo(x+1, y+3); ctx.lineTo(x+w-1, y+3); ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x+w-1, y+3); ctx.lineTo(x+w-1, y+h-7); ctx.lineTo(x+1, y+h-7); ctx.stroke();
+    ctx.restore();
   }
 
   function drawLamp(x, y, w, h, col, now) {
-    const flicker = 0.85 + 0.15 * Math.sin(now * 0.005 + x * 0.01);
+    const flicker = getFlicker(now, x * 2 + y);
     const hcx = x + w / 2;
     // Ground glow pool beneath lamp
     const glowR = 58 * flicker;
@@ -2329,6 +2556,15 @@
     ctx.beginPath(); ctx.arc(hcx, y + 7, 5, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = '#808060'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(hcx, y + 7, 8, 0, Math.PI * 2); ctx.stroke();
+    // Specular highlight
+    ctx.save();
+    const specX = hcx - 3, specY = y + 3;
+    const specGrad = ctx.createRadialGradient(specX, specY, 0, specX, specY, Math.min(w, h) * 0.3);
+    specGrad.addColorStop(0, 'rgba(255,255,255,0.38)');
+    specGrad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = specGrad;
+    ctx.beginPath(); ctx.arc(specX, specY, Math.min(w, h) * 0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
   }
 
   function drawStatue(x, y, w, h, col) {
@@ -2350,6 +2586,15 @@
     ctx.beginPath(); ctx.ellipse(x+w/2, y+10, w/2-2, 7, 0, 0, Math.PI*2); ctx.fill();
     ctx.fillStyle = '#5070a0';
     ctx.beginPath(); ctx.ellipse(x+w/2, y+10, w/2-6, 4, 0, 0, Math.PI*2); ctx.fill();
+    // Specular highlight (cool tint for water surface)
+    ctx.save();
+    const specX = x + w * 0.2, specY = y + h * 0.15;
+    const specGrad = ctx.createRadialGradient(specX, specY, 0, specX, specY, Math.min(w, h) * 0.25);
+    specGrad.addColorStop(0, 'rgba(200,235,255,0.35)');
+    specGrad.addColorStop(1, 'rgba(200,235,255,0)');
+    ctx.fillStyle = specGrad;
+    ctx.beginPath(); ctx.arc(specX, specY, Math.min(w, h) * 0.25, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
   }
 
   function drawPillar(x, y, w, h, col) {
@@ -2380,6 +2625,23 @@
     ctx.fillRect(x + w - 8, y + h - 4, 5, 4);
     ctx.fillStyle = 'rgba(255,255,255,0.15)';
     ctx.fillRect(x, y + 4, w, 2);
+    // Horizontal wood grain lines
+    ctx.strokeStyle = 'rgba(80,45,15,0.06)';
+    ctx.lineWidth = 1;
+    const grainSpacing = Math.max(4, Math.round(h / 5));
+    for (let gi = 1; gi < 5; gi++) {
+      const gy = y + 5 + gi * grainSpacing;
+      if (gy < y + h - 8) {
+        ctx.beginPath(); ctx.moveTo(x + 1, gy); ctx.lineTo(x + w - 1, gy); ctx.stroke();
+      }
+    }
+    // Inner depth lines
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x+1, y+h-9); ctx.lineTo(x+1, y+5); ctx.lineTo(x+w-1, y+5); ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x+w-1, y+5); ctx.lineTo(x+w-1, y+h-9); ctx.lineTo(x+1, y+h-9); ctx.stroke();
+    ctx.restore();
   }
 
   function drawChair(x, y, w, h, col) {
@@ -2394,6 +2656,15 @@
   function drawShelf(x, y, w, h, col) {
     ctx.fillStyle = col;
     ctx.fillRect(x, y, w, h);
+    // Horizontal wood grain lines on shelf body
+    ctx.strokeStyle = 'rgba(80,45,15,0.06)';
+    ctx.lineWidth = 1;
+    for (let gi = 1; gi < 6; gi++) {
+      const gy = y + Math.round(gi * h / 6);
+      if (gy > y && gy < y + h) {
+        ctx.beginPath(); ctx.moveTo(x + 1, gy); ctx.lineTo(x + w - 1, gy); ctx.stroke();
+      }
+    }
     const nShelves = Math.max(2, Math.round(h / 20));
     const sp = h / nShelves;
     const bookColors = ['#8a2020','#2050a0','#206a20','#80601a'];
@@ -2406,6 +2677,13 @@
         ctx.fillRect(x + b * 5 + 1, y + i * sp + 3, 4, sp - 5);
       }
     }
+    // Inner depth lines
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x+1, y+h-1); ctx.lineTo(x+1, y+1); ctx.lineTo(x+w-1, y+1); ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x+w-1, y+1); ctx.lineTo(x+w-1, y+h-1); ctx.lineTo(x+1, y+h-1); ctx.stroke();
+    ctx.restore();
   }
 
   function drawFireplace(x, y, w, h, col, now) {
@@ -2413,7 +2691,7 @@
     ctx.fillRect(x, y, w, h);
     ctx.fillStyle = '#1a0a00';
     ctx.fillRect(x + 5, y + 5, w - 10, h - 10);
-    const flicker = 0.6 + 0.4 * Math.sin(now * 0.01 + x);
+    const flicker = getFlicker(now, x + y * 2);
     const fg = ctx.createRadialGradient(x+w/2, y+h-4, 2, x+w/2, y+h/2, h*0.5*flicker);
     fg.addColorStop(0, `rgba(255,180,30,${(0.9*flicker).toFixed(2)})`);
     fg.addColorStop(0.4, `rgba(255,80,10,${(0.7*flicker).toFixed(2)})`);
@@ -2438,6 +2716,15 @@
     ctx.stroke();
     ctx.fillStyle = 'rgba(255,255,255,0.12)';
     ctx.fillRect(x, y, w, 2);
+    // Specular highlight
+    ctx.save();
+    const specX = x + w * 0.2, specY = y + h * 0.15;
+    const specGrad = ctx.createRadialGradient(specX, specY, 0, specX, specY, Math.min(w, h) * 0.3);
+    specGrad.addColorStop(0, 'rgba(255,255,255,0.38)');
+    specGrad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = specGrad;
+    ctx.beginPath(); ctx.arc(specX, specY, Math.min(w, h) * 0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
   }
 
   function drawMirror(x, y, w, h, col, now) {
@@ -2456,6 +2743,15 @@
       ctx.fillStyle = `rgba(160,200,255,${(gt * 0.07).toFixed(3)})`;
       ctx.fillRect(x + 3, y + 3, w - 6, h - 6);
     }
+    // Specular highlight
+    ctx.save();
+    const specX = x + w * 0.2, specY = y + h * 0.15;
+    const specGrad = ctx.createRadialGradient(specX, specY, 0, specX, specY, Math.min(w, h) * 0.3);
+    specGrad.addColorStop(0, 'rgba(255,255,255,0.38)');
+    specGrad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = specGrad;
+    ctx.beginPath(); ctx.arc(specX, specY, Math.min(w, h) * 0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
   }
 
   function drawStairs(x, y, w, h, col) {
@@ -2468,6 +2764,13 @@
       ctx.fillStyle = 'rgba(255,255,255,0.1)';
       ctx.fillRect(x + i*sw, y + (h - h*(i+1)/nSteps), sw, 2);
     }
+    // Inner depth lines
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x+1, y+h-1); ctx.lineTo(x+1, y+1); ctx.lineTo(x+w-1, y+1); ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x+w-1, y+1); ctx.lineTo(x+w-1, y+h-1); ctx.lineTo(x+1, y+h-1); ctx.stroke();
+    ctx.restore();
   }
 
   function drawBed(x, y, w, h, col) {
@@ -2511,6 +2814,23 @@
     }
     ctx.fillStyle = 'rgba(255,255,255,0.15)';
     ctx.fillRect(x, y, w, 2);
+    // Horizontal wood grain lines on counter top surface
+    ctx.strokeStyle = 'rgba(80,45,15,0.06)';
+    ctx.lineWidth = 1;
+    const cTopH = Math.max(3, Math.round(h * 0.2));
+    for (let gi = 1; gi < 4; gi++) {
+      const gy = y + Math.round(gi * cTopH / 4);
+      if (gy > y && gy < y + cTopH) {
+        ctx.beginPath(); ctx.moveTo(x + 1, gy); ctx.lineTo(x + w - 1, gy); ctx.stroke();
+      }
+    }
+    // Inner depth lines
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x+1, y+h-1); ctx.lineTo(x+1, y+1); ctx.lineTo(x+w-1, y+1); ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x+w-1, y+1); ctx.lineTo(x+w-1, y+h-1); ctx.lineTo(x+1, y+h-1); ctx.stroke();
+    ctx.restore();
   }
 
   function drawSofa(x, y, w, h, col) {
@@ -2531,6 +2851,13 @@
     ctx.fillRect(x + w - 4, y, 4, h);
     ctx.fillStyle = 'rgba(255,255,255,0.1)';
     ctx.fillRect(x, y, w, 2);
+    // Inner depth lines
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x+1, y+h-1); ctx.lineTo(x+1, y+1); ctx.lineTo(x+w-1, y+1); ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x+w-1, y+1); ctx.lineTo(x+w-1, y+h-1); ctx.lineTo(x+1, y+h-1); ctx.stroke();
+    ctx.restore();
   }
 
   function drawPool(x, y, w, h, col, now) {
@@ -2589,6 +2916,15 @@
       ctx.lineWidth = 1;
       ctx.beginPath(); ctx.ellipse(rx, ry, rr, rr * 0.35, 0, 0, Math.PI * 2); ctx.stroke();
     }
+    // Specular highlight (cool tint for water surface)
+    ctx.save();
+    const poolSpecX = x + w * 0.2, poolSpecY = y + h * 0.15;
+    const poolSpecGrad = ctx.createRadialGradient(poolSpecX, poolSpecY, 0, poolSpecX, poolSpecY, Math.min(w, h) * 0.25);
+    poolSpecGrad.addColorStop(0, 'rgba(200,235,255,0.35)');
+    poolSpecGrad.addColorStop(1, 'rgba(200,235,255,0)');
+    ctx.fillStyle = poolSpecGrad;
+    ctx.beginPath(); ctx.arc(poolSpecX, poolSpecY, Math.min(w, h) * 0.25, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
   }
 
   function drawElevator(x, y, w, h, col, now) {
@@ -2880,19 +3216,74 @@
       ctx.fillStyle = glow;
       ctx.beginPath(); ctx.arc(gh.x, gh.y, 44, 0, Math.PI*2); ctx.fill();
 
+      // Per-personality visual parameters
+      const pers = gh.personality || 'shy';
+      let gScale = 1.0, gWide = 1.0, gTilt = 0, eyeSpread = 1.0, eyeSize = 3;
+      let hemFreq = 4, hemAmp = 5;
+      switch(pers) {
+        case 'shy':      gScale = 0.88; gWide = 0.92; break;
+        case 'dramatic': gScale = 1.18; hemFreq = 6; hemAmp = 7; eyeSize = 3.5; break;
+        case 'goofy':    gWide = 1.25; gScale = 0.92; eyeSpread = 1.4; eyeSize = 3.5; break;
+        case 'grumpy':   gWide = 1.1; hemFreq = 3; hemAmp = 3; break;
+        case 'regal':    gScale = 1.12; hemFreq = 5; hemAmp = 4; break;
+        case 'confused': gTilt = Math.sin(now * 0.002) * 0.18; break;
+      }
+
       // Body
       const by = gh.y - 6 + Math.sin(now*0.002+gh.id)*4;
+      const headR = (16 + pulse * 3) * gScale;
+      const sheetW = 32 * gWide;
+      const sheetH = 22 * gScale;
+
+      ctx.save();
+      if (pers === 'shy') ctx.globalAlpha = 0.75 + Math.sin(now * 0.002) * 0.2;
+      ctx.translate(gh.x, by);
+      if (gTilt !== 0) ctx.rotate(gTilt);
       ctx.fillStyle = gh.color + 'ee';
-      ctx.beginPath(); ctx.arc(gh.x, by-10, 16+pulse*3, 0, Math.PI*2); ctx.fill();
-      ctx.fillRect(gh.x-16, by-10, 32, 22);
+      ctx.beginPath(); ctx.arc(0, -10 * gScale, headR, 0, Math.PI*2); ctx.fill();
+      ctx.fillRect(-sheetW/2, -10 * gScale, sheetW, sheetH);
       // Wavy hem
-      ctx.beginPath(); ctx.moveTo(gh.x-16, by+12);
-      for (let i=0;i<4;i++) ctx.quadraticCurveTo(gh.x-12+i*8, by+20+(i%2?5:-5), gh.x-8+i*8, by+12);
+      const hemY = (-10 * gScale) + sheetH;
+      ctx.beginPath(); ctx.moveTo(-sheetW/2, hemY);
+      for (let i = 0; i < hemFreq; i++) {
+        const segW = sheetW / hemFreq;
+        ctx.quadraticCurveTo(
+          -sheetW/2 + (i + 0.5) * segW,
+          hemY + hemAmp * (i % 2 ? 1 : -1),
+          -sheetW/2 + (i + 1) * segW,
+          hemY
+        );
+      }
       ctx.fill();
       // Eyes
+      const eyeOff = 5 * eyeSpread;
       ctx.fillStyle = 'rgba(0,0,0,0.75)';
-      ctx.beginPath(); ctx.arc(gh.x-5, by-11, 3, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(gh.x+5, by-11, 3, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(-eyeOff, (-10 * gScale) + 1, eyeSize, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc( eyeOff, (-10 * gScale) + 1, eyeSize, 0, Math.PI*2); ctx.fill();
+
+      // Regal crown
+      if (pers === 'regal') {
+        const crownY = (-10 * gScale) - headR - 4;
+        ctx.fillStyle = 'rgba(255,215,0,0.85)';
+        for (let ci = -1; ci <= 1; ci++) {
+          const peakH = ci === 0 ? 9 : 6;
+          ctx.beginPath();
+          ctx.moveTo(ci * 8 - 4, crownY);
+          ctx.lineTo(ci * 8,     crownY - peakH);
+          ctx.lineTo(ci * 8 + 4, crownY);
+          ctx.closePath(); ctx.fill();
+        }
+      }
+
+      // Grumpy brow lines
+      if (pers === 'grumpy') {
+        ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 1.5;
+        const browY = (-10 * gScale) - eyeSize - 3;
+        ctx.beginPath(); ctx.moveTo(-eyeOff - 4, browY - 3); ctx.lineTo(-eyeOff + 2, browY); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo( eyeOff + 4, browY - 3); ctx.lineTo( eyeOff - 2, browY); ctx.stroke();
+      }
+
+      ctx.restore();
 
       // Name-length dots
       const nl = gh.nameLength, dotX = gh.x - nl*5;
@@ -3019,7 +3410,7 @@
         if (ob.type !== 'torch' && ob.type !== 'candle') continue;
         const lx = ob.x + ob.w/2 - S.cam.x, ly = ob.y - S.cam.y;
         if (lx < -140 || lx > cw+140 || ly < -140 || ly > ch+140) continue;
-        const flicker = 0.78 + 0.22 * Math.sin(now * 0.0095 + ob.x * 0.013);
+        const flicker = getFlicker(now, ob.x + ob.y);
         const lr = 75 * flicker;
         const tg = dc.createRadialGradient(lx, ly, 0, lx, ly, lr);
         tg.addColorStop(0, `rgba(255,240,180,${(0.55 * flicker).toFixed(3)})`);
@@ -3036,7 +3427,7 @@
         if (ob.type !== 'fireplace') continue;
         const lx = ob.x + ob.w/2 - S.cam.x, ly = ob.y + ob.h/2 - S.cam.y;
         if (lx < -200 || lx > cw+200 || ly < -200 || ly > ch+200) continue;
-        const flicker = 0.8 + 0.2 * Math.sin(now * 0.0095 + ob.x * 0.01);
+        const flicker = getFlicker(now, ob.x + ob.y * 2);
         const lr = 130 * flicker;
         const fg = dc.createRadialGradient(lx, ly, 0, lx, ly, lr);
         fg.addColorStop(0, `rgba(255,220,160,${(0.65 * flicker).toFixed(3)})`);
@@ -3054,11 +3445,12 @@
         if (ob.type !== 'lamp') continue;
         const lx = ob.x + ob.w/2 - S.cam.x, ly = ob.y - S.cam.y;
         if (lx < -120 || lx > cw+120 || ly < -120 || ly > ch+120) continue;
-        const lg = dc.createRadialGradient(lx, ly, 0, lx, ly, 90);
-        lg.addColorStop(0, 'rgba(255,255,200,0.55)');
+        const lampFlicker = getFlicker(now, ob.x * 2 + ob.y);
+        const lg = dc.createRadialGradient(lx, ly, 0, lx, ly, 90 * lampFlicker);
+        lg.addColorStop(0, `rgba(255,255,200,${(0.55 * lampFlicker).toFixed(3)})`);
         lg.addColorStop(1, 'rgba(255,255,200,0)');
         dc.fillStyle = lg;
-        dc.beginPath(); dc.arc(lx, ly, 90, 0, Math.PI*2); dc.fill();
+        dc.beginPath(); dc.arc(lx, ly, 90 * lampFlicker, 0, Math.PI*2); dc.fill();
       }
       // #9 Fountain — cool blue landmark light source
       const fnx = 1600 - S.cam.x, fny = 1120 - S.cam.y;
@@ -3177,7 +3569,7 @@
         if (ob.type !== 'torch') continue;
         const lx = ob.x + ob.w/2 - S.cam.x, ly = ob.y - S.cam.y;
         if (lx < -120 || lx > cw+120 || ly < -120 || ly > ch+120) continue;
-        const flicker = 0.80 + 0.20 * Math.sin(now * 0.0041 + ob.x * 0.009 + ob.y * 0.007);
+        const flicker = getFlicker(now, ob.x + ob.y);
         const tr = 70 * flicker;
         const tg = dc.createRadialGradient(lx, ly, 0, lx, ly, tr);
         tg.addColorStop(0, `rgba(255,200,100,${(0.68 * flicker).toFixed(3)})`);
@@ -4161,6 +4553,7 @@
       hasEMFUpgrade: gd.hasEMFUpgrade || false,
       playerSignals: {},
       signalCooldown: 0,
+      footsteps: [],
     };
 
     // Init alligators for hotel
