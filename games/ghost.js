@@ -68,6 +68,16 @@ module.exports = function(io, helpers) {
       { title: 'Bookshelf Note',            text: '"Count the windows from outside, then from inside. Tell me which number is right."' },
       { title: 'Fireplace Carving',         text: 'Names carved since 1840. The most recent was added three years ago. The house has been empty for fifteen.' },
     ],
+    egypt: [
+      { title: 'Canopic Jar',         text: '"Contents: liver, lungs, stomach, intestines. The fourth jar is missing. Its contents were never found."' },
+      { title: 'Hieroglyph Warning',  text: '"Translation: Those who disturb this rest shall be followed home. The expedition members disagreed on what followed whom."' },
+      { title: 'Offering Table',      text: '"Daily offerings recorded for 3,000 years. The last entry is dated this morning. The table was empty when we arrived."' },
+      { title: 'Sarcophagus Lid',     text: '"The lid has been resealed from the inside. Archaeologists confirmed the mechanism only works from within."' },
+      { title: 'Scarab Amulet',       text: '"Buried to guide the heart in the afterlife. This one was found in the wrong tomb. It keeps reappearing."' },
+      { title: 'Tomb Oil Lamp',       text: '"Still burning after 4,000 years. Oil levels increase overnight. No one has been observed refilling it."' },
+      { title: 'Cartouche',           text: '"The name belongs to a pharaoh with no known reign, no known tomb, no known death. Yet here is the tomb."' },
+      { title: 'Excavation Log',      text: '"Day 14: The night watchman quit. Said something moved inside. Day 15: We hired a new one. Day 16: He also quit."' },
+    ],
   };
 
   const FLASH_RANGE = 280;
@@ -193,8 +203,8 @@ module.exports = function(io, helpers) {
     obs.push(rect(28,8,4,5,'elevator'), rect(49,8,4,5,'elevator'));
     // Lobby divider wall with passages
     obs.push(rect(1,14,19,1,'stone'), rect(28,14,24,1,'stone'), rect(60,14,19,1,'stone'));
-    // Wing A right wall
-    obs.push(rect(19,15,1,44,'stone'));
+    // Wing A right wall — 3 doorways (every 2 rooms)
+    obs.push(rect(19,15,1,2,'stone'), rect(19,19,1,12,'stone'), rect(19,33,1,12,'stone'), rect(19,47,1,11,'stone'));
     // Wing A rooms (walls and furniture)
     obs.push(rect(1,21,18,1,'stone'));
     obs.push(rect(2,16,7,3,'bed'), rect(14,16,3,3,'mirror'), rect(14,19,2,1,'table'));
@@ -208,8 +218,8 @@ module.exports = function(io, helpers) {
     obs.push(rect(2,44,7,3,'bed'), rect(14,44,3,3,'mirror'), rect(14,47,2,1,'table'));
     obs.push(rect(1,56,18,1,'stone'));
     obs.push(rect(2,51,7,3,'bed'), rect(14,51,3,3,'mirror'), rect(14,54,2,1,'table'), rect(11,55,2,1,'chair'));
-    // Wing B left wall
-    obs.push(rect(60,15,1,44,'stone'));
+    // Wing B left wall — 3 doorways (every 2 rooms)
+    obs.push(rect(60,15,1,2,'stone'), rect(60,19,1,12,'stone'), rect(60,33,1,12,'stone'), rect(60,47,1,11,'stone'));
     // Wing B rooms
     obs.push(rect(61,21,18,1,'stone'));
     obs.push(rect(70,16,7,3,'bed'), rect(62,16,3,3,'mirror'), rect(62,19,2,1,'table'));
@@ -223,8 +233,8 @@ module.exports = function(io, helpers) {
     obs.push(rect(70,44,7,3,'bed'), rect(62,44,3,3,'mirror'), rect(62,47,2,1,'table'));
     obs.push(rect(61,56,18,1,'stone'));
     obs.push(rect(70,51,7,3,'bed'), rect(62,51,3,3,'mirror'), rect(62,54,2,1,'table'), rect(66,55,2,1,'chair'));
-    // Ballroom bottom wall and pillars
-    obs.push(rect(20,37,40,1,'stone'));
+    // Ballroom bottom wall — 2 passages into pool area (tiles 28-31 and 46-49 left open)
+    obs.push(rect(20,37,8,1,'stone'), rect(32,37,14,1,'stone'), rect(50,37,10,1,'stone'));
     obs.push(rect(21,16,2,3,'pillar'), rect(56,16,2,3,'pillar'));
     obs.push(rect(21,33,2,3,'pillar'), rect(56,33,2,3,'pillar'));
     // Ballroom tables
@@ -240,8 +250,8 @@ module.exports = function(io, helpers) {
     obs.push(rect(32,26,1,1,'chair'), rect(36,26,1,1,'chair'), rect(34,24,1,1,'chair'), rect(34,28,1,1,'chair'));
     obs.push(rect(41,26,1,1,'chair'), rect(45,26,1,1,'chair'), rect(43,24,1,1,'chair'), rect(43,28,1,1,'chair'));
     obs.push(rect(50,26,1,1,'chair'), rect(54,26,1,1,'chair'), rect(52,24,1,1,'chair'), rect(52,28,1,1,'chair'));
-    // Pool room bottom wall (pool itself is non-collidable, so skip)
-    obs.push(rect(20,59,40,1,'stone'));
+    // Pool room bottom wall — 2 passages into lower section (tiles 28-31 and 46-49 left open)
+    obs.push(rect(20,59,8,1,'stone'), rect(32,59,14,1,'stone'), rect(50,59,10,1,'stone'));
     // Lounge chairs around pool
     obs.push(rect(21,43,3,1,'chair'), rect(21,48,3,1,'chair'), rect(21,53,3,1,'chair'));
     obs.push(rect(56,43,3,1,'chair'), rect(56,48,3,1,'chair'), rect(56,53,3,1,'chair'));
@@ -250,8 +260,8 @@ module.exports = function(io, helpers) {
     // Shrubs near pool
     obs.push(rect(21,40,2,2,'shrub'), rect(57,40,2,2,'shrub'));
     obs.push(rect(21,56,2,2,'shrub'), rect(57,56,2,2,'shrub'));
-    // Lower section
-    obs.push(rect(19,60,1,19,'stone'), rect(1,66,18,1,'stone'), rect(9,60,1,6,'stone'));
+    // Lower section — wing lower walls have a doorway at y=64-67 each
+    obs.push(rect(19,60,1,4,'stone'), rect(19,68,1,11,'stone'), rect(1,66,18,1,'stone'), rect(9,60,1,6,'stone'));
     obs.push(rect(2,61,5,3,'table'), rect(11,61,6,3,'table'), rect(11,67,4,2,'table'));
     obs.push(rect(2,64,1,5,'shelf'), rect(5,64,1,5,'shelf'));
     obs.push(rect(39,60,1,19,'stone'));
@@ -266,11 +276,60 @@ module.exports = function(io, helpers) {
     obs.push(rect(40,62,1,1,'chair'), rect(46,62,1,1,'chair'), rect(47,62,1,1,'chair'), rect(55,62,1,1,'chair'));
     obs.push(rect(40,68,1,1,'chair'), rect(46,68,1,1,'chair'), rect(47,68,1,1,'chair'), rect(55,68,1,1,'chair'));
     obs.push(rect(40,74,1,1,'chair'), rect(46,74,1,1,'chair'), rect(47,74,1,1,'chair'), rect(55,74,1,1,'chair'));
-    obs.push(rect(60,60,1,19,'stone'), rect(61,66,18,1,'stone'), rect(70,60,1,6,'stone'));
+    obs.push(rect(60,60,1,4,'stone'), rect(60,68,1,11,'stone'), rect(61,66,18,1,'stone'), rect(70,60,1,6,'stone'));
     obs.push(rect(62,61,6,3,'table'), rect(72,61,5,3,'table'));
     obs.push(rect(62,64,1,5,'shelf'), rect(65,64,1,5,'shelf'));
     obs.push(rect(2,75,4,3,'stairs'), rect(73,75,4,3,'stairs'));
     obs.push(rect(19,25,1,3,'mirror'), rect(60,25,1,3,'mirror'));
+    return obs;
+  }
+
+  function buildEgyptObstacles() {
+    const obs = [];
+    // Outer walls
+    obs.push(rect(0,0,90,1,'stone'), rect(0,69,90,1,'stone'));
+    obs.push(rect(0,0,1,70,'stone'), rect(89,0,1,70,'stone'));
+    // Vestibule back wall (y=8): gap x=32-58 for center hall entry
+    obs.push(rect(1,8,31,1,'stone'), rect(59,8,30,1,'stone'));
+    // Center hall west wall (x=32, y=9-56): doors at y=17-19, y=33-35, y=49-51
+    obs.push(rect(32,9,1,8,'stone'), rect(32,20,1,13,'stone'), rect(32,36,1,13,'stone'), rect(32,52,1,5,'stone'));
+    // Center hall east wall (x=58, y=9-56): same doors
+    obs.push(rect(58,9,1,8,'stone'), rect(58,20,1,13,'stone'), rect(58,36,1,13,'stone'), rect(58,52,1,5,'stone'));
+    // Center hall columns (4 rows × 2)
+    obs.push(rect(35,11,2,3,'pillar'), rect(53,11,2,3,'pillar'));
+    obs.push(rect(35,21,2,3,'pillar'), rect(53,21,2,3,'pillar'));
+    obs.push(rect(35,36,2,3,'pillar'), rect(53,36,2,3,'pillar'));
+    obs.push(rect(35,51,2,3,'pillar'), rect(53,51,2,3,'pillar'));
+    // Central altar + flanking urns
+    obs.push(rect(40,28,10,5,'altar'));
+    obs.push(rect(38,29,2,2,'urn'), rect(50,29,2,2,'urn'));
+    // West wing room dividers (passage at x=13-17 each)
+    obs.push(rect(1,24,12,1,'stone'), rect(18,24,14,1,'stone'));
+    obs.push(rect(1,41,12,1,'stone'), rect(18,41,14,1,'stone'));
+    // West wing room 1 (y=9-23)
+    obs.push(rect(3,13,5,3,'sarcophagus'), rect(20,12,3,3,'urn'), rect(22,18,3,3,'statue'));
+    // West wing room 2 (y=25-40)
+    obs.push(rect(3,29,5,3,'sarcophagus'), rect(20,28,3,3,'urn'), rect(22,34,4,3,'altar'));
+    // West wing room 3 (y=42-56)
+    obs.push(rect(3,46,5,3,'sarcophagus'), rect(20,45,3,3,'urn'), rect(22,50,3,3,'statue'));
+    // East wing room dividers (passage at x=73-77 each)
+    obs.push(rect(59,24,14,1,'stone'), rect(78,24,11,1,'stone'));
+    obs.push(rect(59,41,14,1,'stone'), rect(78,41,11,1,'stone'));
+    // East wing room 1 (y=9-23)
+    obs.push(rect(82,13,5,3,'sarcophagus'), rect(67,12,3,3,'urn'), rect(65,18,3,3,'statue'));
+    // East wing room 2 (y=25-40)
+    obs.push(rect(82,29,5,3,'sarcophagus'), rect(67,28,3,3,'urn'), rect(64,34,4,3,'altar'));
+    // East wing room 3 (y=42-56)
+    obs.push(rect(82,46,5,3,'sarcophagus'), rect(67,45,3,3,'urn'), rect(65,50,3,3,'statue'));
+    // Inner sanctum: main sarcophagus, obelisks, altars, urns
+    obs.push(rect(40,60,10,6,'sarcophagus'));
+    obs.push(rect(33,59,2,8,'obelisk'), rect(55,59,2,8,'obelisk'));
+    obs.push(rect(5,60,8,4,'altar'), rect(77,60,8,4,'altar'));
+    obs.push(rect(36,60,2,2,'urn'), rect(52,60,2,2,'urn'));
+    obs.push(rect(36,65,2,2,'urn'), rect(52,65,2,2,'urn'));
+    // Vestibule: obelisks and columns (decorative but collidable)
+    obs.push(rect(34,2,2,5,'obelisk'), rect(54,2,2,5,'obelisk'));
+    obs.push(rect(40,3,2,4,'pillar'), rect(48,3,2,4,'pillar'));
     return obs;
   }
 
@@ -331,6 +390,21 @@ module.exports = function(io, helpers) {
         { x: 1280, y: 1984, w: 896, h: 512 }, // lower section right
       ],
       playerStart: { x: 1280, y: 520 },
+    },
+    egypt: {
+      label: 'Egyptian Temple',
+      bgColor: '#1a1208',
+      areaWidth:  90 * T,  // 2880
+      areaHeight: 70 * T,  // 2240
+      obstacles: buildEgyptObstacles(),
+      spawnZones: [
+        { x:  64,  y:  64,  w: 2752, h: 192  },   // north vestibule
+        { x:  64,  y: 320,  w: 832,  h: 1408 },   // west wing
+        { x: 1024, y: 320,  w: 832,  h: 1408 },   // center hall
+        { x: 1984, y: 320,  w: 832,  h: 1408 },   // east wing
+        { x:  64,  y: 1888, w: 2752, h: 288  },   // inner sanctum
+      ],
+      playerStart: { x: 1440, y: 480 },
     },
   };
 
@@ -842,7 +916,7 @@ module.exports = function(io, helpers) {
   function registerEvents(socket, rooms) {
 
     // Player movement
-    socket.on('ghost:move', ({ roomId, x, y, facing, avatar }) => {
+    socket.on('ghost:move', ({ roomId, x, y, facing, avatar, tool }) => {
       const state = rooms.get(roomId);
       if (!state || !state.ghost || state.phase !== 'playing') return;
       const areaData = AREAS[state.ghost.area];
@@ -856,6 +930,7 @@ module.exports = function(io, helpers) {
         playerIndex, x: cx, y: cy,
         facing: facing || 0,
         avatar: state.players[playerIndex].lobbyAvatar || 0,
+        tool: tool || null,
       });
     });
 

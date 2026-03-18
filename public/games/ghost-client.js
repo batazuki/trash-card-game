@@ -214,7 +214,8 @@
     o.push(rect(60,14,19,1,'stone')); // right solid
 
     // ── WING A — left rooms (x=1-19, y=15-58) ─────────────────────────────
-    o.push(rect(19,15,1,44,'stone'));  // right wall
+    // Wing A right wall — 3 doorways (every 2 rooms: y=17-18, y=31-32, y=45-46)
+    o.push(rect(19,15,1,2,'stone'), rect(19,19,1,12,'stone'), rect(19,33,1,12,'stone'), rect(19,47,1,11,'stone'));
     // Room 101 (y=15-20)
     o.push(rect(1,21,18,1,'stone'));
     o.push(rect(2,16,7,3,'bed')); o.push(rect(14,16,3,3,'mirror')); o.push(rect(14,19,2,1,'table'));
@@ -235,7 +236,8 @@
     o.push(rect(2,51,7,3,'bed')); o.push(rect(14,51,3,3,'mirror')); o.push(rect(14,54,2,1,'table')); o.push(rect(11,55,2,1,'chair'));
 
     // ── WING B — right rooms (x=61-79, y=15-58) ───────────────────────────
-    o.push(rect(60,15,1,44,'stone')); // left wall
+    // Wing B left wall — 3 doorways (every 2 rooms: y=17-18, y=31-32, y=45-46)
+    o.push(rect(60,15,1,2,'stone'), rect(60,19,1,12,'stone'), rect(60,33,1,12,'stone'), rect(60,47,1,11,'stone'));
     // Room 201 (y=15-20)
     o.push(rect(61,21,18,1,'stone'));
     o.push(rect(70,16,7,3,'bed')); o.push(rect(62,16,3,3,'mirror')); o.push(rect(62,19,2,1,'table'));
@@ -256,7 +258,8 @@
     o.push(rect(70,51,7,3,'bed')); o.push(rect(62,51,3,3,'mirror')); o.push(rect(62,54,2,1,'table')); o.push(rect(66,55,2,1,'chair'));
 
     // ── CENTRAL BALLROOM (x=20-59, y=15-37) ───────────────────────────────
-    o.push(rect(20,37,40,1,'stone'));    // ballroom bottom wall
+    // Ballroom bottom wall — 2 passages into pool area (tiles 28-31 and 46-49 left open)
+    o.push(rect(20,37,8,1,'stone'), rect(32,37,14,1,'stone'), rect(50,37,10,1,'stone'));
     // Corner pillars
     o.push(rect(21,16,2,3,'pillar'), rect(56,16,2,3,'pillar'));
     o.push(rect(21,33,2,3,'pillar'), rect(56,33,2,3,'pillar'));
@@ -277,7 +280,8 @@
     o.push(rect(39,16,1,1,'candle'), rect(39,24,1,1,'candle'), rect(39,32,1,1,'candle'));
 
     // ── POOL ROOM (x=20-59, y=38-59) ──────────────────────────────────────
-    o.push(rect(20,59,40,1,'stone'));   // pool room bottom wall
+    // Pool room bottom wall — 2 passages into lower section (tiles 28-31 and 46-49 left open)
+    o.push(rect(20,59,8,1,'stone'), rect(32,59,14,1,'stone'), rect(50,59,10,1,'stone'));
     // Swimming pool (non-collidable)
     o.push(rect(27,40,26,16,'pool'));
     // Lounge chairs
@@ -290,8 +294,8 @@
     o.push(rect(21,56,2,2,'shrub'), rect(57,56,2,2,'shrub'));
 
     // ── LOWER SECTION (y=60-79) ─────────────────────────────────────────────
-    // Wing A lower: service/laundry (x=1-19, y=60-79)
-    o.push(rect(19,60,1,19,'stone'));   // right wall continues
+    // Wing A lower: service/laundry (x=1-19, y=60-79) — doorway at y=64-67
+    o.push(rect(19,60,1,4,'stone'), rect(19,68,1,11,'stone'));
     o.push(rect(1,66,18,1,'stone'));    // room divider
     o.push(rect(9,60,1,6,'stone'));     // vertical divider
     o.push(rect(2,61,5,3,'table'), rect(11,61,6,3,'table'));
@@ -322,8 +326,8 @@
     o.push(rect(40,74,1,1,'chair'), rect(46,74,1,1,'chair'), rect(47,74,1,1,'chair'), rect(55,74,1,1,'chair'));
     o.push(rect(48,65,1,1,'candle'));
 
-    // Wing B lower: storage/utility (x=61-79, y=60-79)
-    o.push(rect(60,60,1,19,'stone'));
+    // Wing B lower: storage/utility (x=61-79, y=60-79) — doorway at y=64-67
+    o.push(rect(60,60,1,4,'stone'), rect(60,68,1,11,'stone'));
     o.push(rect(61,66,18,1,'stone'));
     o.push(rect(70,60,1,6,'stone'));
     o.push(rect(62,61,6,3,'table'), rect(72,61,5,3,'table'));
@@ -336,6 +340,75 @@
     o.push(rect(19,25,1,3,'mirror'));
     o.push(rect(60,25,1,3,'mirror'));
 
+    return o;
+  }
+
+  function buildEgyptObs() {
+    const o = [];
+    // Outer walls
+    o.push(rect(0,0,90,1,'stone'), rect(0,69,90,1,'stone'));
+    o.push(rect(0,0,1,70,'stone'), rect(89,0,1,70,'stone'));
+    // Vestibule back wall (y=8): gap x=32-58 for center hall entry
+    o.push(rect(1,8,31,1,'stone'), rect(59,8,30,1,'stone'));
+    // Center hall west wall: doors at y=17-19, y=33-35, y=49-51
+    o.push(rect(32,9,1,8,'stone'), rect(32,20,1,13,'stone'), rect(32,36,1,13,'stone'), rect(32,52,1,5,'stone'));
+    // Center hall east wall: same doors
+    o.push(rect(58,9,1,8,'stone'), rect(58,20,1,13,'stone'), rect(58,36,1,13,'stone'), rect(58,52,1,5,'stone'));
+    // Center hall columns (4 rows × 2)
+    o.push(rect(35,11,2,3,'pillar'), rect(53,11,2,3,'pillar'));
+    o.push(rect(35,21,2,3,'pillar'), rect(53,21,2,3,'pillar'));
+    o.push(rect(35,36,2,3,'pillar'), rect(53,36,2,3,'pillar'));
+    o.push(rect(35,51,2,3,'pillar'), rect(53,51,2,3,'pillar'));
+    // Central altar + flanking urns
+    o.push(rect(40,28,10,5,'altar'));
+    o.push(rect(38,29,2,2,'urn'), rect(50,29,2,2,'urn'));
+    // Center hall torches
+    o.push(rect(33,10,1,1,'torch'), rect(57,10,1,1,'torch'));
+    o.push(rect(33,25,1,1,'torch'), rect(57,25,1,1,'torch'));
+    o.push(rect(33,40,1,1,'torch'), rect(57,40,1,1,'torch'));
+    o.push(rect(33,55,1,1,'torch'), rect(57,55,1,1,'torch'));
+    // West wing room dividers (passage at x=13-17)
+    o.push(rect(1,24,12,1,'stone'), rect(18,24,14,1,'stone'));
+    o.push(rect(1,41,12,1,'stone'), rect(18,41,14,1,'stone'));
+    // West wing room 1 (y=9-23)
+    o.push(rect(3,13,5,3,'sarcophagus'), rect(20,12,3,3,'urn'), rect(22,18,3,3,'statue'));
+    o.push(rect(2,10,1,1,'torch'), rect(30,10,1,1,'torch'));
+    // West wing room 2 (y=25-40)
+    o.push(rect(3,29,5,3,'sarcophagus'), rect(20,28,3,3,'urn'), rect(22,34,4,3,'altar'));
+    o.push(rect(2,26,1,1,'torch'), rect(30,26,1,1,'torch'));
+    // West wing room 3 (y=42-56)
+    o.push(rect(3,46,5,3,'sarcophagus'), rect(20,45,3,3,'urn'), rect(22,50,3,3,'statue'));
+    o.push(rect(2,42,1,1,'torch'), rect(30,42,1,1,'torch'));
+    // East wing room dividers (passage at x=73-77)
+    o.push(rect(59,24,14,1,'stone'), rect(78,24,11,1,'stone'));
+    o.push(rect(59,41,14,1,'stone'), rect(78,41,11,1,'stone'));
+    // East wing room 1 (y=9-23)
+    o.push(rect(82,13,5,3,'sarcophagus'), rect(67,12,3,3,'urn'), rect(65,18,3,3,'statue'));
+    o.push(rect(59,10,1,1,'torch'), rect(87,10,1,1,'torch'));
+    // East wing room 2 (y=25-40)
+    o.push(rect(82,29,5,3,'sarcophagus'), rect(67,28,3,3,'urn'), rect(64,34,4,3,'altar'));
+    o.push(rect(59,26,1,1,'torch'), rect(87,26,1,1,'torch'));
+    // East wing room 3 (y=42-56)
+    o.push(rect(82,46,5,3,'sarcophagus'), rect(67,45,3,3,'urn'), rect(65,50,3,3,'statue'));
+    o.push(rect(59,42,1,1,'torch'), rect(87,42,1,1,'torch'));
+    // Inner sanctum: main sarcophagus, obelisks, altars, urns
+    o.push(rect(40,60,10,6,'sarcophagus'));
+    o.push(rect(33,59,2,8,'obelisk'), rect(55,59,2,8,'obelisk'));
+    o.push(rect(5,60,8,4,'altar'), rect(77,60,8,4,'altar'));
+    o.push(rect(36,60,2,2,'urn'), rect(52,60,2,2,'urn'));
+    o.push(rect(36,65,2,2,'urn'), rect(52,65,2,2,'urn'));
+    o.push(rect(2,59,1,1,'torch'), rect(87,59,1,1,'torch'));
+    o.push(rect(2,67,1,1,'torch'), rect(87,67,1,1,'torch'));
+    o.push(rect(38,59,1,1,'torch'), rect(52,59,1,1,'torch'));
+    // Vestibule: obelisks, columns, torches
+    o.push(rect(34,2,2,5,'obelisk'), rect(54,2,2,5,'obelisk'));
+    o.push(rect(40,3,2,4,'pillar'), rect(48,3,2,4,'pillar'));
+    o.push(rect(33,1,1,1,'torch'), rect(56,1,1,1,'torch'));
+    o.push(rect(39,2,1,1,'torch'), rect(50,2,1,1,'torch'));
+    // Sandpit decorations (non-collidable)
+    o.push(rect(5,15,4,4,'sandpit'), rect(22,32,4,4,'sandpit'));
+    o.push(rect(64,20,4,4,'sandpit'), rect(81,38,4,4,'sandpit'));
+    o.push(rect(36,62,4,3,'sandpit'), rect(50,63,4,3,'sandpit'));
     return o;
   }
 
@@ -373,10 +446,26 @@
                    pool:'#1848a0', default:'#3a2a40' },
       pathColor: '#22182e',
     },
+    egypt: {
+      areaWidth: 2880, areaHeight: 2240, bgColor: '#1a1208', label: 'Egyptian Temple',
+      playerStart: { x: 1440, y: 480 }, obstacles: buildEgyptObs(),
+      obsColors: {
+        stone:       '#5a4830',
+        pillar:      '#c8a840',
+        obelisk:     '#b89030',
+        sarcophagus: '#7a6040',
+        altar:       '#9a7830',
+        urn:         '#b06020',
+        statue:      '#a08040',
+        sandpit:     '#c8a060',
+        default:     '#7a5a2a',
+      },
+      pathColor: '#2a1c0e',
+    },
   };
 
   // ── Collision ────────────────────────────────────────────────────────────
-  const NON_COLLIDABLE = new Set(['torch', 'candle', 'pool']);
+  const NON_COLLIDABLE = new Set(['torch', 'candle', 'pool', 'sandpit']);
   function isBlocked(x, y, r, obstacles) {
     for (const o of obstacles) {
       if (NON_COLLIDABLE.has(o.type)) continue;
@@ -453,6 +542,7 @@
         garden:    [[41.20, 0.050, 0.052], [55.00, 0.032, 0.065]], // E1+A1  — eerie pastoral
         house:     [[30.87, 0.065, 0.041], [46.25, 0.040, 0.079]], // B0+Bb1 — deep dread
         hotel:     [[43.65, 0.058, 0.044], [61.74, 0.038, 0.069]], // F1+B1  — tritone dread
+        egypt:     [[34.65, 0.055, 0.042], [46.25, 0.040, 0.068]], // C1+Bb1 — ancient dread
       };
       const dronePair = DRONE_PAIRS[GA.area] || DRONE_PAIRS.graveyard;
       dronePair.forEach(([f, vol, lfoHz]) => {
@@ -546,6 +636,12 @@
       bells:  [174.61, 207.65, 261.63, 311.13, 349.23, 415.30], // F3 Ab3 C4 Eb4 F4 Ab4
       chords: [[87.31,103.83,130.81],[130.81,155.56,174.61],[174.61,207.65,261.63]],
       bassInterval: [2.0, 4.0], bellInterval: [4.0, 9.0], chordInterval: [10, 16],
+    },
+    egypt: {
+      bass:   [36.71, 55.00, 73.42],
+      bells:  [277.18, 329.63, 415.30, 466.16, 554.37, 622.25],
+      chords: [[73.42,92.50,110.00],[110.00,130.81,155.56],[146.83,174.61,207.65]],
+      bassInterval: [2.5, 4.5], bellInterval: [5.5, 11.0], chordInterval: [14, 22],
     },
   };
 
@@ -927,7 +1023,7 @@
     posSendAccum += dt * 1000;
     if (posSendAccum >= POS_SEND_MS) {
       posSendAccum = 0;
-      socket.emit('ghost:move', { roomId: S.roomId, x: S.me.x, y: S.me.y, facing: S.me.facing, avatar: S.me.avatar });
+      socket.emit('ghost:move', { roomId: S.roomId, x: S.me.x, y: S.me.y, facing: S.me.facing, avatar: S.me.avatar, tool: S.activeTool });
     }
 
     // Drive signal-reactive audio (EMF buzz / sound rumble)
@@ -938,6 +1034,7 @@
 
     // Update alligators (hotel only)
     if (S.area === 'hotel') updateAlligators(dt);
+    if (S.area === 'egypt') updateEgyptNPCs(dt);
 
     // Check POI proximity
     S.activePoi = null;
@@ -1634,6 +1731,27 @@
       }
       ctx.restore();
     }
+
+    else if (areaName === 'egypt') {
+      // Sandy floor — scattered sand ripple patches
+      for (let i = 0; i < 22; i++) {
+        const px = 128 + (Math.sin(i * 6.31) * 0.5 + 0.5) * (aw - 256);
+        const py = 128 + (Math.sin(i * 4.73) * 0.5 + 0.5) * (ah - 256);
+        const rx = 20 + (Math.sin(i * 3.17) * 0.5 + 0.5) * 36;
+        const ry = 8  + (Math.sin(i * 5.29) * 0.5 + 0.5) * 16;
+        ctx.fillStyle = `rgba(200,155,50,${0.055 + (Math.sin(i*2.1)*0.5+0.5)*0.045})`;
+        ctx.save(); ctx.translate(px, py); ctx.rotate(Math.sin(i*1.7) * 0.8);
+        ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+      }
+      // Fine sand grain dots
+      ctx.fillStyle = 'rgba(215,175,80,0.08)';
+      for (let i = 0; i < 60; i++) {
+        const px = 64 + (Math.sin(i * 7.43) * 0.5 + 0.5) * (aw - 128);
+        const py = 64 + (Math.sin(i * 5.81) * 0.5 + 0.5) * (ah - 128);
+        ctx.beginPath(); ctx.arc(px, py, 2.5, 0, Math.PI*2); ctx.fill();
+      }
+    }
   }
 
   function drawAmbientParticles(areaName, area, now) {
@@ -1798,6 +1916,45 @@
         ctx.beginPath(); ctx.arc(bx, py2, 1.5, 0, Math.PI * 2); ctx.fill();
       }
     }
+
+    else if (areaName === 'egypt') {
+      // Drifting sand motes rising upward
+      for (let i = 0; i < 18; i++) {
+        const bx2 = 80 + (Math.sin(i * 6.11) * 0.5 + 0.5) * (aw - 160);
+        const yOff2 = (now * 0.012 + i * (ah / 18)) % ah;
+        const py2 = ah - 80 - yOff2;
+        const alpha2 = 0.06 + 0.04 * Math.sin(now * 0.0015 + i * 2.1);
+        const wobX2 = Math.sin(now * 0.0012 + i * 3.1) * 30;
+        ctx.fillStyle = `rgba(220,175,70,${alpha2.toFixed(3)})`;
+        ctx.beginPath(); ctx.arc(bx2 + wobX2, py2, 2.2, 0, Math.PI * 2); ctx.fill();
+      }
+      // Slow golden shimmer particles near altar
+      const altarX = 40 * T + T * 5, altarY = 28 * T + T * 2.5;
+      for (let i = 0; i < 8; i++) {
+        const ax = altarX + Math.sin(now * 0.0008 + i * 0.78) * 90;
+        const ay = altarY + Math.cos(now * 0.0011 + i * 1.1) * 40 - (now * 0.008 + i * (ah/8)) % 200;
+        const aa = 0.05 + 0.04 * Math.sin(now * 0.002 + i * 1.5);
+        ctx.fillStyle = `rgba(255,215,80,${aa.toFixed(3)})`;
+        ctx.beginPath(); ctx.arc(ax, ay, 1.8, 0, Math.PI * 2); ctx.fill();
+      }
+      // Torch smoke wisps from wall torches (subtle dark upward tendrils)
+      const torchPosArr = [
+        { x:33*T, y:10*T }, { x:57*T, y:10*T }, { x:33*T, y:25*T }, { x:57*T, y:25*T },
+        { x:33*T, y:40*T }, { x:57*T, y:40*T }, { x:38*T, y:59*T }, { x:52*T, y:59*T },
+      ];
+      for (let i = 0; i < torchPosArr.length; i++) {
+        const tp = torchPosArr[i];
+        for (let s = 0; s < 3; s++) {
+          const age = (now * 0.0005 + i * 0.7 + s * 0.33) % 1;
+          const sy2 = tp.y - age * 40;
+          const sx2 = tp.x + Math.sin(now * 0.003 + i * 2.1 + s) * 6;
+          const sa = (0.07 - age * 0.07);
+          if (sa <= 0) continue;
+          ctx.fillStyle = `rgba(60,40,20,${sa.toFixed(3)})`;
+          ctx.beginPath(); ctx.arc(sx2, sy2, 2.5 + age * 3, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+    }
   }
 
   function drawPOIs() {
@@ -1867,6 +2024,105 @@
     }
   }
 
+  function drawSarcophagus(x, y, w, h, col) {
+    // Base coffin body
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y, w, h);
+    // Lid panel (slightly raised - lighter stripe)
+    ctx.fillStyle = 'rgba(255,255,200,0.10)';
+    ctx.fillRect(x + Math.round(w*0.12), y + Math.round(h*0.08), Math.round(w*0.76), Math.round(h*0.84));
+    // Carved cross-band lines
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+    ctx.fillRect(x, Math.round(y + h*0.32), w, 2);
+    ctx.fillRect(x, Math.round(y + h*0.62), w, 2);
+    // Hieroglyph dots (decorative)
+    ctx.fillStyle = 'rgba(220,180,60,0.45)';
+    const dc = Math.round(w * 0.22), dr = 2;
+    ctx.beginPath(); ctx.arc(x + dc, y + Math.round(h*0.18), dr, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + w - dc, y + Math.round(h*0.18), dr, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + Math.round(w*0.5), y + Math.round(h*0.47), dr+1, 0, Math.PI*2); ctx.fill();
+    // Top/left edge highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.09)';
+    ctx.fillRect(x, y, w, 2);
+    ctx.fillRect(x, y, 2, h);
+  }
+
+  function drawObelisk(x, y, w, h, col) {
+    ctx.fillStyle = col;
+    // Taper: wide at base, narrow at top
+    const cx2 = x + w/2;
+    ctx.beginPath();
+    ctx.moveTo(x,      y + h);          // bottom-left
+    ctx.lineTo(x + w,  y + h);          // bottom-right
+    ctx.lineTo(cx2 + w*0.15, y + h*0.12); // upper-right
+    ctx.lineTo(cx2 - w*0.15, y + h*0.12); // upper-left
+    ctx.closePath(); ctx.fill();
+    // Pyramidion tip (gold)
+    ctx.fillStyle = '#e8c040';
+    ctx.beginPath();
+    ctx.moveTo(cx2, y);
+    ctx.lineTo(cx2 + w*0.15, y + h*0.12);
+    ctx.lineTo(cx2 - w*0.15, y + h*0.12);
+    ctx.closePath(); ctx.fill();
+    // Carved band lines
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    ctx.fillRect(x, Math.round(y + h*0.3), w, 2);
+    ctx.fillRect(x, Math.round(y + h*0.55), w, 2);
+    ctx.fillRect(x, Math.round(y + h*0.75), w, 2);
+    // Highlight
+    ctx.fillStyle = 'rgba(255,255,200,0.12)';
+    ctx.fillRect(x, y, 3, h);
+  }
+
+  function drawAltar(x, y, w, h, col) {
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y, w, h);
+    // Stone block top edge
+    ctx.fillStyle = 'rgba(255,255,200,0.16)';
+    ctx.fillRect(x, y, w, 3);
+    ctx.fillRect(x, y, 3, h);
+    // Shadow bottom
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.fillRect(x, y + h - 3, w, 3);
+    // Carved center symbol
+    ctx.fillStyle = 'rgba(220,180,50,0.35)';
+    const ccx = x + w/2, ccy = y + h/2;
+    ctx.beginPath(); ctx.arc(ccx, ccy, Math.min(w,h)*0.18, 0, Math.PI*2); ctx.fill();
+  }
+
+  function drawUrn(x, y, w, h, col) {
+    const cx2 = x + w/2, cy2 = y + h/2;
+    // Body (oval)
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.ellipse(cx2, cy2 + h*0.05, w*0.44, h*0.42, 0, 0, Math.PI*2); ctx.fill();
+    // Neck
+    ctx.fillRect(cx2 - w*0.16, y, w*0.32, h*0.28);
+    // Lip at top
+    ctx.fillStyle = 'rgba(255,255,200,0.20)';
+    ctx.fillRect(cx2 - w*0.22, y - 2, w*0.44, 4);
+    // Highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.14)';
+    ctx.beginPath(); ctx.ellipse(cx2 - w*0.14, cy2 - h*0.08, w*0.1, h*0.16, -0.5, 0, Math.PI*2); ctx.fill();
+    // Band decoration
+    ctx.strokeStyle = 'rgba(220,150,30,0.55)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.ellipse(cx2, cy2 + h*0.12, w*0.38, 4, 0, 0, Math.PI*2); ctx.stroke();
+  }
+
+  function drawSandpit(x, y, w, h) {
+    ctx.fillStyle = 'rgba(200,160,70,0.22)';
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = 'rgba(220,180,80,0.12)';
+    ctx.lineWidth = 1;
+    // Wave texture lines
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.moveTo(x, y + h * (0.25 + i * 0.25));
+      ctx.bezierCurveTo(x + w*0.33, y + h*(0.2 + i*0.25), x + w*0.66, y + h*(0.3 + i*0.25), x+w, y + h*(0.25 + i*0.25));
+      ctx.stroke();
+    }
+  }
+
   function drawObstacle(ob, area, now) {
     const { x, y, w, h, type } = ob;
     const colors = area.obsColors || {};
@@ -1898,6 +2154,11 @@
       case 'sofa':     drawSofa(x, y, w, h, col); break;
       case 'pool':     drawPool(x, y, w, h, col, now); break;
       case 'elevator': drawElevator(x, y, w, h, col, now); break;
+      case 'sarcophagus': drawSarcophagus(x, y, w, h, col); break;
+      case 'obelisk':     drawObelisk(x, y, w, h, col); break;
+      case 'altar':       drawAltar(x, y, w, h, col); break;
+      case 'urn':         drawUrn(x, y, w, h, col); break;
+      case 'sandpit':     drawSandpit(x, y, w, h); break;
       default:
         ctx.fillStyle = col;
         ctx.fillRect(x, y, w, h);
@@ -2360,6 +2621,102 @@
     ctx.fillRect(x + w - 2 - doorW, y + 2, 3, h - 4);
   }
 
+  // ── Egypt NPCs: Mummies and Scarabs ─────────────────────────────────────
+  const EGYPT_BOUNDS = { x1: 64, y1: 64, x2: 2816, y2: 2176 };
+
+  function initEgyptNPCs() {
+    S.egyptNPCs = [
+      { type: 'mummy', x: 1440, y: 640,  angle: 0,          stateTimer: 0,    speed: 26 },
+      { type: 'mummy', x:  320, y: 800,  angle: Math.PI/2,  stateTimer: 800,  speed: 24 },
+      { type: 'mummy', x: 2560, y: 1100, angle: Math.PI,    stateTimer: 1600, speed: 28 },
+      { type: 'scarab',x:  800, y: 480,  angle: 0.8,        stateTimer: 0,    speed: 55 },
+      { type: 'scarab',x: 2100, y: 700,  angle: 2.5,        stateTimer: 300,  speed: 60 },
+      { type: 'scarab',x: 1200, y: 1400, angle: 4.1,        stateTimer: 600,  speed: 52 },
+      { type: 'scarab',x: 1700, y: 1800, angle: 1.2,        stateTimer: 900,  speed: 58 },
+      { type: 'scarab',x:  500, y: 1600, angle: 3.7,        stateTimer: 200,  speed: 56 },
+      { type: 'scarab',x: 2300, y: 1500, angle: 5.1,        stateTimer: 450,  speed: 54 },
+    ];
+  }
+
+  function updateEgyptNPCs(dt) {
+    if (!S || !S.egyptNPCs) return;
+    const b = EGYPT_BOUNDS;
+    for (const npc of S.egyptNPCs) {
+      npc.stateTimer -= dt * 1000;
+      if (npc.stateTimer <= 0) {
+        npc.angle += (Math.random() - 0.5) * (npc.type === 'mummy' ? 1.2 : 2.4);
+        npc.stateTimer = npc.type === 'mummy'
+          ? 2500 + Math.random() * 3000
+          : 600  + Math.random() * 1200;
+      }
+      const step = npc.speed * dt;
+      const nx = npc.x + Math.cos(npc.angle) * step;
+      const ny = npc.y + Math.sin(npc.angle) * step;
+      if (nx < b.x1 + 40 || nx > b.x2 - 40) { npc.angle = Math.PI - npc.angle; }
+      else if (ny < b.y1 + 40 || ny > b.y2 - 40) { npc.angle = -npc.angle; }
+      else { npc.x = nx; npc.y = ny; }
+    }
+  }
+
+  function drawMummy(cx, cy, angle, now) {
+    const bob = Math.sin(now * 0.0015) * 2.5;
+    ctx.save(); ctx.translate(Math.round(cx), Math.round(cy + bob));
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+    ctx.beginPath(); ctx.ellipse(0, 14, 9, 4, 0, 0, Math.PI*2); ctx.fill();
+    // Body
+    ctx.fillStyle = '#c8b890';
+    ctx.fillRect(-7, -12, 14, 26);
+    // Bandage stripes
+    ctx.strokeStyle = '#a09070'; ctx.lineWidth = 1.5;
+    for (let i = -10; i < 14; i += 4) {
+      ctx.beginPath(); ctx.moveTo(-7, i); ctx.lineTo(7, i); ctx.stroke();
+    }
+    // Head
+    ctx.fillStyle = '#d0ba9a';
+    ctx.beginPath(); ctx.ellipse(0, -16, 6, 7, 0, 0, Math.PI*2); ctx.fill();
+    // Glowing eyes
+    ctx.fillStyle = '#ff8020';
+    ctx.beginPath(); ctx.arc(-2.5, -16, 2, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc( 2.5, -16, 2, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,160,40,0.6)';
+    ctx.beginPath(); ctx.arc(-2.5, -16, 3.5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc( 2.5, -16, 3.5, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawScarabNPC(cx, cy, angle, now) {
+    ctx.save(); ctx.translate(Math.round(cx), Math.round(cy)); ctx.rotate(angle);
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    ctx.beginPath(); ctx.ellipse(0, 3.5, 6, 2.5, 0, 0, Math.PI*2); ctx.fill();
+    // Shell
+    ctx.fillStyle = '#1a7848';
+    ctx.beginPath(); ctx.ellipse(0, 0, 6, 4.5, 0, 0, Math.PI*2); ctx.fill();
+    // Iridescent highlight
+    ctx.fillStyle = 'rgba(60,220,140,0.50)';
+    ctx.beginPath(); ctx.ellipse(-1, -1.5, 3, 2, 0.4, 0, Math.PI*2); ctx.fill();
+    // Center line
+    ctx.strokeStyle = '#0d5030'; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(0, -4.5); ctx.lineTo(0, 4.5); ctx.stroke();
+    // Legs
+    ctx.strokeStyle = '#1a6040'; ctx.lineWidth = 0.7;
+    for (let i = -1; i <= 1; i++) {
+      ctx.beginPath(); ctx.moveTo(-6, i*2.2); ctx.lineTo(-10, i*2.2 - 1.5); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo( 6, i*2.2); ctx.lineTo( 10, i*2.2 - 1.5); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawEgyptNPCs() {
+    if (!S || !S.egyptNPCs) return;
+    const now = Date.now();
+    for (const npc of S.egyptNPCs) {
+      if (npc.type === 'mummy') drawMummy(npc.x, npc.y, npc.angle, now);
+      else drawScarabNPC(npc.x, npc.y, npc.angle, now);
+    }
+  }
+
   // ── Alligator system ─────────────────────────────────────────────────────
   const ALLIGATOR_SPEED = 55;
   const ALLIGATOR_DETECT_RANGE = 280;
@@ -2561,6 +2918,7 @@
 
     // Alligators (hotel only)
     if (S.area === 'hotel') drawAlligators();
+    if (S.area === 'egypt') drawEgyptNPCs();
   }
 
   function applyDarkness(cw, ch) {
@@ -2589,17 +2947,34 @@
       dc.beginPath(); dc.arc(gx, gy, gr, 0, Math.PI*2); dc.fill();
     }
 
-    // Flashlight cone (range scaled by avatar flashMult)
+    // Flashlight cone — self (slightly reduced from 1.0 → 0.82 for better atmosphere)
     if (S.activeTool === 'flashlight') {
       const avFlash = FLASH_RANGE * (AVATAR_STATS[S.me.avatar || 0] || AVATAR_STATS[0]).flashMult;
       const grad = dc.createRadialGradient(sx, sy, 0, sx, sy, avFlash);
-      grad.addColorStop(0,   'rgba(255,255,255,1)');
-      grad.addColorStop(0.5, 'rgba(255,255,255,0.9)');
+      grad.addColorStop(0,   'rgba(255,255,255,0.82)');
+      grad.addColorStop(0.5, 'rgba(255,255,255,0.70)');
       grad.addColorStop(1,   'rgba(255,255,255,0)');
       dc.fillStyle = grad;
       dc.beginPath();
       dc.moveTo(sx, sy);
       dc.arc(sx, sy, avFlash, S.me.facing - FLASH_ANGLE, S.me.facing + FLASH_ANGLE);
+      dc.closePath();
+      dc.fill();
+    }
+
+    // Flashlight cones — other players (dimmer, tinted slightly warm)
+    for (const p of Object.values(S.otherPlayers)) {
+      if (p.activeTool !== 'flashlight') continue;
+      const px = p.x - S.cam.x, py = p.y - S.cam.y;
+      if (px < -FLASH_RANGE || px > cw + FLASH_RANGE || py < -FLASH_RANGE || py > ch + FLASH_RANGE) continue;
+      const pgrad = dc.createRadialGradient(px, py, 0, px, py, FLASH_RANGE * 0.92);
+      pgrad.addColorStop(0,   'rgba(255,255,240,0.58)');
+      pgrad.addColorStop(0.5, 'rgba(255,255,220,0.42)');
+      pgrad.addColorStop(1,   'rgba(255,255,200,0)');
+      dc.fillStyle = pgrad;
+      dc.beginPath();
+      dc.moveTo(px, py);
+      dc.arc(px, py, FLASH_RANGE * 0.92, p.facing - FLASH_ANGLE, p.facing + FLASH_ANGLE);
       dc.closePath();
       dc.fill();
     }
@@ -2791,6 +3166,62 @@
         eg.addColorStop(1, 'rgba(255,200,60,0)');
         dc.fillStyle = eg;
         dc.beginPath(); dc.arc(elx, ely, er, 0, Math.PI*2); dc.fill();
+      }
+    }
+
+    // #18 Egypt: torch glow + altar radiance + obelisk ambient + inner sanctum
+    if (S.area === 'egypt') {
+      const aw = area.areaWidth;
+      // Torch light cutouts from obstacle array
+      for (const ob of area.obstacles) {
+        if (ob.type !== 'torch') continue;
+        const lx = ob.x + ob.w/2 - S.cam.x, ly = ob.y - S.cam.y;
+        if (lx < -120 || lx > cw+120 || ly < -120 || ly > ch+120) continue;
+        const flicker = 0.80 + 0.20 * Math.sin(now * 0.0041 + ob.x * 0.009 + ob.y * 0.007);
+        const tr = 70 * flicker;
+        const tg = dc.createRadialGradient(lx, ly, 0, lx, ly, tr);
+        tg.addColorStop(0, `rgba(255,200,100,${(0.68 * flicker).toFixed(3)})`);
+        tg.addColorStop(0.5, `rgba(255,160,50,${(0.35 * flicker).toFixed(3)})`);
+        tg.addColorStop(1, 'rgba(255,140,30,0)');
+        dc.fillStyle = tg;
+        dc.beginPath(); dc.arc(lx, ly, tr, 0, Math.PI*2); dc.fill();
+      }
+      // Central altar golden radiance
+      const alx = (40*32+160) - S.cam.x, aly = (28*32+80) - S.cam.y;
+      if (alx > -280 && alx < cw+280 && aly > -280 && aly < ch+280) {
+        const apulse = 0.85 + 0.15 * Math.sin(now * 0.0022);
+        const alg = dc.createRadialGradient(alx, aly, 0, alx, aly, 160 * apulse);
+        alg.addColorStop(0, `rgba(255,230,100,${(0.40 * apulse).toFixed(3)})`);
+        alg.addColorStop(0.5, `rgba(255,200,60,${(0.18 * apulse).toFixed(3)})`);
+        alg.addColorStop(1, 'rgba(255,180,40,0)');
+        dc.fillStyle = alg;
+        dc.beginPath(); dc.arc(alx, aly, 160 * apulse, 0, Math.PI*2); dc.fill();
+      }
+      // Inner sanctum main sarcophagus eerie cold glow
+      const scx = (40*32+160) - S.cam.x, scy = (60*32+96) - S.cam.y;
+      if (scx > -240 && scx < cw+240 && scy > -240 && scy < ch+240) {
+        const spulse = 0.75 + 0.25 * Math.sin(now * 0.0016);
+        const scg = dc.createRadialGradient(scx, scy, 0, scx, scy, 120 * spulse);
+        scg.addColorStop(0, `rgba(180,255,210,${(0.32 * spulse).toFixed(3)})`);
+        scg.addColorStop(0.6, `rgba(100,220,160,${(0.12 * spulse).toFixed(3)})`);
+        scg.addColorStop(1, 'rgba(60,200,140,0)');
+        dc.fillStyle = scg;
+        dc.beginPath(); dc.arc(scx, scy, 120 * spulse, 0, Math.PI*2); dc.fill();
+      }
+      // Obelisk tip glow (4 obelisks: vestibule pair + inner sanctum pair)
+      const obeliskTips = [
+        { x: 34*32+32, y: 2*32 }, { x: 54*32+32, y: 2*32 },
+        { x: 33*32+32, y: 59*32 }, { x: 55*32+32, y: 59*32 },
+      ];
+      for (const ot of obeliskTips) {
+        const otx = ot.x - S.cam.x, oty = ot.y - S.cam.y;
+        if (otx < -80 || otx > cw+80 || oty < -80 || oty > ch+80) continue;
+        const opglow = 0.55 + 0.45 * Math.sin(now * 0.0028 + ot.x * 0.002);
+        const org = dc.createRadialGradient(otx, oty, 0, otx, oty, 35 * opglow);
+        org.addColorStop(0, `rgba(255,220,80,${(0.42 * opglow).toFixed(3)})`);
+        org.addColorStop(1, 'rgba(255,200,40,0)');
+        dc.fillStyle = org;
+        dc.beginPath(); dc.arc(otx, oty, 35 * opglow, 0, Math.PI*2); dc.fill();
       }
     }
 
@@ -3563,15 +3994,21 @@
       gh.x = x; gh.y = y;
     });
 
-    socket.on('ghost:player_pos', ({ playerIndex, x, y, facing, avatar }) => {
+    socket.on('ghost:player_pos', ({ playerIndex, x, y, facing, avatar, tool }) => {
       if (!S) return;
-      if (!S.otherPlayers[playerIndex]) S.otherPlayers[playerIndex] = { x, y, facing: 0, avatar: 0, walkPhase: 0, shockStart: 0 };
+      if (!S.otherPlayers[playerIndex]) S.otherPlayers[playerIndex] = { x, y, facing: 0, avatar: 0, walkPhase: 0, shockStart: 0, activeTool: null };
       const p = S.otherPlayers[playerIndex];
       const dist = Math.hypot(x - p.x, y - p.y);
       p.walkPhase = (p.walkPhase || 0) + dist * 0.12;
       p.x = x; p.y = y;
       if (facing !== undefined) p.facing = facing;
       if (avatar !== undefined) p.avatar = avatar;
+      if (tool !== undefined) p.activeTool = tool;
+    });
+
+    socket.on('ghost:player_left', ({ playerIndex }) => {
+      if (!S) return;
+      delete S.otherPlayers[playerIndex];
     });
 
     socket.on('ghost:ouija_start', ({ ghostId, sequence, personality }) => {
@@ -3728,6 +4165,7 @@
 
     // Init alligators for hotel
     if ((gd.area || 'graveyard') === 'hotel') initAlligators();
+    if ((gd.area || 'graveyard') === 'egypt') initEgyptNPCs();
 
     // Init fog grid
     const areaForFog = AREA_DEFS[S.area] || AREA_DEFS.graveyard;

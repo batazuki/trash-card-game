@@ -577,6 +577,22 @@ io.on("connection", socket => {
 
       if (state.phase === "playing") {
         const player = state.players[idx];
+
+        // Ghost is cooperative — a single player leaving shouldn't end the game
+        // for everyone else. Mark them disconnected and notify; only end if no
+        // human players remain.
+        if (state.game === "ghost") {
+          player.disconnected = true;
+          io.to(roomId).emit("ghost:player_left", { playerIndex: idx });
+          const remaining = state.players.filter(p => !p.isAI && !p.disconnected);
+          if (remaining.length === 0) {
+            state.phase = "ended";
+            clearTimeout(state.cleanupTimer);
+            state.cleanupTimer = setTimeout(() => rooms.delete(roomId), 30000);
+          }
+          break;
+        }
+
         player.disconnecting = true;
         io.to(roomId).emit("opponentDisconnecting");
         player.disconnectTimer = setTimeout(() => {
