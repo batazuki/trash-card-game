@@ -1433,6 +1433,12 @@
     ctx.restore();
 
     applyDarkness(cw, ch);
+    // #1 Screen-space vignette — darkens edges for tension/depth
+    const vg = ctx.createRadialGradient(cw/2, ch/2, Math.min(cw,ch)*0.28, cw/2, ch/2, Math.max(cw,ch)*0.82);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, 'rgba(0,0,0,0.30)');
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, cw, ch);
     drawHUD(cw, ch);
     drawPOIPanel(cw, ch);
     drawPlayerSignals(cw, ch);
@@ -1452,6 +1458,15 @@
     ctx.fillRect(64, 64, area.areaWidth-128, area.areaHeight-128);
 
     drawGroundTexture(S.area, area, now);
+
+    // #2 Contact shadows — soft south-edge ground shadow grounds large obstacles
+    ctx.fillStyle = 'rgba(0,0,0,0.16)';
+    for (const ob of area.obstacles) {
+      if (ob.w < 32 || ob.h < 32) continue;
+      const _t = ob.type;
+      if (_t==='chair'||_t==='candle'||_t==='torch'||_t==='lamp'||_t==='cross'||_t==='fence'||_t==='pillar'||_t==='flower'||_t==='pool') continue;
+      ctx.fillRect(ob.x + 2, ob.y + ob.h, ob.w - 4, 5);
+    }
 
     for (const ob of area.obstacles) {
       drawObstacle(ob, area, now);
@@ -1625,6 +1640,17 @@
     const aw = area.areaWidth, ah = area.areaHeight;
 
     if (areaName === 'graveyard') {
+      // #7 Large slow-drifting fog banks
+      for (let b = 0; b < 3; b++) {
+        const fbx = aw * (0.18 + b * 0.32) + Math.sin(now * 0.00012 + b * 2.3) * (aw * 0.12);
+        const fby = ah * (0.22 + b * 0.28) + Math.cos(now * 0.000089 + b * 1.7) * (ah * 0.09);
+        const falpha = 0.028 + 0.012 * Math.sin(now * 0.00075 + b * 1.1);
+        ctx.fillStyle = `rgba(155,200,160,${falpha.toFixed(3)})`;
+        ctx.save();
+        ctx.translate(fbx, fby);
+        ctx.beginPath(); ctx.ellipse(0, 0, 260, 100, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
       // Drifting fog wisps
       for (let i = 0; i < 8; i++) {
         const bx = 128 + (Math.sin(i * 5.31) * 0.5 + 0.5) * (aw - 256);
@@ -2539,6 +2565,7 @@
 
   function applyDarkness(cw, ch) {
     const dc = darkCtx;
+    const now = Date.now();
     dc.clearRect(0, 0, cw, ch);
     dc.fillStyle = 'rgba(0,0,0,0.87)';
     dc.fillRect(0, 0, cw, ch);
@@ -2547,6 +2574,20 @@
     const sy = Math.round(S.me.y - S.cam.y);
 
     dc.globalCompositeOperation = 'destination-out';
+
+    // #3 Found-ghost ambient glow — guides players toward revealed ghosts in the dark
+    for (const gh of Object.values(S.ghosts)) {
+      if (!gh.found || gh.identified) continue;
+      const gx = gh.x - S.cam.x, gy = gh.y - S.cam.y;
+      if (gx < -100 || gx > cw+100 || gy < -100 || gy > ch+100) continue;
+      const gpulse = 0.6 + 0.4 * Math.sin(now * 0.003 + gh.id * 1.8);
+      const gr = 55 + gpulse * 12;
+      const gg = dc.createRadialGradient(gx, gy, 0, gx, gy, gr);
+      gg.addColorStop(0, `rgba(255,255,255,${(0.32 + gpulse * 0.14).toFixed(3)})`);
+      gg.addColorStop(1, 'rgba(255,255,255,0)');
+      dc.fillStyle = gg;
+      dc.beginPath(); dc.arc(gx, gy, gr, 0, Math.PI*2); dc.fill();
+    }
 
     // Flashlight cone (range scaled by avatar flashMult)
     if (S.activeTool === 'flashlight') {
@@ -2563,7 +2604,7 @@
       dc.fill();
     }
 
-    // EMF — radial glow tinted green
+    // EMF — radial glow
     if (S.activeTool === 'emf') {
       const emfSig = S.signals.emf / 100;
       if (emfSig > 0.05) {
@@ -2594,13 +2635,49 @@
     dc.fillStyle = ag;
     dc.beginPath(); dc.arc(sx, sy, 48, 0, Math.PI*2); dc.fill();
 
-    // Lamp posts in garden — static ambient light sources
+    // ── Per-level static light sources ──────────────────────────────────
+    const area = AREA_DEFS[S.area];
+
+    // #5 Graveyard + House: torch and candle obstacles emit real warm light
+    if (S.area === 'graveyard' || S.area === 'house') {
+      for (const ob of area.obstacles) {
+        if (ob.type !== 'torch' && ob.type !== 'candle') continue;
+        const lx = ob.x + ob.w/2 - S.cam.x, ly = ob.y - S.cam.y;
+        if (lx < -140 || lx > cw+140 || ly < -140 || ly > ch+140) continue;
+        const flicker = 0.78 + 0.22 * Math.sin(now * 0.0095 + ob.x * 0.013);
+        const lr = 75 * flicker;
+        const tg = dc.createRadialGradient(lx, ly, 0, lx, ly, lr);
+        tg.addColorStop(0, `rgba(255,240,180,${(0.55 * flicker).toFixed(3)})`);
+        tg.addColorStop(0.4, `rgba(255,200,100,${(0.28 * flicker).toFixed(3)})`);
+        tg.addColorStop(1, 'rgba(255,160,60,0)');
+        dc.fillStyle = tg;
+        dc.beginPath(); dc.arc(lx, ly, lr, 0, Math.PI*2); dc.fill();
+      }
+    }
+
+    // #11 House: fireplace casts large warm amber light
+    if (S.area === 'house') {
+      for (const ob of area.obstacles) {
+        if (ob.type !== 'fireplace') continue;
+        const lx = ob.x + ob.w/2 - S.cam.x, ly = ob.y + ob.h/2 - S.cam.y;
+        if (lx < -200 || lx > cw+200 || ly < -200 || ly > ch+200) continue;
+        const flicker = 0.8 + 0.2 * Math.sin(now * 0.0095 + ob.x * 0.01);
+        const lr = 130 * flicker;
+        const fg = dc.createRadialGradient(lx, ly, 0, lx, ly, lr);
+        fg.addColorStop(0, `rgba(255,220,160,${(0.65 * flicker).toFixed(3)})`);
+        fg.addColorStop(0.4, `rgba(255,160,60,${(0.38 * flicker).toFixed(3)})`);
+        fg.addColorStop(1, 'rgba(255,100,30,0)');
+        dc.fillStyle = fg;
+        dc.beginPath(); dc.arc(lx, ly, lr, 0, Math.PI*2); dc.fill();
+      }
+    }
+
+    // #8 #9 #10 Garden: lamp posts + fountain beacon + fireflies + bioluminescent flowers
     if (S.area === 'garden') {
-      const area = AREA_DEFS[S.area];
+      const aw = area.areaWidth, ah = area.areaHeight;
       for (const ob of area.obstacles) {
         if (ob.type !== 'lamp') continue;
-        const lx = ob.x + ob.w/2 - S.cam.x;
-        const ly = ob.y - S.cam.y;
+        const lx = ob.x + ob.w/2 - S.cam.x, ly = ob.y - S.cam.y;
         if (lx < -120 || lx > cw+120 || ly < -120 || ly > ch+120) continue;
         const lg = dc.createRadialGradient(lx, ly, 0, lx, ly, 90);
         lg.addColorStop(0, 'rgba(255,255,200,0.55)');
@@ -2608,18 +2685,179 @@
         dc.fillStyle = lg;
         dc.beginPath(); dc.arc(lx, ly, 90, 0, Math.PI*2); dc.fill();
       }
+      // #9 Fountain — cool blue landmark light source
+      const fnx = 1600 - S.cam.x, fny = 1120 - S.cam.y;
+      if (fnx > -200 && fnx < cw+200 && fny > -200 && fny < ch+200) {
+        const fng = dc.createRadialGradient(fnx, fny, 0, fnx, fny, 90);
+        fng.addColorStop(0, 'rgba(140,225,255,0.5)');
+        fng.addColorStop(0.6, 'rgba(90,195,255,0.18)');
+        fng.addColorStop(1, 'rgba(80,190,255,0)');
+        dc.fillStyle = fng;
+        dc.beginPath(); dc.arc(fnx, fny, 90, 0, Math.PI*2); dc.fill();
+      }
+      // #8 Fireflies — cut tiny light dots when bright (same deterministic positions as drawAmbientParticles)
+      for (let i = 0; i < 10; i++) {
+        const bx = 128 + (Math.sin(i * 6.13) * 0.5 + 0.5) * (aw - 256);
+        const by = 128 + (Math.sin(i * 4.51) * 0.5 + 0.5) * (ah - 256);
+        const ffx = bx + Math.sin(now * 0.00082 + i * 2.3) * 60;
+        const ffy = by + Math.cos(now * 0.00065 + i * 1.7) * 40;
+        const twinkle = 0.5 + 0.5 * Math.sin(now * 0.006 + i * 1.9);
+        if (twinkle < 0.6) continue;
+        const flx = ffx - S.cam.x, fly = ffy - S.cam.y;
+        if (flx < -40 || flx > cw+40 || fly < -40 || fly > ch+40) continue;
+        const fr = 14 * twinkle;
+        const fg = dc.createRadialGradient(flx, fly, 0, flx, fly, fr);
+        fg.addColorStop(0, `rgba(255,255,200,${(twinkle * 0.45).toFixed(3)})`);
+        fg.addColorStop(1, 'rgba(255,255,200,0)');
+        dc.fillStyle = fg;
+        dc.beginPath(); dc.arc(flx, fly, fr, 0, Math.PI*2); dc.fill();
+      }
+      // #10 Bioluminescent flowers — faint magenta/violet glow
+      for (const ob of area.obstacles) {
+        if (ob.type !== 'flower') continue;
+        const flx2 = ob.x + ob.w/2 - S.cam.x, fly2 = ob.y + ob.h/2 - S.cam.y;
+        if (flx2 < -60 || flx2 > cw+60 || fly2 < -60 || fly2 > ch+60) continue;
+        const fpulse = 0.5 + 0.5 * Math.sin(now * 0.0018 + ob.x * 0.007);
+        const fr2 = 20 * fpulse;
+        const fwg = dc.createRadialGradient(flx2, fly2, 0, flx2, fly2, fr2);
+        fwg.addColorStop(0, `rgba(255,180,255,${(0.32 * fpulse).toFixed(3)})`);
+        fwg.addColorStop(1, 'rgba(255,180,255,0)');
+        dc.fillStyle = fwg;
+        dc.beginPath(); dc.arc(flx2, fly2, fr2, 0, Math.PI*2); dc.fill();
+      }
     }
+
+    // #14 #15 #16 #17 Hotel: chandeliers + corridor sconces + pool glow + elevator proximity
+    if (S.area === 'hotel') {
+      const aw = area.areaWidth;
+      // #14 Ballroom chandeliers — large warm pools of golden light
+      const chandelierPositions = [
+        { x: 39*32+16, y: 16*32+16 },
+        { x: 39*32+16, y: 24*32+16 },
+        { x: 39*32+16, y: 32*32+16 },
+      ];
+      for (const cp of chandelierPositions) {
+        const lx = cp.x - S.cam.x, ly = cp.y - S.cam.y;
+        if (lx < -240 || lx > cw+240 || ly < -240 || ly > ch+240) continue;
+        const flicker = 0.88 + 0.12 * Math.sin(now * 0.0032 + cp.y * 0.001);
+        const lr = 165 * flicker;
+        const cg = dc.createRadialGradient(lx, ly, 0, lx, ly, lr);
+        cg.addColorStop(0, `rgba(255,245,200,${(0.62 * flicker).toFixed(3)})`);
+        cg.addColorStop(0.4, `rgba(255,210,120,${(0.38 * flicker).toFixed(3)})`);
+        cg.addColorStop(1, 'rgba(255,190,80,0)');
+        dc.fillStyle = cg;
+        dc.beginPath(); dc.arc(lx, ly, lr, 0, Math.PI*2); dc.fill();
+      }
+      // #15 Corridor sconces — series of warm lit pools in wing corridors
+      const sconceYPositions = [576+96, 576+96*3, 576+96*5, 576+96*7, 576+96*9, 576+96*11];
+      for (let si = 0; si < sconceYPositions.length; si++) {
+        const swy = sconceYPositions[si];
+        const sflicker = 0.82 + 0.18 * Math.sin(now * 0.0025 + si * 1.7);
+        for (const swx of [96, aw - 96]) {
+          const lx2 = swx - S.cam.x, ly2 = swy - S.cam.y;
+          if (lx2 < -130 || lx2 > cw+130 || ly2 < -130 || ly2 > ch+130) continue;
+          const lr2 = 60 * sflicker;
+          const sg = dc.createRadialGradient(lx2, ly2, 0, lx2, ly2, lr2);
+          sg.addColorStop(0, `rgba(255,200,120,${(0.52 * sflicker).toFixed(3)})`);
+          sg.addColorStop(0.5, `rgba(255,170,80,${(0.28 * sflicker).toFixed(3)})`);
+          sg.addColorStop(1, 'rgba(255,150,50,0)');
+          dc.fillStyle = sg;
+          dc.beginPath(); dc.arc(lx2, ly2, lr2, 0, Math.PI*2); dc.fill();
+        }
+      }
+      // #16 Pool — cool blue-green ambient light from the water
+      const poolCX = (864 + 1696) / 2, poolCY = (1280 + 1792) / 2;
+      const plx = poolCX - S.cam.x, ply = poolCY - S.cam.y;
+      if (plx > -280 && plx < cw+280 && ply > -280 && ply < ch+280) {
+        const ppulse = 0.9 + 0.1 * Math.sin(now * 0.0018);
+        const pg = dc.createRadialGradient(plx, ply, 0, plx, ply, 185 * ppulse);
+        pg.addColorStop(0, `rgba(80,210,255,${(0.45 * ppulse).toFixed(3)})`);
+        pg.addColorStop(0.5, `rgba(40,180,220,${(0.2 * ppulse).toFixed(3)})`);
+        pg.addColorStop(1, 'rgba(20,160,200,0)');
+        dc.fillStyle = pg;
+        dc.beginPath(); dc.arc(plx, ply, 185 * ppulse, 0, Math.PI*2); dc.fill();
+      }
+      // #17 Elevator proximity glow — warm amber as player approaches
+      for (const ob of area.obstacles) {
+        if (ob.type !== 'elevator') continue;
+        const edist = Math.hypot(S.me.x - (ob.x + ob.w/2), S.me.y - (ob.y + ob.h/2));
+        if (edist > 200) continue;
+        const elx = ob.x + ob.w/2 - S.cam.x, ely = ob.y + ob.h - 20 - S.cam.y;
+        const eInt = Math.max(0, 1 - edist/200);
+        const ePulse = 0.6 + 0.4 * Math.sin(now * 0.0028 + ob.x * 0.01);
+        const er = 35 * ePulse;
+        const eg = dc.createRadialGradient(elx, ely, 0, elx, ely, er);
+        eg.addColorStop(0, `rgba(255,230,100,${(0.52 * eInt * ePulse).toFixed(3)})`);
+        eg.addColorStop(1, 'rgba(255,200,60,0)');
+        dc.fillStyle = eg;
+        dc.beginPath(); dc.arc(elx, ely, er, 0, Math.PI*2); dc.fill();
+      }
+    }
+
     dc.globalCompositeOperation = 'source-over';
     ctx.drawImage(darkCanvas, 0, 0, cssW, cssH);
 
-    // Cold spot: frost-blue edge glow when near an undiscovered ghost
+    // ── Screen-space overlays (drawn on main ctx after dark blit) ──────────
+
+    // #6 Graveyard: diagonal moonbeam shafts — faint pale green light rays
+    if (S.area === 'graveyard') {
+      for (let b = 0; b < 3; b++) {
+        const beamX = cw * (0.15 + b * 0.34) + Math.sin(now * 0.00015 + b * 2.3) * 18;
+        const alpha = 0.048 + 0.022 * Math.sin(now * 0.00022 + b * 1.8);
+        ctx.save();
+        ctx.translate(beamX, 0);
+        ctx.rotate(0.52);
+        const bmg = ctx.createLinearGradient(-22, 0, 22, 0);
+        bmg.addColorStop(0, 'rgba(200,230,200,0)');
+        bmg.addColorStop(0.5, `rgba(200,230,200,${alpha.toFixed(3)})`);
+        bmg.addColorStop(1, 'rgba(200,230,200,0)');
+        ctx.fillStyle = bmg;
+        ctx.fillRect(-22, -ch * 0.2, 44, ch * 1.55);
+        ctx.restore();
+      }
+    }
+
+    // #12 House: faint amber window light shafts from room wall openings
+    if (S.area === 'house') {
+      const winWorldX = [192, 480, 800, 1120, 1440, 1680];
+      for (let wi = 0; wi < winWorldX.length; wi++) {
+        const wx = winWorldX[wi] - S.cam.x;
+        if (wx < -80 || wx > cw + 80) continue;
+        const alpha = 0.055 + 0.02 * Math.sin(now * 0.0003 + wi * 1.4);
+        ctx.save();
+        ctx.translate(wx, 0);
+        ctx.rotate(0.1);
+        const wg = ctx.createLinearGradient(-26, 0, 26, 0);
+        wg.addColorStop(0, 'rgba(255,220,150,0)');
+        wg.addColorStop(0.5, `rgba(255,220,150,${alpha.toFixed(3)})`);
+        wg.addColorStop(1, 'rgba(255,220,150,0)');
+        ctx.fillStyle = wg;
+        ctx.fillRect(-26, 0, 52, ch);
+        ctx.restore();
+      }
+    }
+
+    // #4 Cold spot: frost-blue edge glow with pulsing sparkles (enhanced)
     if (S.coldSignal > 0.15) {
       const intensity = Math.min(1, (S.coldSignal - 0.15) / 0.85);
-      const cg = ctx.createRadialGradient(cw/2, ch/2, Math.min(cw,ch)*0.28, cw/2, ch/2, Math.max(cw,ch)*0.75);
+      const cpulse = 0.72 + 0.28 * Math.sin(now * 0.0044);
+      const cg = ctx.createRadialGradient(cw/2, ch/2, Math.min(cw,ch)*0.22, cw/2, ch/2, Math.max(cw,ch)*0.75);
       cg.addColorStop(0, 'rgba(100,200,255,0)');
-      cg.addColorStop(1, `rgba(80,170,255,${(intensity * 0.38).toFixed(3)})`);
+      cg.addColorStop(0.65, `rgba(80,170,255,${(intensity * 0.18 * cpulse).toFixed(3)})`);
+      cg.addColorStop(1, `rgba(60,140,255,${(intensity * 0.38 * cpulse).toFixed(3)})`);
       ctx.fillStyle = cg;
       ctx.fillRect(0, 0, cw, ch);
+      if (intensity > 0.3) {
+        for (let i = 0; i < 6; i++) {
+          const angle = now * 0.0006 * Math.PI * 2 + (i / 6) * Math.PI * 2;
+          const dist = Math.min(cw, ch) * 0.42;
+          const spx = cw/2 + Math.cos(angle) * dist;
+          const spy = ch/2 + Math.sin(angle) * dist;
+          const sparkA = intensity * (0.45 + 0.55 * Math.sin(now * 0.004 + i * 1.1)) * 0.65;
+          ctx.fillStyle = `rgba(160,230,255,${sparkA.toFixed(3)})`;
+          ctx.beginPath(); ctx.arc(spx, spy, 2.5, 0, Math.PI*2); ctx.fill();
+        }
+      }
     }
   }
 
