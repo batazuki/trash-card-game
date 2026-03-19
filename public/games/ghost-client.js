@@ -122,6 +122,13 @@
     o.push(rect(4,3,1,1,'torch'),rect(11,3,1,1,'torch'));
     o.push(rect(32,9,1,1,'torch'),rect(43,9,1,1,'torch'));
     o.push(rect(6,47,1,1,'torch'),rect(17,47,1,1,'torch'));
+    // Gravestones (rounded tombstone variant)
+    o.push(rect(16,9,1,2,'gravestone'),rect(20,9,1,2,'gravestone'),rect(32,22,1,2,'gravestone'));
+    o.push(rect(46,38,1,2,'gravestone'),rect(50,43,1,2,'gravestone'));
+    // Coffins near mausoleum
+    o.push(rect(5,5,2,1,'coffin'),rect(5,7,2,1,'coffin'));
+    // Cauldrons (non-collidable — client only)
+    o.push(rect(30,12,1,1,'cauldron'),rect(55,28,1,1,'cauldron'),rect(12,42,1,1,'cauldron'));
     return o;
   }
 
@@ -193,6 +200,18 @@
     // Basement right: table + shelves
     o.push(rect(33,42,5,2,'table'));
     o.push(rect(50,42,1,6,'shelf'),rect(53,42,1,6,'shelf'));
+    // Basement coffins (collidable)
+    o.push(rect(7,43,2,2,'coffin'),rect(7,47,2,2,'coffin'));
+    // Basement storage (collidable)
+    o.push(rect(35,44,2,2,'crate'),rect(38,44,2,2,'crate'),rect(41,44,2,1,'crate'));
+    o.push(rect(35,48,2,2,'barrel'),rect(38,48,2,2,'barrel'));
+    // Sconces (non-collidable — client only)
+    o.push(rect(3,3,1,1,'sconce'),rect(22,3,1,1,'sconce'),rect(42,3,1,1,'sconce'));
+    o.push(rect(3,20,1,1,'sconce'),rect(12,20,1,1,'sconce'));
+    // Paintings (non-collidable — client only)
+    o.push(rect(44,2,2,2,'painting'),rect(48,10,2,2,'painting'));
+    // Rugs (non-collidable — client only)
+    o.push(rect(22,16,4,2,'rug'),rect(2,40,6,3,'rug'),rect(32,40,6,3,'rug'));
     return o;
   }
 
@@ -435,6 +454,7 @@
       playerStart: { x:1280, y:960 }, obstacles: buildGraveyardObs(),
       obsColors: { stone:'#6a6a6a', tree:'#3a2510', cross:'#9a9a8a', fence:'#505058',
                    well:'#7a7a7a', torch:'#b05820', shrub:'#2a5a1a', arch:'#7a6a58',
+                   coffin:'#3a2010', cauldron:'#2a3020', gravestone:'#8a8078',
                    default:'#5a5a5a' },
       pathColor: '#243524',
     },
@@ -451,7 +471,8 @@
       playerStart: { x:960, y:640 }, obstacles: buildHouseObs(),
       obsColors: { stone:'#4a3a2a', wood:'#6b4a1a', table:'#7a5030', chair:'#5a3a18',
                    shelf:'#3a2810', fireplace:'#5a3020', clock:'#3a2a10', mirror:'#8080a8',
-                   stairs:'#5a4838', default:'#3a2a1a' },
+                   stairs:'#5a4838', coffin:'#2a1808', sconce:'#5a4020', crate:'#7a5028',
+                   barrel:'#6a4020', painting:'#8a6820', rug:'#8a2030', default:'#3a2a1a' },
       pathColor: '#251c14',
     },
     hotel: {
@@ -482,7 +503,7 @@
   };
 
   // ── Collision ────────────────────────────────────────────────────────────
-  const NON_COLLIDABLE = new Set(['torch', 'candle', 'pool', 'sandpit']);
+  const NON_COLLIDABLE = new Set(['torch', 'candle', 'pool', 'sandpit', 'cauldron', 'sconce', 'painting', 'rug']);
   function isBlocked(x, y, r, obstacles) {
     for (const o of obstacles) {
       if (NON_COLLIDABLE.has(o.type)) continue;
@@ -1212,6 +1233,81 @@
     if (S.area === 'hotel') updateAlligators(dt);
     if (S.area === 'egypt') updateEgyptNPCs(dt);
 
+    // ── Garden rain particles ─────────────────────────────────────────────
+    if (S.area === 'garden') {
+      const area = AREA_DEFS.garden;
+      rainSpawnAccum += dt * 220;
+      const toSpawn = Math.floor(rainSpawnAccum);
+      rainSpawnAccum -= toSpawn;
+      for (let i = 0; i < toSpawn && rainParticles.length < 350; i++) {
+        rainParticles.push({
+          x: Math.random() * area.areaWidth,
+          y: Math.random() * -80,
+          vx: -0.4 - Math.random() * 0.3,
+          vy: 9 + Math.random() * 5,
+          alpha: 0.12 + Math.random() * 0.14,
+          len: 7 + Math.random() * 6,
+        });
+      }
+      for (let i = rainParticles.length - 1; i >= 0; i--) {
+        const p = rainParticles[i];
+        p.x += p.vx * dt * 60;
+        p.y += p.vy * dt * 60;
+        if (p.y > area.areaHeight + 20) rainParticles.splice(i, 1);
+      }
+      // Garden falling leaves
+      leafSpawnAccum += dt * 1.8;
+      const leafToSpawn = Math.floor(leafSpawnAccum);
+      leafSpawnAccum -= leafToSpawn;
+      for (let i = 0; i < leafToSpawn && leafParticles.length < 60; i++) {
+        leafParticles.push({
+          x: Math.random() * area.areaWidth,
+          y: -10,
+          vx: (Math.random() - 0.5) * 18,
+          vy: 10 + Math.random() * 8,
+          rot: Math.random() * Math.PI * 2,
+          rotSpeed: (Math.random() - 0.5) * 3,
+          wobble: Math.random() * Math.PI * 2,
+          autumn: Math.random() < 0.4,
+          age: 0,
+          maxAge: 4 + Math.random() * 4,
+        });
+      }
+      for (let i = leafParticles.length - 1; i >= 0; i--) {
+        const lp = leafParticles[i];
+        lp.age += dt;
+        lp.x += lp.vx * dt + Math.sin(lp.wobble + Date.now() * 0.001) * 8 * dt;
+        lp.y += lp.vy * dt;
+        lp.rot += lp.rotSpeed * dt;
+        if (lp.age >= lp.maxAge || lp.y > area.areaHeight + 20) leafParticles.splice(i, 1);
+      }
+    } else {
+      rainParticles = [];
+      leafParticles = [];
+      rainSpawnAccum = 0;
+      leafSpawnAccum = 0;
+    }
+
+    // ── Graveyard lightning ───────────────────────────────────────────────
+    if (S.area === 'graveyard') {
+      if (!lightningNextMs) lightningNextMs = Date.now() + 8000 + Math.random() * 12000;
+      if (Date.now() >= lightningNextMs) {
+        const pts = [];
+        let bx = cssW * (0.15 + Math.random() * 0.7), by = 0;
+        pts.push({ x: bx, y: by });
+        while (by < cssH) {
+          bx += (Math.random() - 0.5) * 90;
+          by += 38 + Math.random() * 42;
+          pts.push({ x: Math.max(10, Math.min(cssW - 10, bx)), y: by });
+        }
+        lightningState = { start: Date.now(), duration: 200, boltPoints: pts };
+        lightningNextMs = Date.now() + 7000 + Math.random() * 16000;
+      }
+    } else {
+      lightningState = null;
+      lightningNextMs = 0;
+    }
+
     // Check POI proximity
     S.activePoi = null;
     for (const poi of (S.pois || [])) {
@@ -1721,6 +1817,14 @@
   // ── Light Flicker Override ────────────────────────────────────────────────
   let flickerOverride = null; // { start, duration }
 
+  // ── Weather / FX State ────────────────────────────────────────────────────
+  let rainParticles = [];
+  let rainSpawnAccum = 0;
+  let leafParticles = [];
+  let leafSpawnAccum = 0;
+  let lightningState = null; // { start, duration, boltPoints }
+  let lightningNextMs = 0;
+
   // ── Dramatic Pose Flash ───────────────────────────────────────────────────
   let dramaticPoseFlash = null; // { start, color }
 
@@ -2223,6 +2327,24 @@
         ctx.beginPath(); ctx.ellipse(0, 0, 260, 100, 0, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
       }
+      // Cauldron smoke wisps
+      const cauldronWorldPos = [
+        { x: 30*32+16, y: 12*32+16 },
+        { x: 55*32+16, y: 28*32+16 },
+        { x: 12*32+16, y: 42*32+16 },
+      ];
+      for (let ci = 0; ci < cauldronWorldPos.length; ci++) {
+        const cp = cauldronWorldPos[ci];
+        for (let s = 0; s < 4; s++) {
+          const age = (now * 0.00045 + ci * 0.9 + s * 0.25) % 1;
+          const sy2 = cp.y - age * 55;
+          const sx2 = cp.x + Math.sin(now * 0.0025 + ci * 1.7 + s * 0.8) * 8;
+          const sa = (0.09 - age * 0.09);
+          if (sa <= 0.005) continue;
+          ctx.fillStyle = `rgba(60,120,40,${sa.toFixed(3)})`;
+          ctx.beginPath(); ctx.arc(sx2, sy2, 4 + age * 6, 0, Math.PI * 2); ctx.fill();
+        }
+      }
       // Drifting fog wisps
       for (let i = 0; i < 8; i++) {
         const bx = 128 + (Math.sin(i * 5.31) * 0.5 + 0.5) * (aw - 256);
@@ -2242,23 +2364,102 @@
     }
 
     else if (areaName === 'garden') {
+      // Rain streaks
+      ctx.save();
+      ctx.lineWidth = 0.8;
+      for (const rp of rainParticles) {
+        const sx2 = rp.x - S.cam.x, sy2 = rp.y - S.cam.y;
+        if (sx2 < -20 || sx2 > cssW + 20 || sy2 < -20 || sy2 > cssH + 20) continue;
+        ctx.strokeStyle = `rgba(140,180,220,${rp.alpha.toFixed(2)})`;
+        ctx.beginPath();
+        ctx.moveTo(sx2, sy2);
+        ctx.lineTo(sx2 + rp.vx * rp.len * 0.15, sy2 + rp.vy * rp.len * 0.15);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Puddle ripples (8 deterministic positions near benches and lamps)
+      const puddlePositions = [
+        { wx: 12*32+48, wy: 8*32+48 }, { wx: 72*32+48, wy: 12*32+48 },
+        { wx: 8*32+48, wy: 38*32+48 }, { wx: 88*32+48, wy: 40*32+48 },
+        { wx: 50*32+48, wy: 60*32+48 }, { wx: 28*32+48, wy: 62*32+48 },
+        { wx: 8*32+48, wy: 8*32+48 }, { wx: 90*32+48, wy: 60*32+48 },
+      ];
+      for (let pi = 0; pi < puddlePositions.length; pi++) {
+        const pd = puddlePositions[pi];
+        const ppx = pd.wx - S.cam.x, ppy = pd.wy - S.cam.y;
+        if (ppx < -60 || ppx > cssW + 60 || ppy < -60 || ppy > cssH + 60) continue;
+        for (let ri = 0; ri < 2; ri++) {
+          const phase = ((now * 0.0018 + pi * 0.8 + ri * 0.5) % 1);
+          const rAlpha = (1 - phase) * 0.22;
+          if (rAlpha < 0.01) continue;
+          ctx.strokeStyle = `rgba(140,180,220,${rAlpha.toFixed(3)})`;
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.ellipse(ppx, ppy, 2 + phase * 20, 1 + phase * 7, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+
+      // Falling leaves
+      ctx.save();
+      for (const lp of leafParticles) {
+        const lpx = lp.x - S.cam.x, lpy = lp.y - S.cam.y;
+        if (lpx < -20 || lpx > cssW + 20 || lpy < -20 || lpy > cssH + 20) continue;
+        const fadeIn = Math.min(1, lp.age / 0.5);
+        const fadeOut = Math.min(1, (lp.maxAge - lp.age) / 1.0);
+        const la = fadeIn * fadeOut * 0.75;
+        ctx.save();
+        ctx.globalAlpha = la;
+        ctx.translate(Math.round(lpx), Math.round(lpy));
+        ctx.rotate(lp.rot);
+        ctx.fillStyle = lp.autumn ? '#b86020' : '#4a8818';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 4, 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.restore();
+
       // Fountain — drawn on top of stone obstacle so water is visible
       const fx = 1600, fy = 1120; // center of fountain (tile 50,35)
       const fRipple = (now * 0.0012) % 1;
+      // Outer basin rings (sculpted stone)
+      ctx.strokeStyle = '#6a5a38'; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.arc(fx, fy, 118, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = '#7a6a48'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(fx, fy, 110, 0, Math.PI * 2); ctx.stroke();
+      // Main basin edge
+      ctx.strokeStyle = '#8a7a50'; ctx.lineWidth = 7;
+      ctx.beginPath(); ctx.arc(fx, fy, 108, 0, Math.PI * 2); ctx.stroke();
+      // Water fill
       ctx.fillStyle = '#183898';
-      ctx.beginPath(); ctx.arc(fx, fy, 108, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(fx, fy, 105, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#1e50b8';
       ctx.beginPath(); ctx.arc(fx, fy, 90, 0, Math.PI * 2); ctx.fill();
+      // Water ripples
       for (let r = 0; r < 3; r++) {
         const rp = (fRipple + r / 3) % 1;
         ctx.strokeStyle = `rgba(150,205,255,${(0.5*(1-rp)).toFixed(3)})`;
         ctx.lineWidth = 2.5;
         ctx.beginPath(); ctx.arc(fx, fy, 12 + rp * 72, 0, Math.PI * 2); ctx.stroke();
       }
+      // Glinting water shimmer highlights
+      for (let gs = 0; gs < 5; gs++) {
+        const angle = now * 0.0006 + gs * (Math.PI * 2 / 5);
+        const dist = 30 + gs * 10;
+        const gsx = fx + Math.cos(angle) * dist;
+        const gsy = fy + Math.sin(angle) * dist * 0.5;
+        const gsAlpha = 0.3 + 0.3 * Math.sin(now * 0.004 + gs * 1.3);
+        ctx.fillStyle = `rgba(200,235,255,${gsAlpha.toFixed(2)})`;
+        ctx.beginPath(); ctx.ellipse(gsx, gsy, 3, 1.5, angle, 0, Math.PI * 2); ctx.fill();
+      }
+      // Center jet
       ctx.fillStyle = 'rgba(200,235,255,0.5)';
       ctx.beginPath(); ctx.arc(fx, fy, 10, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = '#8a7a50'; ctx.lineWidth = 7;
-      ctx.beginPath(); ctx.arc(fx, fy, 108, 0, Math.PI * 2); ctx.stroke();
+      // Inner basin ring
+      ctx.strokeStyle = 'rgba(140,180,220,0.25)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(fx, fy, 78, 0, Math.PI * 2); ctx.stroke();
       // Fireflies
       for (let i = 0; i < 10; i++) {
         const bx = 128 + (Math.sin(i * 6.13) * 0.5 + 0.5) * (aw - 256);
@@ -2605,6 +2806,227 @@
     }
   }
 
+  function drawCoffin(x, y, w, h, col) {
+    // Tapered body (hexagonal coffin shape)
+    const cx2 = x + w / 2;
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.2, y);
+    ctx.lineTo(x + w * 0.8, y);
+    ctx.lineTo(x + w, y + h * 0.3);
+    ctx.lineTo(x + w, y + h * 0.7);
+    ctx.lineTo(x + w * 0.8, y + h);
+    ctx.lineTo(x + w * 0.2, y + h);
+    ctx.lineTo(x, y + h * 0.7);
+    ctx.lineTo(x, y + h * 0.3);
+    ctx.closePath();
+    ctx.fill();
+    // Lid highlight stripe
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.fillRect(cx2 - 2, y + h * 0.12, 4, h * 0.76);
+    // Cross inlay
+    ctx.fillStyle = 'rgba(200,180,140,0.30)';
+    ctx.fillRect(cx2 - 1, y + h * 0.2, 2, h * 0.5);
+    ctx.fillRect(cx2 - w * 0.18, y + h * 0.35, w * 0.36, 2);
+    // Handle dots
+    ctx.fillStyle = 'rgba(180,150,80,0.45)';
+    ctx.beginPath(); ctx.arc(x + 4, y + h * 0.45, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + w - 4, y + h * 0.45, 2, 0, Math.PI * 2); ctx.fill();
+    // Top highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.10)';
+    ctx.fillRect(x + w * 0.2, y, w * 0.6, 2);
+  }
+
+  function drawCauldron(x, y, w, h, col, now) {
+    const cx2 = x + w / 2, cy2 = y + h / 2;
+    const flicker = getFlicker(now, x + y * 3);
+    // Legs
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(cx2 - w * 0.38, y + h * 0.78, Math.max(3, w * 0.14), h * 0.22);
+    ctx.fillRect(cx2 - w * 0.08, y + h * 0.80, Math.max(3, w * 0.14), h * 0.20);
+    ctx.fillRect(cx2 + w * 0.22, y + h * 0.78, Math.max(3, w * 0.14), h * 0.22);
+    // Cauldron body (bowl)
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.ellipse(cx2, cy2 + h * 0.08, w * 0.46, h * 0.36, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Rim
+    ctx.fillStyle = 'rgba(80,80,80,0.80)';
+    ctx.beginPath();
+    ctx.ellipse(cx2, cy2 - h * 0.16, w * 0.46, h * 0.12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Bubbling liquid
+    const liquidAlpha = (0.55 + 0.30 * flicker);
+    ctx.fillStyle = `rgba(40,200,60,${liquidAlpha.toFixed(2)})`;
+    ctx.beginPath();
+    ctx.ellipse(cx2, cy2 - h * 0.16, w * 0.36, h * 0.09, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Bubble dots
+    for (let b = 0; b < 3; b++) {
+      const bph = (now * 0.003 + b * 1.1) % 1;
+      const bAlpha = (1 - bph) * 0.7 * flicker;
+      ctx.fillStyle = `rgba(120,255,120,${bAlpha.toFixed(2)})`;
+      ctx.beginPath();
+      ctx.arc(cx2 + (b - 1) * w * 0.12, cy2 - h * 0.16 - bph * h * 0.08, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Handle arc
+    ctx.strokeStyle = 'rgba(60,60,60,0.8)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx2, cy2 - h * 0.16, w * 0.32, Math.PI * 1.1, Math.PI * 1.9);
+    ctx.stroke();
+  }
+
+  function drawSconce(x, y, w, h, col, now) {
+    const flicker = getFlicker(now, x * 3 + y);
+    const armX = x + w * 0.65;
+    const armY = y + h * 0.5;
+    // Wall backplate
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y + h * 0.2, w * 0.25, h * 0.6);
+    // Arm bracket
+    ctx.fillStyle = '#3a2810';
+    ctx.fillRect(x + w * 0.2, armY - 2, w * 0.45, 4);
+    // Torch cup
+    ctx.fillStyle = '#c06020';
+    ctx.fillRect(armX - 4, armY - h * 0.12, 8, h * 0.2);
+    // Flame
+    const flameCX = armX, flameCY = armY - h * 0.12;
+    const fg = ctx.createRadialGradient(flameCX, flameCY, 0, flameCX, flameCY, 14 * flicker);
+    fg.addColorStop(0, `rgba(255,200,60,${(0.85 * flicker).toFixed(2)})`);
+    fg.addColorStop(0.5, `rgba(255,100,20,${(0.5 * flicker).toFixed(2)})`);
+    fg.addColorStop(1, 'rgba(255,80,10,0)');
+    ctx.fillStyle = fg;
+    ctx.beginPath(); ctx.arc(flameCX, flameCY, 14 * flicker, 0, Math.PI * 2); ctx.fill();
+  }
+
+  function drawCrate(x, y, w, h, col) {
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y, w, h);
+    // Lid cross-hatch
+    ctx.strokeStyle = 'rgba(0,0,0,0.22)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x + 2, y + 2); ctx.lineTo(x + w - 2, y + h - 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + w - 2, y + 2); ctx.lineTo(x + 2, y + h - 2); ctx.stroke();
+    // Corner reinforcements
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    const cs = Math.max(3, Math.round(Math.min(w, h) * 0.18));
+    ctx.fillRect(x, y, cs, cs);
+    ctx.fillRect(x + w - cs, y, cs, cs);
+    ctx.fillRect(x, y + h - cs, cs, cs);
+    ctx.fillRect(x + w - cs, y + h - cs, cs, cs);
+    // Highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.10)';
+    ctx.fillRect(x, y, w, 2);
+    ctx.fillRect(x, y, 2, h);
+    // Inner depth lines
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x+1, y+h-1); ctx.lineTo(x+1, y+1); ctx.lineTo(x+w-1, y+1); ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x+w-1, y+1); ctx.lineTo(x+w-1, y+h-1); ctx.lineTo(x+1, y+h-1); ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawBarrel(x, y, w, h, col) {
+    const cx2 = x + w / 2;
+    ctx.fillStyle = col;
+    ctx.fillRect(x + 3, y, w - 6, h);
+    // Rounded top/bottom caps
+    ctx.beginPath(); ctx.ellipse(cx2, y + 4, w / 2 - 2, 6, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx2, y + h - 4, w / 2 - 2, 6, 0, 0, Math.PI * 2); ctx.fill();
+    // Hoop stripes
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fillRect(x + 1, y + Math.round(h * 0.22), w - 2, 3);
+    ctx.fillRect(x + 1, y + Math.round(h * 0.50), w - 2, 3);
+    ctx.fillRect(x + 1, y + Math.round(h * 0.75), w - 2, 3);
+    // Specular
+    ctx.save();
+    const specG = ctx.createRadialGradient(x + w * 0.28, y + h * 0.18, 0, x + w * 0.28, y + h * 0.18, w * 0.3);
+    specG.addColorStop(0, 'rgba(255,255,255,0.22)');
+    specG.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = specG;
+    ctx.beginPath(); ctx.arc(x + w * 0.28, y + h * 0.18, w * 0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawPainting(x, y, w, h, col, now) {
+    const shimmer = Math.sin(now * 0.0007 + x * 0.003) * 0.5 + 0.5;
+    // Outer frame
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y, w, h);
+    // Inner mat
+    const mw = Math.round(w * 0.12), mh = Math.round(h * 0.12);
+    ctx.fillStyle = '#1a1208';
+    ctx.fillRect(x + mw, y + mh, w - mw * 2, h - mh * 2);
+    // Canvas sheen (sepia/amber ghost painting)
+    const pg = ctx.createRadialGradient(x + w * 0.5, y + h * 0.4, 0, x + w * 0.5, y + h * 0.4, Math.max(w, h) * 0.55);
+    pg.addColorStop(0, `rgba(220,180,100,${(0.10 + shimmer * 0.07).toFixed(3)})`);
+    pg.addColorStop(0.6, `rgba(180,130,60,${(0.04 + shimmer * 0.03).toFixed(3)})`);
+    pg.addColorStop(1, 'rgba(160,100,40,0)');
+    ctx.fillStyle = pg;
+    ctx.fillRect(x + mw, y + mh, w - mw * 2, h - mh * 2);
+    // Frame highlight
+    ctx.fillStyle = 'rgba(255,220,120,0.18)';
+    ctx.fillRect(x, y, w, 2);
+    ctx.fillRect(x, y, 2, h);
+  }
+
+  function drawRug(x, y, w, h, col) {
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y, w, h);
+    // Border stripe
+    ctx.strokeStyle = 'rgba(255,200,120,0.45)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x + 4, y + 4, w - 8, h - 8);
+    // Inner diamond line
+    ctx.strokeStyle = 'rgba(255,200,120,0.22)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 8, y + 8, w - 16, h - 16);
+    // Fringe stubs on long edges
+    ctx.strokeStyle = 'rgba(220,170,80,0.35)';
+    ctx.lineWidth = 1;
+    const fringeStep = Math.max(6, Math.round(w / 8));
+    for (let fx = x + 4; fx < x + w - 2; fx += fringeStep) {
+      ctx.beginPath(); ctx.moveTo(fx, y); ctx.lineTo(fx, y - 4); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(fx, y + h); ctx.lineTo(fx, y + h + 4); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawGravestone(x, y, w, h, col) {
+    const cx2 = x + w / 2;
+    const archR = w / 2;
+    const archY = y + archR;
+    // Main body (arch top)
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.moveTo(x, y + h);
+    ctx.lineTo(x, archY);
+    ctx.arc(cx2, archY, archR, Math.PI, 0);
+    ctx.lineTo(x + w, y + h);
+    ctx.closePath();
+    ctx.fill();
+    // Worn texture dots
+    ctx.fillStyle = 'rgba(0,0,0,0.10)';
+    for (let di = 0; di < 5; di++) {
+      const dx = x + 3 + (Math.sin(di * 7.31 + x * 0.01) * 0.5 + 0.5) * (w - 6);
+      const dy = archY + 4 + (Math.sin(di * 5.17 + y * 0.01) * 0.5 + 0.5) * (h - archR - 8);
+      ctx.fillRect(Math.round(dx), Math.round(dy), 2, 2);
+    }
+    // Engraved name lines
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.fillRect(cx2 - w * 0.28, archY + (h - archR) * 0.35, w * 0.56, 2);
+    ctx.fillRect(cx2 - w * 0.20, archY + (h - archR) * 0.58, w * 0.40, 2);
+    // Top highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.fillRect(x, archY, w, 2);
+    ctx.fillRect(x, archY, 2, h - archR);
+  }
+
   function drawObstacle(ob, area, now) {
     const { x, y, w, h, type } = ob;
     const colors = area.obsColors || {};
@@ -2641,6 +3063,14 @@
       case 'altar':       drawAltar(x, y, w, h, col); break;
       case 'urn':         drawUrn(x, y, w, h, col); break;
       case 'sandpit':     drawSandpit(x, y, w, h); break;
+      case 'coffin':      drawCoffin(x, y, w, h, col); break;
+      case 'cauldron':    drawCauldron(x, y, w, h, col, now); break;
+      case 'sconce':      drawSconce(x, y, w, h, col, now); break;
+      case 'crate':       drawCrate(x, y, w, h, col); break;
+      case 'barrel':      drawBarrel(x, y, w, h, col); break;
+      case 'painting':    drawPainting(x, y, w, h, col, now); break;
+      case 'rug':         drawRug(x, y, w, h, col); break;
+      case 'gravestone':  drawGravestone(x, y, w, h, col); break;
       default:
         ctx.fillStyle = col;
         ctx.fillRect(x, y, w, h);
@@ -2753,6 +3183,10 @@
     ctx.fillStyle = 'rgba(255,255,255,0.07)';
     ctx.fillRect(x, y, w, 2);
     ctx.fillRect(x, y, 2, h);
+    // Inner depth / shadow stripe on bottom or right face for 3D depth
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    if (w > h) ctx.fillRect(x, y + h - 4, w, 4);
+    else ctx.fillRect(x + w - 4, y, 4, h);
     // Inner depth lines
     ctx.save();
     ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
@@ -2786,6 +3220,9 @@
       ctx.beginPath();
       ctx.moveTo(px - 3, y + 4); ctx.lineTo(px, y - 3); ctx.lineTo(px + 3, y + 4);
       ctx.fill();
+      // Metallic ball cap at spike tip
+      ctx.fillStyle = '#d4d4d8';
+      ctx.beginPath(); ctx.arc(px, y - 3, 1.5, 0, Math.PI * 2); ctx.fill();
     }
   }
 
@@ -3099,6 +3536,16 @@
       ctx.fillStyle = 'rgba(255,255,255,0.1)';
       ctx.fillRect(x + i*sw, y + (h - h*(i+1)/nSteps), sw, 2);
     }
+    // Railing posts along upper-left edge
+    for (let i = 0; i < nSteps; i++) {
+      const postX = x + i * sw + sw * 0.5;
+      const postY = y + (h - h * (i + 1) / nSteps);
+      ctx.fillStyle = 'rgba(255,255,255,0.20)';
+      ctx.fillRect(Math.round(postX) - 1, Math.round(postY) - 6, 2, 7);
+    }
+    // Handrail bar
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.fillRect(x, y - 3, w, 2);
     // Inner depth lines
     ctx.save();
     ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
@@ -3692,7 +4139,21 @@
     const dc = darkCtx;
     const now = Date.now();
     dc.clearRect(0, 0, cw, ch);
-    dc.fillStyle = 'rgba(0,0,0,0.87)';
+
+    // Lightning flash — briefly illuminates entire graveyard
+    let darknessAlpha = 0.87;
+    if (lightningState && S.area === 'graveyard') {
+      const le = now - lightningState.start;
+      if (le < lightningState.duration) {
+        const lPhase = le / lightningState.duration;
+        const flashStrength = lPhase < 0.25 ? (1 - lPhase / 0.25) : 0;
+        darknessAlpha = 0.87 * (1 - flashStrength * 0.92);
+      } else {
+        lightningState = null;
+      }
+    }
+
+    dc.fillStyle = `rgba(0,0,0,${darknessAlpha.toFixed(3)})`;
     dc.fillRect(0, 0, cw, ch);
     // Light flicker override
     if (flickerOverride) {
@@ -3827,6 +4288,52 @@
         fg.addColorStop(1, 'rgba(255,100,30,0)');
         dc.fillStyle = fg;
         dc.beginPath(); dc.arc(lx, ly, lr, 0, Math.PI*2); dc.fill();
+      }
+    }
+
+    // Cauldron eerie green glow — Graveyard
+    if (S.area === 'graveyard') {
+      for (const ob of area.obstacles) {
+        if (ob.type !== 'cauldron') continue;
+        const lx = ob.x + ob.w / 2 - S.cam.x, ly = ob.y + ob.h / 2 - S.cam.y;
+        if (lx < -120 || lx > cw + 120 || ly < -120 || ly > ch + 120) continue;
+        const cf = 0.75 + 0.25 * Math.sin(now * 0.003 + ob.x * 0.01);
+        const cr = 80 * cf;
+        const cg = dc.createRadialGradient(lx, ly, 0, lx, ly, cr);
+        cg.addColorStop(0, `rgba(80,255,80,${(0.45 * cf).toFixed(3)})`);
+        cg.addColorStop(0.5, `rgba(40,200,60,${(0.22 * cf).toFixed(3)})`);
+        cg.addColorStop(1, 'rgba(20,180,40,0)');
+        dc.fillStyle = cg;
+        dc.beginPath(); dc.arc(lx, ly, cr, 0, Math.PI * 2); dc.fill();
+      }
+    }
+
+    // Sconce warm wall light — House
+    if (S.area === 'house') {
+      for (const ob of area.obstacles) {
+        if (ob.type !== 'sconce') continue;
+        const lx = ob.x + ob.w / 2 - S.cam.x, ly = ob.y + ob.h / 2 - S.cam.y;
+        if (lx < -100 || lx > cw + 100 || ly < -100 || ly > ch + 100) continue;
+        const sf = getFlicker(now, ob.x * 3 + ob.y);
+        const sr = 60 * sf;
+        const sg = dc.createRadialGradient(lx, ly, 0, lx, ly, sr);
+        sg.addColorStop(0, `rgba(255,200,100,${(0.48 * sf).toFixed(3)})`);
+        sg.addColorStop(1, 'rgba(255,160,60,0)');
+        dc.fillStyle = sg;
+        dc.beginPath(); dc.arc(lx, ly, sr, 0, Math.PI * 2); dc.fill();
+      }
+      // Coffin basement candles — tiny warm flicker near each coffin
+      for (const ob of area.obstacles) {
+        if (ob.type !== 'coffin') continue;
+        const lcx = ob.x + ob.w / 2 - S.cam.x, lcy = ob.y - 4 - S.cam.y;
+        if (lcx < -80 || lcx > cw + 80 || lcy < -80 || lcy > ch + 80) continue;
+        const cfl = getFlicker(now, ob.x * 5 + ob.y);
+        const clr = 45 * cfl;
+        const clg = dc.createRadialGradient(lcx, lcy, 0, lcx, lcy, clr);
+        clg.addColorStop(0, `rgba(255,220,140,${(0.38 * cfl).toFixed(3)})`);
+        clg.addColorStop(1, 'rgba(255,180,80,0)');
+        dc.fillStyle = clg;
+        dc.beginPath(); dc.arc(lcx, lcy, clr, 0, Math.PI * 2); dc.fill();
       }
     }
 
@@ -4059,6 +4566,57 @@
       }
     }
 
+    // Lightning bolt draw (Graveyard, screen-space)
+    if (S.area === 'graveyard' && lightningState) {
+      const le2 = now - lightningState.start;
+      if (le2 < lightningState.duration) {
+        const bPhase = le2 / lightningState.duration;
+        const bAlpha = bPhase < 0.3 ? (1 - bPhase / 0.3) * 0.9 : 0;
+        if (bAlpha > 0.01) {
+          ctx.save();
+          ctx.strokeStyle = `rgba(220,240,255,${bAlpha.toFixed(3)})`;
+          ctx.lineWidth = 2.5;
+          ctx.shadowColor = 'rgba(180,220,255,0.85)';
+          ctx.shadowBlur = 14;
+          ctx.beginPath();
+          const pts = lightningState.boltPoints;
+          ctx.moveTo(pts[0].x, pts[0].y);
+          for (let bi = 1; bi < pts.length; bi++) ctx.lineTo(pts[bi].x, pts[bi].y);
+          ctx.stroke();
+          // Secondary thinner branch (random deviation)
+          if (pts.length > 3) {
+            ctx.strokeStyle = `rgba(200,230,255,${(bAlpha * 0.5).toFixed(3)})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            const branchIdx = Math.floor(pts.length * 0.4);
+            ctx.moveTo(pts[branchIdx].x, pts[branchIdx].y);
+            ctx.lineTo(pts[branchIdx].x + 30, pts[branchIdx].y + 40);
+            ctx.lineTo(pts[branchIdx].x + 50, pts[branchIdx].y + 80);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+      }
+    }
+
+    // Graveyard moonlight ground patches near fence openings
+    if (S.area === 'graveyard') {
+      const moonPatchPositions = [
+        { wx: 13*32+96, wy: 2*32+48 }, { wx: 25*32+96, wy: 2*32+48 },
+        { wx: 45*32+96, wy: 2*32+48 }, { wx: 13*32+96, wy: 57*32+48 },
+      ];
+      for (const mp of moonPatchPositions) {
+        const mpx = mp.wx - S.cam.x, mpy = mp.wy - S.cam.y;
+        if (mpx < -160 || mpx > cw + 160 || mpy < -160 || mpy > ch + 160) continue;
+        const mpulse = 0.8 + 0.2 * Math.sin(now * 0.00045 + mp.wx * 0.001);
+        const mpg = ctx.createRadialGradient(mpx, mpy, 0, mpx, mpy, 90 * mpulse);
+        mpg.addColorStop(0, `rgba(180,210,255,${(0.06 * mpulse).toFixed(3)})`);
+        mpg.addColorStop(1, 'rgba(180,210,255,0)');
+        ctx.fillStyle = mpg;
+        ctx.beginPath(); ctx.arc(mpx, mpy, 90 * mpulse, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+
     // #12 House: faint amber window light shafts from room wall openings
     if (S.area === 'house') {
       const winWorldX = [192, 480, 800, 1120, 1440, 1680];
@@ -4252,45 +4810,6 @@
       ctx.lineWidth = 1;
       rrect(ctx, tmpX, tmpY, tmpBarW, tmpBarH, 3);
       ctx.stroke();
-    }
-
-    // C3: Evidence card slots (bottom-left, above joystick zone) — only draw collected cards
-    if (S.evidenceCards !== undefined && S.evidenceCards.length > 0) {
-      const cardW = 30, cardH = 42, cardGap = 6;
-      const evTypes = ['cold_presence', 'emf_level5', 'audible_sounds'];
-      const slotColors  = { cold_presence: '#2060c0', emf_level5: '#206040', audible_sounds: '#602080' };
-      const slotLabels  = { cold_presence: 'COLD', emf_level5: 'EMF', audible_sounds: 'SND' };
-      const slotEmoji   = { cold_presence: '\u2745', emf_level5: 'EMF', audible_sounds: 'SND' };
-      const baseX = 12, baseY = ch - cardH - 60;
-
-      const collected = evTypes.filter(t => S.evidenceCards.includes(t));
-      collected.forEach((slot, si) => {
-        const cx2 = baseX + si * (cardW + cardGap);
-        const cy2 = baseY;
-        const lastEvidence = S.evidenceCards[S.evidenceCards.length - 1];
-        const isNewest  = slot === lastEvidence;
-        const flipAge   = (Date.now() - (S.evidenceFlipTime || 0)) / 500;
-        const scaleY    = (isNewest && flipAge < 1) ? Math.max(0.01, flipAge) : 1;
-
-        ctx.save();
-        ctx.translate(cx2 + cardW / 2, cy2 + cardH / 2);
-        ctx.scale(1, scaleY);
-        ctx.translate(-(cx2 + cardW / 2), -(cy2 + cardH / 2));
-
-        ctx.fillStyle = slotColors[slot] || '#444';
-        rrect(ctx, cx2, cy2, cardW, cardH, 4); ctx.fill();
-        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-        ctx.lineWidth = 1.5;
-        rrect(ctx, cx2, cy2, cardW, cardH, 4); ctx.stroke();
-
-        ctx.fillStyle = '#fff';
-        ctx.font = '11px serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(slotEmoji[slot], cx2 + cardW / 2, cy2 + cardH * 0.48);
-        ctx.font = 'bold 7px monospace';
-        ctx.fillText(slotLabels[slot], cx2 + cardW / 2, cy2 + cardH - 6);
-        ctx.restore();
-      });
     }
 
     // ── Wrong guess flash / message ────────────────────────────────────
@@ -5224,14 +5743,6 @@
       dramaticPoseFlash = { start: Date.now(), color: color || '#ff6b9d' };
     });
 
-    // C3: Evidence card collection
-    socket.on('ghost:evidence', ({ type }) => {
-      if (!S) return;
-      if (!S.evidenceCards.includes(type)) {
-        S.evidenceCards.push(type);
-        S.evidenceFlipTime = Date.now();
-      }
-    });
   }
 
   function unbindSocketEvents() {
@@ -5254,6 +5765,12 @@
     setupCanvas();
     walkPhase = 0;
     shockStart = 0;
+    rainParticles = [];
+    leafParticles = [];
+    rainSpawnAccum = 0;
+    leafSpawnAccum = 0;
+    lightningState = null;
+    lightningNextMs = 0;
 
     // Use server-confirmed avatar (from ghost:avatarChosen) if present in gameStart data,
     // falling back to local selection
@@ -5305,9 +5822,6 @@
       // A8/C1: temperature tracking
       lastTemperature: 0,
       breathTimer: 0,
-      // C3: evidence cards
-      evidenceCards: [],
-      evidenceFlipTime: 0,
     };
 
     // Init alligators for hotel

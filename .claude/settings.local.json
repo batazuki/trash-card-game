@@ -11,7 +11,8 @@
       "Bash(node --check \"C:\\\\Users\\\\hokie\\\\Downloads\\\\trash-card-game\\\\public\\\\game.js\" && node --check \"C:\\\\Users\\\\hokie\\\\Downloads\\\\trash-card-game\\\\server.js\" && node --check \"C:\\\\Users\\\\hokie\\\\Downloads\\\\trash-card-game\\\\public\\\\games\\\\sketch-client.js\" && echo \"ALL OK\")",
       "Bash(node --check \"C:\\\\Users\\\\hokie\\\\Downloads\\\\trash-card-game\\\\public\\\\games\\\\sketch-client.js\" && echo \"OK\")",
       "Bash(node:*)",
-      "Bash(grep -v \"^.*//.*lineWidth\")"
+      "Bash(grep -v \"^.*//.*lineWidth\")",
+      "Bash(grep:*)"
     ]
   }
 }

@@ -128,6 +128,11 @@ module.exports = function(io, helpers) {
     obs.push(rect(65,48,2,2,'well'));
     obs.push(rect(48,20,1,1,'shrub'),rect(72,28,1,1,'shrub'),rect(15,52,1,1,'shrub'),rect(40,5,1,1,'shrub'));
     obs.push(rect(8,18,1,1,'shrub'),rect(74,50,1,1,'shrub'),rect(56,35,1,1,'shrub'));
+    // Gravestones (rounded tombstone variant)
+    obs.push(rect(16,9,1,2,'gravestone'),rect(20,9,1,2,'gravestone'),rect(32,22,1,2,'gravestone'));
+    obs.push(rect(46,38,1,2,'gravestone'),rect(50,43,1,2,'gravestone'));
+    // Coffins near mausoleum
+    obs.push(rect(5,5,2,1,'coffin'),rect(5,7,2,1,'coffin'));
     return obs;
   }
 
@@ -176,6 +181,11 @@ module.exports = function(io, helpers) {
     obs.push(rect(10,42,2,1,'chair'));
     obs.push(rect(33,42,5,2,'table'));
     obs.push(rect(50,42,1,6,'shelf'),rect(53,42,1,6,'shelf'));
+    // Basement coffins
+    obs.push(rect(7,43,2,2,'coffin'),rect(7,47,2,2,'coffin'));
+    // Basement storage
+    obs.push(rect(35,44,2,2,'crate'),rect(38,44,2,2,'crate'),rect(41,44,2,1,'crate'));
+    obs.push(rect(35,48,2,2,'barrel'),rect(38,48,2,2,'barrel'));
     return obs;
   }
 
@@ -536,7 +546,7 @@ module.exports = function(io, helpers) {
         ghost.behaviorType = 'pose';
         ghost.behaviorElapsed = 0;
         ghost.behaviorTimer = 0;
-        if (roomId) io.to(roomId).emit('ghost:dramatic_pose', { ghostIndex: ghost.id });
+        if (roomId) io.to(roomId).emit('ghost:dramatic_pose', { ghostIndex: ghost.id, color: ghost.color });
       }
       if (ghost.behaviorActive && ghost.behaviorElapsed >= 1000) {
         ghost.behaviorActive = false;
@@ -977,7 +987,7 @@ module.exports = function(io, helpers) {
         gs.timerAccum = (gs.timerAccum || 0) + dt;
         if (gs.timerAccum >= 1000) {
           gs.timerAccum -= 1000;
-          io.to(roomId).emit('ghost:timer_update', { elapsed: gs.elapsedMs });
+          io.to(roomId).emit('ghost:timer_update', { remainingMs: Math.max(0, 480000 - gs.elapsedMs) });
         }
         if (gs.elapsedMs >= 480000) {
           clearAllTimers(gs);
@@ -1179,7 +1189,7 @@ module.exports = function(io, helpers) {
           clearAllTimers(gs);
           // C9 — Farewell sequence: emit farewell for each ghost, then end game after 3s
           for (const g of gs.ghosts) {
-            io.to(roomId).emit('ghost:farewell', { ghostIndex: g.id });
+            io.to(roomId).emit('ghost:farewell', { ghostId: g.id, x: g.x, y: g.y, color: g.color });
           }
           setTimeout(() => {
             endGame(state, roomId, playerIndex);
