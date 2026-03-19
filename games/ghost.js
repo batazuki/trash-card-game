@@ -510,8 +510,7 @@ module.exports = function(io, helpers) {
       newState = 'aware';
       ghost.awarenessTimer = 0;
     } else if (nearestPlayerDist <= 400) {
-      if (ghost.awarenessState === 'restless') newState = 'dormant';
-      else if (ghost.awarenessState !== 'aware') newState = 'dormant';
+      newState = 'dormant';
       ghost.awarenessTimer = 0;
     } else {
       ghost.awarenessTimer += dt;
@@ -728,7 +727,8 @@ module.exports = function(io, helpers) {
 
   // ─── Signal Computation ───────────────────────────────────────────────────
   // emfRange/soundRange/flashRange already include both avatar and ghost personality multipliers
-  function computeSignals(ghost, playerPos, facing, emfRange, soundRange, flashRange) {
+  // playerTool (optional): when provided, gates which signal values are non-zero
+  function computeSignals(ghost, playerPos, facing, emfRange, soundRange, flashRange, playerTool) {
     const dx = ghost.x - playerPos.x;
     const dy = ghost.y - playerPos.y;
     const dist = Math.hypot(dx, dy);
@@ -736,19 +736,31 @@ module.exports = function(io, helpers) {
     const effEmf   = (emfRange   || EMF_RANGE)   * (ghostCfg.emfMult   || 1.0);
     const effSnd   = (soundRange || SOUND_RANGE)  * (ghostCfg.soundMult || 1.0);
     const effFlash = flashRange  || FLASH_RANGE;
-    const emf   = Math.max(0, 1 - dist / effEmf);
-    const sound  = Math.max(0, 1 - dist / effSnd);
-    let flashlight = 0;
+    const emfRaw   = Math.max(0, 1 - dist / effEmf);
+    const soundRaw = Math.max(0, 1 - dist / effSnd);
+    let flashlightRaw = 0;
     if (dist < effFlash) {
       const gAngle = Math.atan2(dy, dx);
       let diff = Math.abs(gAngle - facing);
       if (diff > Math.PI) diff = 2 * Math.PI - diff;
       if (diff < FLASH_ANGLE) {
-        flashlight = (1 - dist / effFlash) * (1 - diff / FLASH_ANGLE);
+        flashlightRaw = (1 - dist / effFlash) * (1 - diff / FLASH_ANGLE);
       }
     }
-    // C8 — Temperature: inverse distance clamped 0–1
+    // C8 — Temperature: inverse distance clamped 0–1 (always computed, not tool-gated)
     const temperature = clamp(1 - dist / Math.max(effEmf, effSnd, effFlash), 0, 1);
+    // Gate signal values by player's active tool when specified
+    let emf = emfRaw, sound = soundRaw, flashlight = flashlightRaw;
+    if (playerTool === 'flashlight') {
+      emf = 0; sound = 0;
+    } else if (playerTool === 'emf') {
+      sound = 0; flashlight = 0;
+    } else if (playerTool === 'microphone') {
+      emf = 0; flashlight = 0;
+    } else if (playerTool !== undefined && playerTool !== null) {
+      // Unknown or missing tool — return all zeros for detection signals
+      emf = 0; sound = 0; flashlight = 0;
+    }
     return { emf, sound, flashlight, temperature };
   }
 
@@ -879,7 +891,8 @@ module.exports = function(io, helpers) {
           const sig = computeSignals(ghost, playerPos, facing,
             emfBase   * avStat.emfMult,
             SOUND_RANGE * avStat.soundMult,
-            FLASH_RANGE * avStat.flashMult);
+            FLASH_RANGE * avStat.flashMult,
+            player.tool || 'flashlight');
           signals.push({ ghostId: ghost.id, ...sig });
 
           // Track strongest signal direction for arrow indicator
@@ -1060,10 +1073,11 @@ module.exports = function(io, helpers) {
     };
     state.phase = 'playing';
 
-    // Init each player's position / facing
+    // Init each player's position / facing / tool
     for (const player of state.players) {
       player.ghostPos    = { x: areaData.playerStart.x, y: areaData.playerStart.y };
       player.ghostFacing = 0;
+      player.tool        = 'flashlight';
     }
 
     // Emit gameStart to each human player
@@ -1107,6 +1121,7 @@ module.exports = function(io, helpers) {
       const cy = clamp(y, 0, areaData.areaHeight);
       state.players[playerIndex].ghostPos    = { x: cx, y: cy };
       state.players[playerIndex].ghostFacing = facing || 0;
+      if (tool !== undefined) state.players[playerIndex].tool = tool;
       socket.to(roomId).emit('ghost:player_pos', {
         playerIndex, x: cx, y: cy,
         facing: facing || 0,

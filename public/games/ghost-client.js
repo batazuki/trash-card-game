@@ -728,7 +728,7 @@
       GA.emfGain.gain.setTargetAtTime(sig * 0.22, ct, 0.07);
       GA.emfOsc.frequency.setTargetAtTime(80 + sig * 200, ct, 0.07);
       GA.sndGain.gain.setTargetAtTime(0, ct, 0.07);
-    } else if (tool === 'sound') {
+    } else if (tool === 'microphone') {
       const sig = (signals.sound || 0) / 100;
       GA.sndGain.gain.setTargetAtTime(sig * 0.18, ct, 0.10);
       GA.sndOsc.frequency.setTargetAtTime(40 + sig * 80, ct, 0.10);
@@ -892,7 +892,11 @@
   function updateMicVolume(dist) {
     if (!MIC.active || !MIC.gainNode || !MIC.audioCtx) return;
     const volume = Math.max(0, 1 - dist / 500) * 0.15;
-    MIC.gainNode.gain.setTargetAtTime(volume, MIC.audioCtx.currentTime, 0.1);
+    if (volume <= 0.001) {
+      stopMicAudio();
+    } else {
+      MIC.gainNode.gain.setTargetAtTime(volume, MIC.audioCtx.currentTime, 0.1);
+    }
   }
 
   function stopMicAudio() {
@@ -1056,7 +1060,7 @@
     }
 
     // Tool buttons (vertical stack in right panel)
-    const tools = ['flashlight','emf','sound','microphone'];
+    const tools = ['flashlight','emf','microphone'];
     tools.forEach((t, i) => {
       const bx = panX, by = toolsY + i * (toolH + toolGap);
       if (tx >= bx && tx <= bx + panW && ty >= by && ty <= by + toolH) {
@@ -3723,14 +3727,20 @@
     // Flashlight cone — self (slightly reduced from 1.0 → 0.82 for better atmosphere)
     if (S.activeTool === 'flashlight') {
       const avFlash = FLASH_RANGE * (AVATAR_STATS[S.me.avatar || 0] || AVATAR_STATS[0]).flashMult;
-      const grad = dc.createRadialGradient(sx, sy, 0, sx, sy, avFlash);
+      // Offset the flashlight origin to simulate holding it
+      const facing = S.me.facing;
+      const holdOffX = Math.cos(facing) * 16 + Math.cos(facing + Math.PI / 2) * 6;
+      const holdOffY = Math.sin(facing) * 16 + Math.sin(facing + Math.PI / 2) * 6;
+      const fx = sx + holdOffX;
+      const fy = sy + holdOffY;
+      const grad = dc.createRadialGradient(fx, fy, 0, fx, fy, avFlash);
       grad.addColorStop(0,   'rgba(255,255,255,0.82)');
       grad.addColorStop(0.5, 'rgba(255,255,255,0.70)');
       grad.addColorStop(1,   'rgba(255,255,255,0)');
       dc.fillStyle = grad;
       dc.beginPath();
-      dc.moveTo(sx, sy);
-      dc.arc(sx, sy, avFlash, S.me.facing - FLASH_ANGLE, S.me.facing + FLASH_ANGLE);
+      dc.moveTo(fx, fy);
+      dc.arc(fx, fy, avFlash, S.me.facing - FLASH_ANGLE, S.me.facing + FLASH_ANGLE);
       dc.closePath();
       dc.fill();
     }
@@ -3765,8 +3775,8 @@
       }
     }
 
-    // Sound — wider ambient
-    if (S.activeTool === 'sound') {
+    // Microphone — wider ambient
+    if (S.activeTool === 'microphone') {
       const sndSig = S.signals.sound / 100;
       const r = 50 + sndSig * 160;
       const g = dc.createRadialGradient(sx, sy, 0, sx, sy, r);
@@ -4014,6 +4024,21 @@
     dc.globalCompositeOperation = 'source-over';
     ctx.drawImage(darkCanvas, 0, 0, cssW, cssH);
 
+    // Flashlight body dot — small glowing dot at the held position
+    if (S.activeTool === 'flashlight') {
+      const facing2 = S.me.facing;
+      const holdOffX2 = Math.cos(facing2) * 16 + Math.cos(facing2 + Math.PI / 2) * 6;
+      const holdOffY2 = Math.sin(facing2) * 16 + Math.sin(facing2 + Math.PI / 2) * 6;
+      const fx2 = sx + holdOffX2;
+      const fy2 = sy + holdOffY2;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(fx2, fy2, 3, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,240,150,0.9)';
+      ctx.fill();
+      ctx.restore();
+    }
+
     // ── Screen-space overlays (drawn on main ctx after dark blit) ──────────
 
     // #6 Graveyard: diagonal moonbeam shafts — faint pale green light rays
@@ -4079,9 +4104,9 @@
   }
 
   function drawHUD(cw, ch) {
-    const tools = ['flashlight','emf','sound','microphone'];
-    const icons  = { flashlight:'🔦', emf:'📡', sound:'🎙️', microphone:'🎤' };
-    const labels = { flashlight:'FLASH', sound:'SOUND', microphone:'MIC' };
+    const tools = ['flashlight','emf','microphone'];
+    const icons  = { flashlight:'🔦', emf:'📡', microphone:'🎤' };
+    const labels = { flashlight:'FLASH', microphone:'MIC' };
 
     // ── Layout constants (mirrored in handleTap) ───────────────────────
     const topH = 44;
@@ -4150,7 +4175,7 @@
       const bx = panX;
       const by = toolsY + i * (toolH + toolGap);
       const active = S.activeTool === t;
-      const sig = S.signals[t] || 0;
+      const sig = (t === 'microphone' ? S.signals.sound : S.signals[t]) || 0;
 
       if (t === 'emf') {
         ctx.fillStyle = active ? 'rgba(0,80,30,0.92)' : 'rgba(0,30,10,0.82)';
@@ -4193,13 +4218,11 @@
         ctx.fillText(icons[t], bx + panW / 2, by + 23);
         ctx.fillStyle = active ? '#93c5fd' : '#64748b'; ctx.font = 'bold 8px monospace';
         ctx.fillText(labels[t], bx + panW / 2, by + 35);
-        // Signal bar (skip for microphone — has no signal metric)
-        if (t !== 'microphone') {
-          ctx.fillStyle = 'rgba(255,255,255,0.18)';
-          ctx.fillRect(bx + 6, by + toolH - 9, panW - 12, 4);
-          ctx.fillStyle = sig > 70 ? '#ef4444' : sig > 40 ? '#f97316' : sig > 15 ? '#eab308' : '#4ade80';
-          ctx.fillRect(bx + 6, by + toolH - 9, (panW - 12) * (sig / 100), 4);
-        }
+        // Signal bar
+        ctx.fillStyle = 'rgba(255,255,255,0.18)';
+        ctx.fillRect(bx + 6, by + toolH - 9, panW - 12, 4);
+        ctx.fillStyle = sig > 70 ? '#ef4444' : sig > 40 ? '#f97316' : sig > 15 ? '#eab308' : '#4ade80';
+        ctx.fillRect(bx + 6, by + toolH - 9, (panW - 12) * (sig / 100), 4);
       }
     });
 
@@ -4231,21 +4254,21 @@
       ctx.stroke();
     }
 
-    // C3: Evidence card slots (bottom-left, above joystick zone)
-    if (S.evidenceCards !== undefined) {
+    // C3: Evidence card slots (bottom-left, above joystick zone) — only draw collected cards
+    if (S.evidenceCards !== undefined && S.evidenceCards.length > 0) {
       const cardW = 30, cardH = 42, cardGap = 6;
-      const slots = ['cold_presence', 'emf_level5', 'audible_sounds'];
+      const evTypes = ['cold_presence', 'emf_level5', 'audible_sounds'];
       const slotColors  = { cold_presence: '#2060c0', emf_level5: '#206040', audible_sounds: '#602080' };
       const slotLabels  = { cold_presence: 'COLD', emf_level5: 'EMF', audible_sounds: 'SND' };
       const slotEmoji   = { cold_presence: '\u2745', emf_level5: 'EMF', audible_sounds: 'SND' };
       const baseX = 12, baseY = ch - cardH - 60;
 
-      slots.forEach((slot, si) => {
+      const collected = evTypes.filter(t => S.evidenceCards.includes(t));
+      collected.forEach((slot, si) => {
         const cx2 = baseX + si * (cardW + cardGap);
         const cy2 = baseY;
-        const collected = S.evidenceCards.includes(slot);
         const lastEvidence = S.evidenceCards[S.evidenceCards.length - 1];
-        const isNewest  = collected && slot === lastEvidence;
+        const isNewest  = slot === lastEvidence;
         const flipAge   = (Date.now() - (S.evidenceFlipTime || 0)) / 500;
         const scaleY    = (isNewest && flipAge < 1) ? Math.max(0.01, flipAge) : 1;
 
@@ -4254,25 +4277,18 @@
         ctx.scale(1, scaleY);
         ctx.translate(-(cx2 + cardW / 2), -(cy2 + cardH / 2));
 
-        ctx.fillStyle = collected ? (slotColors[slot] || '#444') : 'rgba(30,30,40,0.6)';
+        ctx.fillStyle = slotColors[slot] || '#444';
         rrect(ctx, cx2, cy2, cardW, cardH, 4); ctx.fill();
-        ctx.strokeStyle = collected ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.18)';
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
         ctx.lineWidth = 1.5;
         rrect(ctx, cx2, cy2, cardW, cardH, 4); ctx.stroke();
 
-        if (collected) {
-          ctx.fillStyle = '#fff';
-          ctx.font = '11px serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(slotEmoji[slot], cx2 + cardW / 2, cy2 + cardH * 0.48);
-          ctx.font = 'bold 7px monospace';
-          ctx.fillText(slotLabels[slot], cx2 + cardW / 2, cy2 + cardH - 6);
-        } else {
-          ctx.fillStyle = 'rgba(255,255,255,0.18)';
-          ctx.font = '16px serif';
-          ctx.textAlign = 'center';
-          ctx.fillText('?', cx2 + cardW / 2, cy2 + cardH / 2 + 6);
-        }
+        ctx.fillStyle = '#fff';
+        ctx.font = '11px serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(slotEmoji[slot], cx2 + cardW / 2, cy2 + cardH * 0.48);
+        ctx.font = 'bold 7px monospace';
+        ctx.fillText(slotLabels[slot], cx2 + cardW / 2, cy2 + cardH - 6);
         ctx.restore();
       });
     }
@@ -4770,7 +4786,7 @@
 
   // ── Direction Arrow ───────────────────────────────────────────────────────
   function drawDirectionArrow(cw, ch) {
-    const dir = S.activeTool === 'emf' ? S.emfDir : (S.activeTool === 'sound' ? S.sndDir : null);
+    const dir = S.activeTool === 'emf' ? S.emfDir : (S.activeTool === 'microphone' ? S.sndDir : null);
     if (dir === null) return;
 
     const cx = cw / 2, cy = ch / 2;
@@ -4783,7 +4799,7 @@
     else if (sin < -0.001) t = Math.min(t, (cy - margin) / (-sin));
 
     const ax = cx + cos * t, ay = cy + sin * t;
-    const col = S.activeTool === 'emf' ? '#4ade80' : '#c084fc';
+    const col = S.activeTool === 'emf' ? '#4ade80' : '#c084fc'; // emf=green, microphone=purple
 
     ctx.save();
     ctx.translate(ax, ay);
@@ -5008,13 +5024,16 @@
     socket.on('ghost:signals', ({ signals, emfDir, sndDir }) => {
       if (!S) return;
       let emf = 0, sound = 0, flashlight = 0, coldSignal = 0;
+      // Only process signals relevant to the currently selected tool
       for (const sig of signals) {
-        emf        = Math.max(emf,        sig.emf       * 100);
-        sound      = Math.max(sound,      sig.sound     * 100);
-        flashlight = Math.max(flashlight, sig.flashlight * 100);
-        // Cold spot: track proximity to ghosts not yet found
+        if (!S.ghosts[sig.ghostId]) {
+          if (S.activeTool === 'flashlight') flashlight = Math.max(flashlight, sig.flashlight * 100);
+          if (S.activeTool === 'emf') emf = Math.max(emf, sig.emf * 100);
+          if (S.activeTool === 'microphone') sound = Math.max(sound, sig.sound * 100);
+        }
+        // Cold spot: track proximity to ghosts not yet found (always active)
         if (!S.ghosts[sig.ghostId]) coldSignal = Math.max(coldSignal, sig.emf);
-        // A8/C1: temperature field
+        // A8/C1: temperature field (always active)
         if (sig.temperature !== undefined) S.lastTemperature = sig.temperature;
       }
       S.signals   = { emf: Math.round(emf), sound: Math.round(sound), flashlight: Math.round(flashlight) };
@@ -5070,6 +5089,7 @@
 
     socket.on('ghost:ouija_start', ({ ghostId, sequence, personality }) => {
       if (!S) return;
+      stopMicAudio();
       openOuija(ghostId, sequence, personality);
     });
 

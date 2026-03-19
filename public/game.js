@@ -1354,6 +1354,14 @@ function doQuitGame() {
   stopElevenMusic();
   const gameClient = window.gameClients[local.gameType];
   if (gameClient && gameClient.cleanup) gameClient.cleanup();
+  // Explicitly hide the game screen so it doesn't block the lobby
+  const gameScreen = $("game-screen");
+  if (gameScreen) gameScreen.classList.add("hidden");
+  // Clean up any lingering overlays
+  const ouijaInput = document.getElementById("ouija-name-input");
+  if (ouijaInput) ouijaInput.style.display = "none";
+  const settingsPanel = $("settings-panel");
+  if (settingsPanel) settingsPanel.classList.add("hidden");
   const savedGame = $("game-select").value || "trash";
   applyGameTheme(savedGame);
   local.roomId = null;
@@ -1363,7 +1371,12 @@ function doQuitGame() {
   local.gameType = savedGame;
   $("shared-reaction-bar").classList.add("hidden");
   if (window._syncCarousel) window._syncCarousel(savedGame);
-  showLobbyScreen();
+  // Show lobby at the game selection view, not the main view
+  const mainView = document.getElementById("lobby-main-view");
+  const gameView = document.getElementById("lobby-game-view");
+  if (mainView) mainView.classList.add("hidden");
+  if (gameView) gameView.classList.remove("hidden");
+  showScreen("lobby-screen");
 }
 window._quitCurrentGame = doQuitGame;
 
