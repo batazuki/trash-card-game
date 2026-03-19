@@ -2488,7 +2488,6 @@ body.game-hockey .gear-btn:hover {
 .game-card.selected {
   border-color: var(--gc, var(--accent));
   background: color-mix(in srgb, var(--gc, var(--accent)) 10%, rgba(255,255,255,0.8));
-  box-shadow: 0 4px 22px color-mix(in srgb, var(--gc, var(--accent)) 30%, transparent);
   transform: translateY(-2px);
 }
 
@@ -3001,6 +3000,11 @@ body.game-ghost .pregame-settings-text {
 .lf8  { left: 93%;  top: 88%; color: rgba(74,25,66,0.11);    animation-delay: 2.9s;  animation-duration: 11s; font-size: 15px; }
 .lf9  { left: 35%;  top: 90%; color: rgba(236,72,153,0.15);  animation-delay: 5.3s;  animation-duration: 9s;  font-size: 22px; }
 .lf10 { left: 55%;  top: 95%; color: rgba(74,25,66,0.13);    animation-delay: 0.4s;  animation-duration: 14s; font-size: 17px; }
+
+/* B3 — Parallax layer animation duration overrides */
+[data-layer="1"] { animation-duration: 8s; }
+[data-layer="2"] { animation-duration: 6s; }
+[data-layer="3"] { animation-duration: 4s; }
 @keyframes suitFloat {
   0%   { opacity: 0;    transform: translateY(0)     rotate(0deg);   }
   10%  { opacity: 1;                                                  }
@@ -3084,4 +3088,192 @@ body.game-sketch .pregame-game-badge {
 }
 body.game-ghost .pregame-game-badge {
   box-shadow: 0 4px 20px rgba(46,125,50,0.3), 0 0 0 1px rgba(76,175,80,0.15);
+}
+
+/* ═══════════════════════════════════════════════
+   B2 — CARD HOVER 3D PERSPECTIVE TILT
+   ═══════════════════════════════════════════════ */
+.game-card {
+  transform-style: preserve-3d;
+  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out, border-color 0.15s, background 0.15s;
+}
+.game-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(255,255,255,0.18) 0%, transparent 60%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 2;
+}
+.game-card:hover::after {
+  opacity: 1;
+}
+
+/* ═══════════════════════════════════════════════
+   B4 — CARD ILLUSTRATED MINI-BACKGROUNDS
+   Applied directly on the card element (not ::before) so the
+   accent-bar ::before remains a clean 4px strip.
+   ═══════════════════════════════════════════════ */
+.game-card[data-game="ghost"] {
+  background-image: radial-gradient(ellipse at 70% 30%, rgba(26,26,58,0.22) 0%, rgba(10,10,26,0.18) 60%);
+}
+.game-card[data-game="trash"] {
+  background-image: radial-gradient(ellipse at center, rgba(45,90,39,0.22) 0%, rgba(26,58,20,0.18) 100%);
+}
+.game-card[data-game="war"] {
+  background-image: linear-gradient(135deg, rgba(139,26,26,0.2) 0%, rgba(26,26,139,0.2) 100%);
+}
+.game-card[data-game="solitaire"] {
+  background-image: radial-gradient(ellipse at center, rgba(26,77,46,0.22) 0%, rgba(13,41,24,0.18) 100%);
+}
+.game-card[data-game="hockey"] {
+  background-image: linear-gradient(180deg, rgba(10,42,74,0.2) 0%, rgba(10,61,92,0.2) 50%, rgba(26,96,128,0.2) 100%);
+}
+.game-card[data-game="sketch"] {
+  background-image: linear-gradient(135deg, rgba(42,26,0,0.2) 0%, rgba(26,10,0,0.2) 100%);
+}
+.game-card[data-game="oldmaid"] {
+  background-image: linear-gradient(135deg, rgba(74,26,110,0.2) 0%, rgba(42,10,78,0.2) 100%);
+}
+.game-card[data-game="trash-eleven"] {
+  background-image: linear-gradient(135deg, rgba(26,10,10,0.2) 0%, rgba(10,10,42,0.2) 100%);
+}
+
+/* ═══════════════════════════════════════════════
+   B5 — SELECTION CONFIRMATION SHIMMER
+   ═══════════════════════════════════════════════ */
+@keyframes cardShimmer {
+  0% { transform: translateX(-100%) skewX(-15deg); }
+  100% { transform: translateX(300%) skewX(-15deg); }
+}
+.game-card.shimmer-active::after {
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%);
+  width: 40%;
+  left: 0; top: 0; bottom: 0;
+  right: auto;
+  inset: auto;
+  border-radius: 0;
+  animation: cardShimmer 0.4s ease-out forwards;
+  opacity: 1;
+}
+
+/* ═══════════════════════════════════════════════
+   B6 — SELECTED STATE GLOW PULSE
+   ═══════════════════════════════════════════════ */
+@keyframes selectedPulse {
+  0%, 100% { box-shadow: 0 0 8px 2px var(--gc, #fff3); }
+  50% { box-shadow: 0 0 24px 8px var(--gc, #fff6); }
+}
+.game-card.selected {
+  animation: selectedPulse 1.8s ease-in-out infinite;
+}
+
+/* ═══════════════════════════════════════════════
+   B7 — SUIT BURST PARTICLES
+   ═══════════════════════════════════════════════ */
+.suit-burst-particle {
+  position: fixed;
+  pointer-events: none;
+  font-size: 1.4rem;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  animation: suitBurst 0.5s ease-out forwards;
+}
+@keyframes suitBurst {
+  0% { opacity: 1; transform: translate(-50%, -50%) translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) scale(0.3); }
+}
+
+/* ═══════════════════════════════════════════════
+   A1 — TITLE CARD KEYFRAMES
+   ═══════════════════════════════════════════════ */
+@keyframes titleShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px) rotate(-0.5deg); }
+  40% { transform: translateX(6px) rotate(0.5deg); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+@keyframes titleFadeIn {
+  from { opacity: 0; transform: scale(1.04); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ═══════════════════════════════════════════════
+   C7 — TIMER TOGGLE ROW
+   ═══════════════════════════════════════════════ */
+.toggle-group {
+  display: flex;
+  gap: 6px;
+}
+.toggle-btn {
+  padding: 7px 14px;
+  border-radius: 12px;
+  border: 2px solid #fcd5e8;
+  background: rgba(255,255,255,0.65);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s;
+  touch-action: manipulation;
+}
+.toggle-btn.active {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 3px 12px rgba(236,72,153,0.32);
+}
+.toggle-btn:hover:not(.active) {
+  border-color: var(--accent);
+  background: rgba(255,255,255,0.9);
+}
+body.game-ghost .toggle-btn {
+  background: rgba(0, 20, 5, 0.55);
+  border-color: rgba(76,175,80,0.3);
+  color: #c8e6c9;
+}
+body.game-ghost .toggle-btn.active {
+  background: linear-gradient(135deg, #2e7d32, #1b5e20);
+  border-color: transparent;
+  color: #c8e6c9;
+  box-shadow: 0 3px 12px rgba(46,125,50,0.4);
+}
+body.game-ghost .toggle-btn:hover:not(.active) {
+  border-color: #4caf50;
+  background: rgba(0, 40, 5, 0.75);
+}
+.option-label {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text);
+  user-select: none;
+}
+
+/* ─── Ghost Detective feature additions ─────────────────────────────────── */
+
+/* A6: Case file manila stamp (HTML DOM overlay cards) */
+.case-stamp {
+  display: inline-block;
+  font-family: serif;
+  font-weight: bold;
+  font-size: 11px;
+  color: #cc0000;
+  border: 1.5px solid #cc0000;
+  border-radius: 2px;
+  padding: 2px 5px;
+  transform: rotate(12deg);
+  letter-spacing: 0.06em;
+  pointer-events: none;
+}
+
+/* C3: Evidence card flip animation (CSS fallback — canvas handles this in-game) */
+@keyframes evidenceFlip {
+  0%   { transform: scaleY(0); }
+  50%  { transform: scaleY(0.5); }
+  100% { transform: scaleY(1); }
 }

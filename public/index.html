@@ -41,16 +41,16 @@
   <!-- ═══ LOBBY SCREEN ═══ -->
   <div id="lobby-screen" class="screen active">
     <div class="lobby-floats" aria-hidden="true">
-      <span class="lobby-float lf1">♥</span>
-      <span class="lobby-float lf2">♠</span>
-      <span class="lobby-float lf3">♦</span>
-      <span class="lobby-float lf4">♣</span>
-      <span class="lobby-float lf5">♥</span>
-      <span class="lobby-float lf6">♠</span>
-      <span class="lobby-float lf7">♦</span>
-      <span class="lobby-float lf8">♣</span>
-      <span class="lobby-float lf9">♥</span>
-      <span class="lobby-float lf10">♠</span>
+      <span class="lobby-float lf1" data-layer="1">♥</span>
+      <span class="lobby-float lf2" data-layer="2">♠</span>
+      <span class="lobby-float lf3" data-layer="3">♦</span>
+      <span class="lobby-float lf4" data-layer="1">♣</span>
+      <span class="lobby-float lf5" data-layer="2">♥</span>
+      <span class="lobby-float lf6" data-layer="3">♠</span>
+      <span class="lobby-float lf7" data-layer="1">♦</span>
+      <span class="lobby-float lf8" data-layer="2">♣</span>
+      <span class="lobby-float lf9" data-layer="3">♥</span>
+      <span class="lobby-float lf10" data-layer="1">♠</span>
     </div>
     <div class="lobby-inner">
       <div class="lobby-top-row">
@@ -157,6 +157,14 @@
             <button class="ghost-count-btn active" data-count="3">3</button>
             <button class="ghost-count-btn" data-count="4">4</button>
             <button class="ghost-count-btn" data-count="5">5</button>
+          </div>
+        </div>
+
+        <div id="ghost-timer-row" class="option-row game-option-row hidden">
+          <label class="option-label">Case Timer</label>
+          <div class="toggle-group">
+            <button class="toggle-btn active" data-timer="off" onclick="selectGhostTimer(this)">Off</button>
+            <button class="toggle-btn" data-timer="on" onclick="selectGhostTimer(this)">8 min</button>
           </div>
         </div>
 

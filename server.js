@@ -207,7 +207,7 @@ io.on("connection", socket => {
   }
 
   // ── Create Room ──
-  socket.on("createRoom", requireVersion(({ playerName, game, rounds, drawTime, previewTime, ghostArea, ghostCount }) => {
+  socket.on("createRoom", requireVersion(({ playerName, game, rounds, drawTime, previewTime, ghostArea, ghostCount, timerOn }) => {
     let roomId;
     try { roomId = generateRoomId(); }
     catch(e) { socket.emit("joinError", { message: "Server is full, try again later." }); return; }
@@ -233,6 +233,7 @@ io.on("connection", socket => {
       sketchPreviewTime: isSketch ? Math.min(3,  Math.max(1,  parseInt(previewTime) || 3))  : undefined,
       ghostArea:         safeGame === 'ghost' ? (ghostArea || null) : undefined,
       ghostCount:        safeGame === 'ghost' ? (parseInt(ghostCount) || 3) : undefined,
+      timerOn:           safeGame === 'ghost' ? (timerOn === true) : undefined,
       players: [creator],
       deck: [],
       discardPile: [],
@@ -352,6 +353,7 @@ io.on("connection", socket => {
       game: safeGame,
       ghostArea:  safeGame === 'ghost' ? (ghostArea || null) : undefined,
       ghostCount: safeGame === 'ghost' ? (parseInt(ghostCount) || 3) : undefined,
+      timerOn:    false,
       players,
       deck: [],
       discardPile: [],
@@ -490,10 +492,11 @@ io.on("connection", socket => {
     const state = rooms.get(roomId);
     if (!state || state.phase !== "lobby") return;
     if (state.players[0]?.id !== socket.id) return; // host only
-    const allowed = ["ghostArea","ghostCount","sketchMaxRounds","sketchDrawTime","sketchPreviewTime"];
+    const allowed = ["ghostArea","ghostCount","timerOn","sketchMaxRounds","sketchDrawTime","sketchPreviewTime"];
     if (!allowed.includes(key)) return;
     if (key === "ghostArea")         state.ghostArea         = value || null;
     if (key === "ghostCount")        state.ghostCount        = parseInt(value) || 3;
+    if (key === "timerOn")           state.timerOn           = value === true || value === 'true';
     if (key === "sketchMaxRounds")   state.sketchMaxRounds   = parseInt(value) || 3;
     if (key === "sketchDrawTime")    state.sketchDrawTime    = parseInt(value) || 15;
     if (key === "sketchPreviewTime") state.sketchPreviewTime = parseInt(value) || 3;

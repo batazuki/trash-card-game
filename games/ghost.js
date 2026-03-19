@@ -491,12 +491,96 @@ module.exports = function(io, helpers) {
   }
 
   // ─── Ghost AI ─────────────────────────────────────────────────────────────
-  function updateGhost(ghost, dt, areaData, playerPositions, litIntensity) {
+  function updateGhost(ghost, dt, areaData, areaKey, playerPositions, litIntensity, roomId) {
     if (ghost.identified || ghost.claimedBy !== null) return;
 
     const { areaWidth, areaHeight, obstacles } = areaData;
     const cfg = PCONFIG[ghost.personality] || PCONFIG.confused;
     const MARGIN = 64;
+
+    // C4 — Awareness state machine
+    let nearestPlayerDist = Infinity;
+    for (const pp of playerPositions) {
+      if (!pp) continue;
+      const d = Math.hypot(pp.x - ghost.x, pp.y - ghost.y);
+      if (d < nearestPlayerDist) nearestPlayerDist = d;
+    }
+    let newState = ghost.awarenessState;
+    if (nearestPlayerDist <= 180) {
+      newState = 'aware';
+      ghost.awarenessTimer = 0;
+    } else if (nearestPlayerDist <= 400) {
+      if (ghost.awarenessState === 'restless') newState = 'dormant';
+      else if (ghost.awarenessState !== 'aware') newState = 'dormant';
+      ghost.awarenessTimer = 0;
+    } else {
+      ghost.awarenessTimer += dt;
+      if (ghost.awarenessTimer >= 60000) {
+        newState = 'restless';
+      }
+      // don't change state here if still counting up — preserve 'aware' or 'dormant'
+    }
+    if (newState !== ghost.awarenessState) {
+      ghost.awarenessState = newState;
+      io.to(roomId).emit('ghost:awareness_change', { ghostIndex: ghost.id, state: newState });
+    }
+
+    // C5 — Personality behavioral tells
+    ghost.behaviorTimer += dt;
+    if (ghost.behaviorActive) {
+      ghost.behaviorElapsed += dt;
+    }
+
+    if (ghost.personality === 'dramatic') {
+      if (!ghost.behaviorActive && ghost.behaviorTimer >= 20000) {
+        ghost.behaviorActive = true;
+        ghost.behaviorType = 'pose';
+        ghost.behaviorElapsed = 0;
+        ghost.behaviorTimer = 0;
+        if (roomId) io.to(roomId).emit('ghost:dramatic_pose', { ghostIndex: ghost.id });
+      }
+      if (ghost.behaviorActive && ghost.behaviorElapsed >= 1000) {
+        ghost.behaviorActive = false;
+        ghost.behaviorType = null;
+      }
+    }
+
+    if (ghost.personality === 'goofy') {
+      if (!ghost.behaviorActive && ghost.behaviorTimer >= 20000) {
+        ghost.behaviorActive = true;
+        ghost.behaviorType = 'figure8';
+        ghost.behaviorElapsed = 0;
+        ghost.behaviorTimer = 0;
+      }
+      if (ghost.behaviorActive && ghost.behaviorElapsed >= 3000) {
+        ghost.behaviorActive = false;
+        ghost.behaviorType = null;
+      }
+    }
+
+    if (ghost.personality === 'grumpy') {
+      if (!ghost.behaviorActive && ghost.behaviorTimer >= 30000) {
+        ghost.behaviorActive = true;
+        ghost.behaviorType = 'charge';
+        ghost.behaviorElapsed = 0;
+        ghost.behaviorTimer = 0;
+        // Find nearest player for charge target
+        let nearestP = null, nearestD = Infinity;
+        for (const pp of playerPositions) {
+          if (!pp) continue;
+          const d = Math.hypot(pp.x - ghost.x, pp.y - ghost.y);
+          if (d < nearestD) { nearestD = d; nearestP = pp; }
+        }
+        if (nearestP) {
+          ghost.targetX = nearestP.x;
+          ghost.targetY = nearestP.y;
+        }
+      }
+      if (ghost.behaviorActive && ghost.behaviorElapsed >= 1000) {
+        ghost.behaviorActive = false;
+        ghost.behaviorType = null;
+      }
+    }
 
     ghost.stateTimer -= dt;
 
@@ -589,22 +673,56 @@ module.exports = function(io, helpers) {
       }
     }
 
-    // Move toward target
-    const dx = ghost.targetX - ghost.x;
-    const dy = ghost.targetY - ghost.y;
-    const dist = Math.hypot(dx, dy);
-    if (dist > 2) {
-      let spd = cfg.speed;
-      if (ghost.personality === 'dramatic' && ghost.sprintActive) spd *= 2;
-      if (ghost.personality === 'regal') spd *= 0.7;
-      // Flashlight illumination causes ghost to flee faster, capped at player speed
-      if (litIntensity > 0.1) spd = Math.min(PLAYER_SPEED, spd * (1 + litIntensity * 2.5));
-      const step = Math.min(spd * dt / 1000, dist);
-      const nx = ghost.x + (dx / dist) * step;
-      const ny = ghost.y + (dy / dist) * step;
-      const resolved = resolveObstacle(nx, ny, obstacles, 16);
-      ghost.x = clamp(resolved.x, MARGIN, areaWidth  - MARGIN);
-      ghost.y = clamp(resolved.y, MARGIN, areaHeight - MARGIN);
+    // C5 shy: steer toward corner when no player nearby
+    if (ghost.personality === 'shy' && nearestPlayerDist > 300) {
+      const shyCorners = {
+        graveyard: { x: 200,  y: 200 },
+        garden:    { x: 400,  y: 400 },
+        house:     { x: 960,  y: 320 },
+        hotel:     { x: 256,  y: 256 },
+        egypt:     { x: 512,  y: 256 },
+      };
+      const corner = shyCorners[areaKey] || shyCorners.graveyard;
+      ghost.targetX = corner.x;
+      ghost.targetY = corner.y;
+    }
+
+    // C5 goofy: figure-8 movement override
+    if (ghost.personality === 'goofy' && ghost.behaviorActive && ghost.behaviorType === 'figure8') {
+      const t = ghost.behaviorElapsed / 1000;
+      const r = 120;
+      ghost.x = clamp(ghost.x + Math.cos(t * 2) * r * dt / 1000, MARGIN, areaWidth  - MARGIN);
+      ghost.y = clamp(ghost.y + Math.sin(t * 4) * r * dt / 1000, MARGIN, areaHeight - MARGIN);
+      // Skip normal movement this tick
+    } else {
+      // Move toward target
+      const dx = ghost.targetX - ghost.x;
+      const dy = ghost.targetY - ghost.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > 2) {
+        let spd = cfg.speed;
+        // C4 — restless multiplier
+        if (ghost.awarenessState === 'restless') spd *= 1.5;
+        if (ghost.personality === 'dramatic' && ghost.sprintActive) spd *= 2;
+        if (ghost.personality === 'regal') spd *= 0.7;
+        // C5 grumpy: 3× speed during behavior charge
+        if (ghost.personality === 'grumpy' && ghost.behaviorActive && ghost.behaviorType === 'charge') spd *= 3;
+        spd = Math.min(spd, cfg.speed * 3.5);
+        // Flashlight illumination causes ghost to flee faster, capped at player speed
+        if (litIntensity > 0.1) spd = Math.min(PLAYER_SPEED, spd * (1 + litIntensity * 2.5));
+        const step = Math.min(spd * dt / 1000, dist);
+        const nx = ghost.x + (dx / dist) * step;
+        const ny = ghost.y + (dy / dist) * step;
+        const resolved = resolveObstacle(nx, ny, obstacles, 16);
+        ghost.x = clamp(resolved.x, MARGIN, areaWidth  - MARGIN);
+        ghost.y = clamp(resolved.y, MARGIN, areaHeight - MARGIN);
+      }
+    }
+
+    // C5 confused: ±32px jitter each tick, clamped to world bounds
+    if (ghost.personality === 'confused') {
+      ghost.x = clamp(ghost.x + randomBetween(-32, 32), 0, areaWidth);
+      ghost.y = clamp(ghost.y + randomBetween(-32, 32), 0, areaHeight);
     }
   }
 
@@ -629,7 +747,9 @@ module.exports = function(io, helpers) {
         flashlight = (1 - dist / effFlash) * (1 - diff / FLASH_ANGLE);
       }
     }
-    return { emf, sound, flashlight };
+    // C8 — Temperature: inverse distance clamped 0–1
+    const temperature = clamp(1 - dist / Math.max(effEmf, effSnd, effFlash), 0, 1);
+    return { emf, sound, flashlight, temperature };
   }
 
   // ─── Spawn ghosts ─────────────────────────────────────────────────────────
@@ -667,6 +787,16 @@ module.exports = function(io, helpers) {
         orbitCenter: null,
         sprintActive: false,
         charging: false,
+        // C4 — Awareness state machine
+        awarenessState: 'dormant',
+        awarenessTimer: 0,
+        // C5 — Personality behavioral tells
+        behaviorTimer: 0,
+        behaviorActive: false,
+        behaviorType: null,
+        behaviorElapsed: 0,
+        // C6 — Haunting flicker timer
+        hauntTimer: randomBetween(8000, 15000),
       });
     }
     return ghosts;
@@ -709,7 +839,7 @@ module.exports = function(io, helpers) {
       // Update each active ghost AI
       for (const ghost of ghosts) {
         if (!ghost.identified && ghost.claimedBy === null) {
-          updateGhost(ghost, dt, areaData, playerPositions, ghostLitIntensity[ghost.id] || 0);
+          updateGhost(ghost, dt, areaData, gs.area, playerPositions, ghostLitIntensity[ghost.id] || 0, roomId);
         }
       }
 
@@ -776,6 +906,21 @@ module.exports = function(io, helpers) {
           }
         }
 
+        // C3 — Formal Evidence Card System: check thresholds and emit once per player per ghost
+        for (const sig of signals) {
+          const evidenceSet = gs.evidenceCollected;
+          const checkEvidence = (type, value, threshold) => {
+            const key = `${type}_${pi}_${sig.ghostId}`;
+            if (value > threshold && !evidenceSet.has(key)) {
+              evidenceSet.add(key);
+              io.to(roomId).emit('ghost:evidence', { type, playerIndex: pi });
+            }
+          };
+          checkEvidence('cold_presence', sig.temperature, 0.6);
+          checkEvidence('emf_level5',    sig.emf,         0.75);
+          checkEvidence('audible_sounds', sig.sound,      0.75);
+        }
+
         io.to(player.id).emit('ghost:signals', {
           signals,
           emfDir: maxEmf > 0.05 ? emfDir : null,
@@ -791,6 +936,40 @@ module.exports = function(io, helpers) {
             x: ghost.x,
             y: ghost.y,
           });
+        }
+      }
+
+      // C6 — Light flicker haunting events
+      for (const ghost of ghosts) {
+        if (ghost.identified) continue;
+        ghost.hauntTimer -= dt;
+        if (ghost.hauntTimer <= 0) {
+          const lightObs = areaData.obstacles.filter(o => o.type === 'lamp' || o.type === 'torch' || o.type === 'candle');
+          let nearLight = false;
+          for (const ob of lightObs) {
+            const ocx = ob.x + ob.w / 2;
+            const ocy = ob.y + ob.h / 2;
+            if (Math.hypot(ocx - ghost.x, ocy - ghost.y) < 200) { nearLight = true; break; }
+          }
+          if (nearLight || lightObs.length === 0) {
+            io.to(roomId).emit('ghost:haunt_flicker', { ghostIndex: ghost.id });
+          }
+          ghost.hauntTimer = randomBetween(8000, 15000);
+        }
+      }
+
+      // C7 — Optional case timer
+      if (state.timerOn) {
+        gs.elapsedMs = (gs.elapsedMs || 0) + dt;
+        gs.timerAccum = (gs.timerAccum || 0) + dt;
+        if (gs.timerAccum >= 1000) {
+          gs.timerAccum -= 1000;
+          io.to(roomId).emit('ghost:timer_update', { elapsed: gs.elapsedMs });
+        }
+        if (gs.elapsedMs >= 480000) {
+          clearAllTimers(gs);
+          state.phase = 'ended';
+          io.to(roomId).emit('ghost:time_up');
         }
       }
     }, TICK_MS);
@@ -847,7 +1026,7 @@ module.exports = function(io, helpers) {
     clearAllTimers(state.ghost);
 
     // Pick area (respect host's selection if valid, otherwise random)
-    const areaKeys = ['graveyard', 'garden', 'house', 'hotel'];
+    const areaKeys = ['graveyard', 'garden', 'house', 'hotel', 'egypt'];
     const areaKey  = (state.ghostArea && AREAS[state.ghostArea]) ? state.ghostArea
                    : areaKeys[Math.floor(Math.random() * areaKeys.length)];
     const areaData = AREAS[areaKey];
@@ -876,6 +1055,8 @@ module.exports = function(io, helpers) {
       keyHolder:      null,
       powerupAvailable: true,
       emfUpgradedPlayers: new Set(),
+      evidenceCollected: new Set(),
+      gameEnding: false,
     };
     state.phase = 'playing';
 
@@ -962,6 +1143,7 @@ module.exports = function(io, helpers) {
       const state = rooms.get(roomId);
       if (!state || !state.ghost || state.phase !== 'playing') return;
       const gs    = state.ghost;
+      if (gs.gameEnding) return;
       const ghost = gs.ghosts[ghostId];
       if (!ghost) return;
       const playerIndex = state.players.findIndex(p => p.id === socket.id);
@@ -971,14 +1153,22 @@ module.exports = function(io, helpers) {
         ghost.identified = true;
         ghost.claimedBy  = null;
         gs.identifiedCount++;
+        gs.evidenceCollected = new Set();
         const cfg = PCONFIG[ghost.personality] || PCONFIG.confused;
         io.to(roomId).emit('ghost:identified', {
           ghostId, name: ghost.name, personality: ghost.personality,
           color: cfg.color, description: cfg.description, identifiedBy: playerIndex,
         });
         if (gs.identifiedCount >= gs.totalGhosts) {
+          gs.gameEnding = true;
           clearAllTimers(gs);
-          endGame(state, roomId, playerIndex);
+          // C9 — Farewell sequence: emit farewell for each ghost, then end game after 3s
+          for (const g of gs.ghosts) {
+            io.to(roomId).emit('ghost:farewell', { ghostIndex: g.id });
+          }
+          setTimeout(() => {
+            endGame(state, roomId, playerIndex);
+          }, 3000);
         }
       } else {
         // Wrong guess: immediately release claim, increment counter

@@ -39,6 +39,9 @@ socket.on("versionMismatch", () => {
 window.gameClients = window.gameClients || {};
 window._gameLocal = null;
 
+// B8: rAF handle for ghost preview canvas loop — cancelled when a game starts
+let _ghostPreviewRaf = null;
+
 // ═══ LOCAL STATE ═══
 let local = {
   roomId: null,
@@ -758,6 +761,16 @@ const GHOST_AVATAR_DEFS = [
 let _ghostAvatar = Math.max(0, Math.min(GHOST_AVATAR_DEFS.length - 1, parseInt(localStorage.getItem("ghostAvatar") || "0") || 0));
 window._ghostAvatarSelection = _ghostAvatar;
 
+// C7 — Ghost timer toggle helpers
+window.selectGhostTimer = function(btn) {
+  btn.closest(".toggle-group").querySelectorAll(".toggle-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+};
+window.getSelectedGhostTimer = function() {
+  const btn = document.querySelector("#ghost-timer-row .toggle-btn.active");
+  return btn ? btn.dataset.timer === "on" : false;
+};
+
 function updateLobbyForGame(game) {
   const isSolo = game === "solitaire";
   const isGhost = game === "ghost";
@@ -777,6 +790,8 @@ function updateLobbyForGame(game) {
   if (ghostAreaRow) ghostAreaRow.classList.toggle("hidden", !isGhost);
   const ghostCountRow = document.getElementById("ghost-count-row");
   if (ghostCountRow) ghostCountRow.classList.toggle("hidden", !isGhost);
+  const ghostTimerRow = document.getElementById("ghost-timer-row");
+  if (ghostTimerRow) ghostTimerRow.classList.toggle("hidden", !isGhost);
   const ghostAvatarRow = document.getElementById("ghost-avatar-row");
   if (ghostAvatarRow) {
     ghostAvatarRow.classList.toggle("hidden", !isGhost);
@@ -890,7 +905,8 @@ function getSelectedGhostAvatar() {
   return _ghostAvatar;
 }
 
-$("vs-ai-btn").addEventListener("click", () => {
+$("vs-ai-btn").addEventListener("click", function() {
+  suitBurst(this);
   const name = $("player-name").value.trim() || "Player";
   local.playerName = name;
   local.vsAI = true;
@@ -900,11 +916,13 @@ $("vs-ai-btn").addEventListener("click", () => {
     payload.ghostArea   = getSelectedGhostArea();
     payload.ghostCount  = getSelectedGhostCount();
     payload.ghostAvatar = _ghostAvatar;
+    payload.timerOn     = window.getSelectedGhostTimer ? window.getSelectedGhostTimer() : false;
   }
   socket.emit("playVsAI", payload);
 });
 
-$("create-room-btn").addEventListener("click", () => {
+$("create-room-btn").addEventListener("click", function() {
+  suitBurst(this);
   const name = $("player-name").value.trim() || "Player";
   local.playerName = name;
   const selectedGame = $("game-select").value;
@@ -917,6 +935,7 @@ $("create-room-btn").addEventListener("click", () => {
   if (selectedGame === "ghost") {
     roomPayload.ghostArea  = getSelectedGhostArea();
     roomPayload.ghostCount = getSelectedGhostCount();
+    roomPayload.timerOn    = window.getSelectedGhostTimer ? window.getSelectedGhostTimer() : false;
   }
   setLobbyBusy(true);
   socket.emit("createRoom", roomPayload);
@@ -1156,6 +1175,8 @@ socket.on("joinError", ({ message }) => {
 
 socket.on("gameStart", (data) => {
   closeAvatarSelectOverlay();
+  // B8: stop the ghost preview canvas loop so it doesn't run during gameplay
+  if (_ghostPreviewRaf) { cancelAnimationFrame(_ghostPreviewRaf); _ghostPreviewRaf = null; }
   const { roomId, myPlayerIndex, players, game } = data;
   local.roomId = roomId;
   local.myPlayerIndex = myPlayerIndex;
@@ -1405,6 +1426,37 @@ $("see-cards-btn").addEventListener("click", viewCards);
         `<button class="game-card-learn" data-tab="${g.tab}">Learn to play →</button>` +
       `</div>`;
 
+    // B1 — Ghost card animated preview canvas
+    if (g.value === "ghost") {
+      const previewCanvas = document.createElement("canvas");
+      previewCanvas.id = "ghost-preview-canvas";
+      previewCanvas.width = 120;
+      previewCanvas.height = 80;
+      previewCanvas.style.cssText = "position:absolute;bottom:8px;right:8px;opacity:0.7;pointer-events:none;z-index:1;";
+      card.appendChild(previewCanvas);
+    }
+
+    // B2 — Card hover 3D perspective tilt
+    card.addEventListener("mousemove", e => {
+      const rect = card.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = (e.clientX - cx) / (rect.width / 2);
+      const dy = (e.clientY - cy) / (rect.height / 2);
+      const rotY = dx * 8;
+      const rotX = -dy * 8;
+      card.style.transform = `perspective(600px) rotateX(${rotX}deg) rotateY(${rotY}deg) translateY(-2px)`;
+      const mx = ((e.clientX - rect.left) / rect.width * 100).toFixed(1) + "%";
+      const my = ((e.clientY - rect.top) / rect.height * 100).toFixed(1) + "%";
+      card.style.setProperty("--mx", mx);
+      card.style.setProperty("--my", my);
+    });
+    card.addEventListener("mouseleave", () => {
+      card.style.transition = "transform 0.35s ease-out, box-shadow 0.15s ease-out";
+      card.style.transform = card.classList.contains("selected") ? "translateY(-2px)" : "";
+      setTimeout(() => { card.style.transition = ""; }, 350);
+    });
+
     card.addEventListener("click", e => {
       if (e.target.classList.contains("game-card-learn")) {
         e.stopPropagation();
@@ -1425,10 +1477,43 @@ $("see-cards-btn").addEventListener("click", viewCards);
       localStorage.setItem("game", g.value);
       applyGameTheme(g.value);
       updateLobbyForGame(g.value);
+      // B5 — Shimmer on selection
+      card.classList.add("shimmer-active");
+      card.addEventListener("animationend", () => card.classList.remove("shimmer-active"), { once: true });
     });
 
     carousel.appendChild(card);
   });
+
+  // B1 — Init ghost preview canvas animation
+  (function initGhostPreview() {
+    const canvas = document.getElementById("ghost-preview-canvas");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    let t = 0;
+    function drawGhostPreview() {
+      ctx.clearRect(0, 0, 120, 80);
+      t += 0.02;
+      const x = 60 + Math.sin(t * 0.7) * 20;
+      const y = 35 + Math.sin(t) * 8;
+      ctx.save();
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = "rgba(220,230,255,0.9)";
+      ctx.beginPath();
+      ctx.arc(x, y - 6, 14, Math.PI, 0);
+      ctx.lineTo(x + 14, y + 10);
+      ctx.quadraticCurveTo(x + 7, y + 14 + Math.sin(t * 3) * 2, x, y + 10);
+      ctx.quadraticCurveTo(x - 7, y + 14 + Math.sin(t * 3 + 1) * 2, x - 14, y + 10);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#1a1a2e";
+      ctx.beginPath(); ctx.arc(x - 5, y - 7, 2.5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + 5, y - 7, 2.5, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      _ghostPreviewRaf = requestAnimationFrame(drawGhostPreview);
+    }
+    drawGhostPreview();
+  })();
 
   window._syncCarousel = function(game) {
     document.querySelectorAll(".game-card").forEach(c => {
@@ -1436,6 +1521,36 @@ $("see-cards-btn").addEventListener("click", viewCards);
     });
   };
 })();
+
+// ═══ B3 — PARALLAX FLOATING SUIT LAYERS ═══
+document.getElementById("lobby-screen")?.addEventListener("mousemove", e => {
+  const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+  const dx = (e.clientX - cx) / cx, dy = (e.clientY - cy) / cy;
+  document.querySelectorAll("[data-layer]").forEach(el => {
+    const layer = parseInt(el.dataset.layer);
+    el.style.transform = `translate(${dx * layer * 18}px, ${dy * layer * 12}px)`;
+  });
+});
+
+// ═══ B7 — SUIT BURST ON CONFIRM ═══
+function suitBurst(fromEl) {
+  const suits = ["♠", "♥", "♦", "♣"];
+  const rect = fromEl.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+  for (let i = 0; i < 10; i++) {
+    const el = document.createElement("span");
+    el.textContent = suits[i % 4];
+    el.className = "suit-burst-particle";
+    const angle = (Math.random() * 360) * Math.PI / 180;
+    const dist = 50 + Math.random() * 70;
+    el.style.setProperty("--tx", `${Math.cos(angle) * dist}px`);
+    el.style.setProperty("--ty", `${Math.sin(angle) * dist}px`);
+    el.style.left = cx + "px";
+    el.style.top = cy + "px";
+    document.body.appendChild(el);
+    el.addEventListener("animationend", () => el.remove(), { once: true });
+  }
+}
 
 // ═══ RECONNECTION ═══
 
