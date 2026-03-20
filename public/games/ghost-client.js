@@ -376,6 +376,55 @@
     o.push(rect(19,25,1,3,'mirror'));
     o.push(rect(60,25,1,3,'mirror'));
 
+    // ── SERVICE ELEVATOR to basement (lower bar section) ─────────────────────
+    o.push(rect(33,74,4,3,'elevator_b'));
+
+    // ── BASEMENT (tiles y=84–131) ─────────────────────────────────────────────
+    // North wall with gap at x=33–37 for elevator shaft
+    o.push(rect(0,84,33,1,'stone'), rect(37,84,43,1,'stone'));
+    // South wall
+    o.push(rect(0,131,80,1,'stone'));
+    // Basement side walls
+    o.push(rect(0,84,1,48,'stone'), rect(79,84,1,48,'stone'));
+    // Horizontal divider at y=96
+    o.push(rect(1,96,17,1,'stone'), rect(22,96,11,1,'stone'), rect(37,96,20,1,'stone'), rect(61,96,18,1,'stone'));
+    // Vertical room dividers with passage at y=115–119
+    o.push(rect(22,97,1,18,'stone'), rect(22,119,1,12,'stone'));
+    o.push(rect(57,97,1,18,'stone'), rect(57,119,1,12,'stone'));
+
+    // ── WINE CELLAR (x=1–21, y=97–131) ──────────────────────────────────────
+    o.push(rect(2,98,4,2,'barrel'), rect(7,98,4,2,'barrel'), rect(12,98,4,2,'barrel'));
+    o.push(rect(2,102,4,2,'barrel'), rect(7,102,4,2,'barrel'), rect(12,102,4,2,'barrel'));
+    o.push(rect(2,106,4,2,'barrel'), rect(7,106,4,2,'barrel'), rect(12,106,4,2,'barrel'));
+    o.push(rect(14,98,6,5,'crate'), rect(14,105,6,5,'crate'), rect(14,112,6,4,'crate'));
+    o.push(rect(2,112,11,1,'shelf'), rect(2,116,11,1,'shelf'), rect(2,120,11,1,'shelf'));
+    o.push(rect(4,123,8,4,'table'));
+    o.push(rect(13,122,7,8,'coffin'));
+    // Hanging chains (non-collidable atmosphere)
+    o.push(rect(5,97,1,3,'chain'), rect(10,97,1,4,'chain'), rect(18,97,1,3,'chain'));
+
+    // ── BOILER ROOM (x=23–56, y=97–131) ─────────────────────────────────────
+    o.push(rect(27,101,7,9,'boiler'), rect(43,101,7,9,'boiler'));
+    o.push(rect(25,100,2,1,'pipe'), rect(34,100,9,1,'pipe'), rect(50,100,2,1,'pipe'));
+    o.push(rect(25,110,2,1,'pipe'), rect(34,110,9,1,'pipe'), rect(50,110,2,1,'pipe'));
+    o.push(rect(26,100,1,2,'pipe'), rect(34,100,1,2,'pipe'), rect(42,100,1,2,'pipe'), rect(50,100,1,2,'pipe'));
+    o.push(rect(24,121,8,3,'crate'), rect(45,121,8,3,'crate'));
+    o.push(rect(33,122,11,4,'table'));
+    o.push(rect(35,128,10,2,'coffin'));
+    // Hanging chains
+    o.push(rect(30,97,1,4,'chain'), rect(40,97,1,3,'chain'), rect(50,97,1,5,'chain'));
+
+    // ── COLD STORAGE (x=58–78, y=97–131) ────────────────────────────────────
+    o.push(rect(59,98,3,5,'locker'), rect(63,98,3,5,'locker'), rect(67,98,3,5,'locker'), rect(71,98,3,5,'locker'));
+    o.push(rect(59,105,3,5,'locker'), rect(63,105,3,5,'locker'), rect(67,105,3,5,'locker'), rect(71,105,3,5,'locker'));
+    o.push(rect(59,112,3,4,'locker'), rect(63,112,3,4,'locker'));
+    o.push(rect(68,112,9,2,'shelf'), rect(68,116,9,2,'shelf'), rect(68,120,9,2,'shelf'));
+    o.push(rect(59,118,7,4,'table'));
+    o.push(rect(59,124,18,1,'shelf'), rect(59,128,18,1,'shelf'));
+    o.push(rect(59,122,12,8,'coffin'));
+    // Hanging chains
+    o.push(rect(62,97,1,4,'chain'), rect(68,97,1,3,'chain'), rect(74,97,1,5,'chain'));
+
     return o;
   }
 
@@ -476,12 +525,14 @@
       pathColor: '#251c14',
     },
     hotel: {
-      areaWidth: 2560, areaHeight: 2560, bgColor: '#18121e', label: 'Hotel',
+      areaWidth: 2560, areaHeight: 4224, bgColor: '#18121e', label: 'Hotel',
       playerStart: { x:1280, y:520 }, obstacles: buildHotelObs(),
       obsColors: { stone:'#3a3050', counter:'#5a4038', bed:'#6a3a5a', sofa:'#7a3848',
-                   elevator:'#5a5870', pillar:'#c8b878', table:'#7a5030', chair:'#5a3a28',
-                   shelf:'#3a2810', mirror:'#8080b8', stairs:'#504860', shrub:'#2a4820',
-                   pool:'#1848a0', default:'#3a2a40' },
+                   elevator:'#5a5870', elevator_b:'#384858', pillar:'#c8b878', table:'#7a5030',
+                   chair:'#5a3a28', shelf:'#3a2810', mirror:'#8080b8', stairs:'#504860',
+                   shrub:'#2a4820', pool:'#1848a0',
+                   boiler:'#503828', pipe:'#706050', locker:'#3a4050', chain:'#504838',
+                   default:'#3a2a40' },
       pathColor: '#22182e',
     },
     egypt: {
@@ -503,7 +554,7 @@
   };
 
   // ── Collision ────────────────────────────────────────────────────────────
-  const NON_COLLIDABLE = new Set(['torch', 'candle', 'pool', 'sandpit', 'cauldron', 'sconce', 'painting', 'rug']);
+  const NON_COLLIDABLE = new Set(['torch', 'candle', 'pool', 'sandpit', 'cauldron', 'sconce', 'painting', 'rug', 'chain']);
   function isBlocked(x, y, r, obstacles) {
     for (const o of obstacles) {
       if (NON_COLLIDABLE.has(o.type)) continue;
@@ -1045,6 +1096,18 @@
     const tx = cx, ty = cy;
     const cw = cssW, ch = cssH;
 
+    if (levelVoteState && !levelVoteState.result) {
+      for (const btn of voteButtonRects) {
+        if (tx >= btn.x && tx <= btn.x + btn.w && ty >= btn.y && ty <= btn.y + btn.h) {
+          levelVoteState.myVote = btn.area;
+          socket.emit('ghost:vote_level', { roomId: S.roomId, area: btn.area });
+          return;
+        }
+      }
+      return;
+    }
+    if (levelVoteState) return; // result screen — block all taps
+
     if (S.ouija) { handleOuijaTap(tx, ty, cw, ch); return; }
 
     // ── Layout mirrors drawHUD ─────────────────────────────────────────
@@ -1232,6 +1295,26 @@
     // Update alligators (hotel only)
     if (S.area === 'hotel') updateAlligators(dt);
     if (S.area === 'egypt') updateEgyptNPCs(dt);
+
+    // Hotel elevator proximity check
+    if (S.area === 'hotel' && S.hotelElevator && S.hotelElevator.unlocked && !S.hotelElevator.activated) {
+      const ep = S.hotelElevator.serviceElevatorPos;
+      if (ep) {
+        const ecx = ep.x + ep.w / 2, ecy = ep.y + ep.h / 2;
+        const dist = Math.hypot(S.me.x - ecx, S.me.y - ecy);
+        const wasNear = S.hotelElevator.nearElevator;
+        S.hotelElevator.nearElevator = dist < 120;
+        if (S.hotelElevator.nearElevator && !wasNear) {
+          socket.emit('ghost:enter_elevator', { roomId: S.roomId });
+        } else if (!S.hotelElevator.nearElevator && wasNear) {
+          socket.emit('ghost:leave_elevator', { roomId: S.roomId });
+        }
+      }
+    }
+    // Tick unlock message timer
+    if (S.hotelElevator && S.hotelElevator.unlockMsgTimer > 0) {
+      S.hotelElevator.unlockMsgTimer -= dt * 1000;
+    }
 
     // ── Garden rain particles ─────────────────────────────────────────────
     if (S.area === 'garden') {
@@ -1817,6 +1900,16 @@
   // ── Light Flicker Override ────────────────────────────────────────────────
   let flickerOverride = null; // { start, duration }
 
+  // ── Hotel Elevator State ──────────────────────────────────────────────────
+  // hotelElevator: { unlocked, insidePlayers, totalHuman, activating, countdownEnd, serviceElevatorPos }
+  // hotelCutscene: { start, duration } | null
+  // hotelBasement: true when players are in the basement
+
+  // ── Level Vote State ──────────────────────────────────────────────────────
+  let levelVoteState = null;
+  // { areas, areaLabels, currentArea, deadline, myVote, counts, playerVotes, result, resultTime }
+  let voteButtonRects = []; // populated each frame by drawVoteOverlay, used by handleTap
+
   // ── Weather / FX State ────────────────────────────────────────────────────
   let rainParticles = [];
   let rainSpawnAccum = 0;
@@ -1997,6 +2090,8 @@
     }
     ctx.restore();
 
+    if (S.hotelCutscene) { drawHotelCutscene(cw, ch); return; }
+    if (levelVoteState) { drawVoteOverlay(cw, ch); return; }
     drawHUD(cw, ch);
     drawPOIPanel(cw, ch);
     drawPlayerSignals(cw, ch);
@@ -2288,6 +2383,40 @@
         ctx.beginPath(); ctx.moveTo(1920, 480 + d); ctx.lineTo(2528, 480 + d + 576); ctx.stroke();
       }
       ctx.restore();
+
+      // ── BASEMENT CONCRETE TEXTURE ──────────────────────────────────────────
+      if (S.hotelBasement) {
+        const bTop = 84 * T, bBot = 131 * T;
+        // Concrete base — darker grey overlay
+        ctx.fillStyle = 'rgba(30,28,26,0.35)';
+        ctx.fillRect(0, bTop, aw, bBot - bTop);
+        // Concrete tile cracks (horizontal fault lines)
+        ctx.strokeStyle = 'rgba(0,0,0,0.22)'; ctx.lineWidth = 1;
+        for (let cy2 = bTop + 64; cy2 < bBot; cy2 += 64) {
+          ctx.beginPath(); ctx.moveTo(0, cy2); ctx.lineTo(aw, cy2); ctx.stroke();
+        }
+        for (let cx2 = 64; cx2 < aw; cx2 += 64) {
+          ctx.beginPath(); ctx.moveTo(cx2, bTop); ctx.lineTo(cx2, bBot); ctx.stroke();
+        }
+        // Moisture streak patches
+        ctx.fillStyle = 'rgba(40,50,60,0.14)';
+        for (let i = 0; i < 18; i++) {
+          const sx = 64 + (Math.sin(i * 6.17) * 0.5 + 0.5) * (aw - 128);
+          const sy = bTop + 32 + (Math.sin(i * 3.89) * 0.5 + 0.5) * (bBot - bTop - 64);
+          ctx.fillRect(sx, sy, 6, 28 + (Math.sin(i * 2.1) * 0.5 + 0.5) * 40);
+        }
+        // Drain grates (circular, at deterministic positions)
+        ctx.strokeStyle = 'rgba(60,55,50,0.5)'; ctx.lineWidth = 1.5;
+        const drainPos = [
+          { x: 11*32, y: 90*32 }, { x: 40*32, y: 90*32 }, { x: 68*32, y: 90*32 },
+          { x: 10*32, y: 118*32 }, { x: 40*32, y: 125*32 }, { x: 70*32, y: 118*32 },
+        ];
+        for (const dp of drainPos) {
+          ctx.beginPath(); ctx.arc(dp.x, dp.y, 10, 0, Math.PI * 2); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(dp.x - 8, dp.y); ctx.lineTo(dp.x + 8, dp.y); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(dp.x, dp.y - 8); ctx.lineTo(dp.x, dp.y + 8); ctx.stroke();
+        }
+      }
     }
 
     else if (areaName === 'egypt') {
@@ -2569,6 +2698,54 @@
         const alpha = 0.03 + 0.02 * Math.sin(now * 0.0014 + i * 1.9);
         ctx.fillStyle = `rgba(200,175,220,${alpha.toFixed(3)})`;
         ctx.beginPath(); ctx.arc(bx, py2, 1.5, 0, Math.PI * 2); ctx.fill();
+      }
+
+      // ── Basement ambient particles (only when in basement) ─────────────────
+      if (S.hotelBasement) {
+        const basementTop = 84 * T, basementBot = 131 * T;
+
+        // Boiler steam rising from boiler positions
+        const boilerPositions = [
+          { x: 27*32+56, y: 101*32 }, // left boiler top
+          { x: 43*32+56, y: 101*32 }, // right boiler top
+        ];
+        for (let bi = 0; bi < boilerPositions.length; bi++) {
+          const bop = boilerPositions[bi];
+          for (let i = 0; i < 6; i++) {
+            const yOff = (now * 0.035 + i * 40 + bi * 20) % 160;
+            const steamX = bop.x + Math.sin(now * 0.0015 + i * 1.7 + bi * 2.3) * 12;
+            const steamY = bop.y - yOff;
+            const steamA = 0.08 * (1 - yOff / 160) * (0.5 + 0.5 * Math.sin(now * 0.003 + i * 1.3));
+            ctx.fillStyle = `rgba(255,160,100,${steamA.toFixed(3)})`;
+            ctx.save(); ctx.translate(steamX, steamY);
+            ctx.beginPath(); ctx.ellipse(0, 0, 4 + yOff * 0.04, 6, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+          }
+        }
+
+        // Water drips falling from ceiling
+        for (let i = 0; i < 8; i++) {
+          const drx = basementTop + 96 + (Math.sin(i * 7.31) * 0.5 + 0.5) * (2560 - 192);
+          const period = 2500 + i * 380;
+          const phase = (now + i * period) % period;
+          const fallFrac = phase / period;
+          const dry = basementTop + 16 + fallFrac * 200;
+          if (dry > basementBot) continue;
+          const dropAlpha = 0.15 + 0.1 * Math.sin(now * 0.004 + i * 1.8);
+          ctx.fillStyle = `rgba(120,160,200,${dropAlpha.toFixed(3)})`;
+          ctx.beginPath(); ctx.ellipse(drx, dry, 2, 3.5, 0, 0, Math.PI * 2); ctx.fill();
+        }
+
+        // Dense dust motes drifting in cold air
+        for (let i = 0; i < 20; i++) {
+          const bx2 = basementTop + 64 + (Math.sin(i * 5.43) * 0.5 + 0.5) * (2560 - 128);
+          const basY = basementTop + 32 + (Math.cos(i * 3.17) * 0.5 + 0.5) * (basementBot - basementTop - 64);
+          const drift = Math.sin(now * 0.0008 + i * 2.1) * 30;
+          const driftY = Math.cos(now * 0.0006 + i * 1.4) * 20;
+          const dustA = 0.04 + 0.03 * Math.sin(now * 0.0018 + i * 2.5);
+          ctx.fillStyle = `rgba(180,165,140,${dustA.toFixed(3)})`;
+          ctx.beginPath(); ctx.arc(bx2 + drift, basY + driftY, 1.8, 0, Math.PI * 2); ctx.fill();
+        }
       }
     }
 
@@ -3057,7 +3234,12 @@
       case 'counter':  drawCounter(x, y, w, h, col); break;
       case 'sofa':     drawSofa(x, y, w, h, col); break;
       case 'pool':     drawPool(x, y, w, h, col, now); break;
-      case 'elevator': drawElevator(x, y, w, h, col, now); break;
+      case 'elevator':   drawElevator(x, y, w, h, col, now); break;
+      case 'elevator_b': drawElevatorB(x, y, w, h, col, now, S && S.hotelElevator && S.hotelElevator.unlocked); break;
+      case 'boiler':  drawBoiler(x, y, w, h, col); break;
+      case 'locker':  drawLocker(x, y, w, h, col); break;
+      case 'pipe':    drawPipe(x, y, w, h, col); break;
+      case 'chain':   drawChain(x, y, w, h, col); break;
       case 'sarcophagus': drawSarcophagus(x, y, w, h, col); break;
       case 'obelisk':     drawObelisk(x, y, w, h, col); break;
       case 'altar':       drawAltar(x, y, w, h, col); break;
@@ -3739,6 +3921,135 @@
     ctx.fillRect(x + w - 2 - doorW, y + 2, 3, h - 4);
   }
 
+  function drawElevatorB(x, y, w, h, col, now, unlocked) {
+    // Darker, rustier service elevator
+    ctx.fillStyle = unlocked ? '#2a3a2a' : '#28303a';
+    ctx.fillRect(x, y, w, h);
+    const doorW = Math.floor((w - 6) / 2);
+    ctx.fillStyle = unlocked ? '#3a5040' : '#3a4050';
+    ctx.fillRect(x + 2, y + 2, doorW, h - 4);
+    ctx.fillRect(x + w - 2 - doorW, y + 2, doorW, h - 4);
+    // Door gap
+    ctx.fillStyle = '#0a0c10';
+    ctx.fillRect(x + w / 2 - 1, y + 2, 2, h - 4);
+    // "B" floor indicator
+    ctx.fillStyle = unlocked ? '#40ff80' : '#607090';
+    ctx.font = `bold ${Math.min(w, h) * 0.4}px monospace`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('B', x + w / 2, y + h * 0.35);
+    ctx.textBaseline = 'alphabetic';
+    // Unlock glow
+    if (unlocked) {
+      const pulse = 0.5 + 0.5 * Math.sin((now || 0) * 0.003);
+      const grd = ctx.createRadialGradient(x + w/2, y + h/2, 0, x + w/2, y + h/2, w);
+      grd.addColorStop(0, `rgba(60,255,100,${(0.18 * pulse).toFixed(3)})`);
+      grd.addColorStop(1, 'rgba(60,255,100,0)');
+      ctx.fillStyle = grd; ctx.fillRect(x - w, y - w, w * 3, h + w * 2);
+      ctx.strokeStyle = `rgba(60,200,80,${(0.7 + 0.3 * pulse).toFixed(2)})`;
+      ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h);
+    }
+    // Rust streaks
+    ctx.fillStyle = 'rgba(90,50,20,0.25)';
+    for (let i = 0; i < 3; i++) {
+      const rx = x + 4 + i * (w / 3);
+      ctx.fillRect(rx, y + h * 0.5, 1, h * 0.45);
+    }
+  }
+
+  function drawBoiler(x, y, w, h, col) {
+    // Large cylindrical boiler tank
+    const cx2 = x + w / 2;
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y + h * 0.12, w, h * 0.76);
+    // Cylinder caps (top and bottom)
+    ctx.beginPath(); ctx.ellipse(cx2, y + h * 0.12, w / 2, h * 0.1, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx2, y + h * 0.88, w / 2, h * 0.1, 0, 0, Math.PI * 2); ctx.fill();
+    // Dark band highlights
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fillRect(x, y + h * 0.28, w, h * 0.06);
+    ctx.fillRect(x, y + h * 0.65, w, h * 0.06);
+    // Rivet highlights
+    ctx.fillStyle = 'rgba(200,150,80,0.6)';
+    const rivX = [x + 4, x + w - 4, cx2];
+    [y + h * 0.28, y + h * 0.65].forEach(ry => {
+      rivX.forEach(rx => {
+        ctx.beginPath(); ctx.arc(rx, ry + 3, 2, 0, Math.PI * 2); ctx.fill();
+      });
+    });
+    // Pressure gauge
+    ctx.fillStyle = '#c0a870'; ctx.beginPath(); ctx.arc(cx2, y + h * 0.22, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#3a2818'; ctx.beginPath(); ctx.arc(cx2, y + h * 0.22, 2.5, 0, Math.PI * 2); ctx.fill();
+    // Shine strip
+    ctx.fillStyle = 'rgba(255,255,255,0.07)';
+    ctx.fillRect(x + 3, y + h * 0.12, 4, h * 0.76);
+  }
+
+  function drawLocker(x, y, w, h, col) {
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y, w, h);
+    // Door panel
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    ctx.fillRect(x + 2, y + 2, w - 4, h - 4);
+    // Horizontal seam (two doors)
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fillRect(x, y + h / 2, w, 1);
+    // Handle (small rectangle)
+    ctx.fillStyle = '#c0b090';
+    ctx.fillRect(x + w / 2 - 2, y + h * 0.28, 4, 2);
+    ctx.fillRect(x + w / 2 - 2, y + h * 0.72, 4, 2);
+    // Vent slats
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    for (let s = 0; s < 3; s++) {
+      ctx.fillRect(x + 3, y + h * 0.08 + s * (h * 0.1), w - 6, 1);
+      ctx.fillRect(x + 3, y + h * 0.55 + s * (h * 0.1), w - 6, 1);
+    }
+    // Edge highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.fillRect(x, y, 1, h);
+    ctx.fillRect(x, y, w, 1);
+  }
+
+  function drawPipe(x, y, w, h, col) {
+    ctx.fillStyle = col;
+    const isHoriz = w > h;
+    if (isHoriz) {
+      // Horizontal pipe
+      ctx.fillRect(x, y + h * 0.2, w, h * 0.6);
+      ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(x, y + h * 0.2, w, h * 0.15);
+      ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(x, y + h * 0.65, w, h * 0.15);
+      // Flanges at ends
+      ctx.fillStyle = col;
+      ctx.fillRect(x, y + h * 0.08, Math.min(6, w), h * 0.84);
+      ctx.fillRect(x + w - Math.min(6, w), y + h * 0.08, Math.min(6, w), h * 0.84);
+    } else {
+      // Vertical pipe
+      ctx.fillRect(x + w * 0.2, y, w * 0.6, h);
+      ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(x + w * 0.2, y, w * 0.15, h);
+      ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(x + w * 0.65, y, w * 0.15, h);
+      ctx.fillStyle = col;
+      ctx.fillRect(x + w * 0.08, y, w * 0.84, Math.min(6, h));
+      ctx.fillRect(x + w * 0.08, y + h - Math.min(6, h), w * 0.84, Math.min(6, h));
+    }
+    // Rust patches
+    ctx.fillStyle = 'rgba(140,70,30,0.3)';
+    ctx.fillRect(x + w * 0.3, isHoriz ? y + h * 0.3 : y + h * 0.4, isHoriz ? w * 0.15 : w * 0.3, isHoriz ? h * 0.25 : h * 0.15);
+  }
+
+  function drawChain(x, y, w, h, col) {
+    // Hanging chain from top of obstacle bounds downward
+    const cx2 = x + w / 2;
+    const linkH = 6, linkW = 4;
+    const numLinks = Math.floor(h / linkH);
+    ctx.strokeStyle = col; ctx.lineWidth = 1.5;
+    for (let i = 0; i < numLinks; i++) {
+      const ly = y + i * linkH;
+      ctx.fillStyle = i % 2 === 0 ? col : '#404030';
+      ctx.beginPath();
+      ctx.ellipse(cx2, ly + linkH / 2, linkW / 2, linkH / 2, i % 2 === 0 ? 0 : Math.PI / 2, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+    }
+  }
+
   // ── Egypt NPCs: Mummies and Scarabs ─────────────────────────────────────
   const EGYPT_BOUNDS = { x1: 64, y1: 64, x2: 2816, y2: 2176 };
 
@@ -4140,8 +4451,10 @@
     const now = Date.now();
     dc.clearRect(0, 0, cw, ch);
 
+    // Basement is much darker
+    let darknessAlpha = (S.area === 'hotel' && S.hotelBasement) ? 0.94 : 0.87;
+
     // Lightning flash — briefly illuminates entire graveyard
-    let darknessAlpha = 0.87;
     if (lightningState && S.area === 'graveyard') {
       const le = now - lightningState.start;
       if (le < lightningState.duration) {
@@ -4445,7 +4758,7 @@
       }
       // #17 Elevator proximity glow — warm amber as player approaches
       for (const ob of area.obstacles) {
-        if (ob.type !== 'elevator') continue;
+        if (ob.type !== 'elevator' && ob.type !== 'elevator_b') continue;
         const edist = Math.hypot(S.me.x - (ob.x + ob.w/2), S.me.y - (ob.y + ob.h/2));
         if (edist > 200) continue;
         const elx = ob.x + ob.w/2 - S.cam.x, ely = ob.y + ob.h - 20 - S.cam.y;
@@ -4453,10 +4766,47 @@
         const ePulse = 0.6 + 0.4 * Math.sin(now * 0.0028 + ob.x * 0.01);
         const er = 35 * ePulse;
         const eg = dc.createRadialGradient(elx, ely, 0, elx, ely, er);
-        eg.addColorStop(0, `rgba(255,230,100,${(0.52 * eInt * ePulse).toFixed(3)})`);
-        eg.addColorStop(1, 'rgba(255,200,60,0)');
+        // elevator_b glows green when unlocked
+        const isServiceElev = ob.type === 'elevator_b';
+        const eUnlocked = isServiceElev && S.hotelElevator && S.hotelElevator.unlocked;
+        if (eUnlocked) {
+          eg.addColorStop(0, `rgba(60,255,80,${(0.50 * eInt * ePulse).toFixed(3)})`);
+          eg.addColorStop(1, 'rgba(40,200,60,0)');
+        } else {
+          eg.addColorStop(0, `rgba(255,230,100,${(0.52 * eInt * ePulse).toFixed(3)})`);
+          eg.addColorStop(1, 'rgba(255,200,60,0)');
+        }
         dc.fillStyle = eg;
         dc.beginPath(); dc.arc(elx, ely, er, 0, Math.PI*2); dc.fill();
+      }
+
+      // #17b Basement: boiler red glow + emergency light strips
+      if (S.hotelBasement) {
+        for (const ob of area.obstacles) {
+          if (ob.type !== 'boiler') continue;
+          const lx = ob.x + ob.w/2 - S.cam.x, ly = ob.y + ob.h/2 - S.cam.y;
+          if (lx < -150 || lx > cw+150 || ly < -150 || ly > ch+150) continue;
+          const heatFlicker = getFlicker(now, ob.x + ob.y * 0.7);
+          const br = 80 * heatFlicker;
+          const bg = dc.createRadialGradient(lx, ly, 0, lx, ly, br);
+          bg.addColorStop(0, `rgba(255,60,20,${(0.50 * heatFlicker).toFixed(3)})`);
+          bg.addColorStop(0.5, `rgba(200,40,10,${(0.22 * heatFlicker).toFixed(3)})`);
+          bg.addColorStop(1, 'rgba(180,30,0,0)');
+          dc.fillStyle = bg; dc.beginPath(); dc.arc(lx, ly, br, 0, Math.PI*2); dc.fill();
+        }
+        // Emergency strip lights along basement north corridor (dim red-orange strips)
+        const stripY = 84 * 32 + 16 - S.cam.y; // just below the north wall
+        const stripPulse = 0.7 + 0.3 * Math.sin(now * 0.0015);
+        if (stripY > -10 && stripY < ch + 10) {
+          for (let sx = 0; sx < 2560; sx += 256) {
+            const slx = sx + 128 - S.cam.x;
+            if (slx < -80 || slx > cw + 80) continue;
+            const sg = dc.createRadialGradient(slx, stripY, 0, slx, stripY, 80);
+            sg.addColorStop(0, `rgba(255,80,30,${(0.35 * stripPulse).toFixed(3)})`);
+            sg.addColorStop(1, 'rgba(200,40,10,0)');
+            dc.fillStyle = sg; dc.beginPath(); dc.arc(slx, stripY, 80, 0, Math.PI*2); dc.fill();
+          }
+        }
       }
     }
 
@@ -4661,6 +5011,303 @@
     }
   }
 
+  // ── Level Vote Overlay ────────────────────────────────────────────────────
+  const AREA_EMOJIS = {
+    graveyard: '🪦', garden: '🌿', house: '🏚️', hotel: '🏨', egypt: '🏺',
+  };
+
+  function drawHotelCutscene(cw, ch) {
+    const cs = S.hotelCutscene;
+    if (!cs) return;
+    const now = Date.now();
+    const elapsed = now - cs.start;
+    const t = Math.min(1, elapsed / cs.duration); // 0→1 over full duration
+
+    // Phase timeline (t proportions):
+    // 0.00–0.12: fade to black
+    // 0.12–0.45: hotel exterior with rain & lightning
+    // 0.45–0.58: elevator floor counter going UP
+    // 0.58–0.72: lightning strike flash
+    // 0.72–0.88: counter going DOWN to B
+    // 0.88–1.00: fade to basement (black → game)
+
+    ctx.save();
+
+    // Background: always black during cutscene base
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, cw, ch);
+
+    // Phase: hotel exterior view (0.12–0.85)
+    if (t >= 0.12 && t < 0.88) {
+      const sceneAlpha = t < 0.18 ? (t - 0.12) / 0.06 : t > 0.82 ? (0.88 - t) / 0.06 : 1;
+      ctx.globalAlpha = sceneAlpha;
+
+      // Night sky gradient
+      const sky = ctx.createLinearGradient(0, 0, 0, ch * 0.7);
+      sky.addColorStop(0, '#0a0818');
+      sky.addColorStop(1, '#1a1430');
+      ctx.fillStyle = sky; ctx.fillRect(0, 0, cw, ch);
+
+      // Hotel silhouette
+      const hx = cw * 0.15, hw = cw * 0.7, hh = ch * 0.55, hy = ch * 0.28;
+      ctx.fillStyle = '#0d0b18';
+      // Main building body
+      ctx.fillRect(hx, hy, hw, hh);
+      // Floors (horizontal lines of windows)
+      const floors = 8;
+      for (let f = 0; f < floors; f++) {
+        const fy = hy + (f + 0.3) * (hh / floors);
+        const cols = 12;
+        for (let c = 0; c < cols; c++) {
+          const wx = hx + (c + 0.5) * (hw / cols) - 6;
+          // Lightning makes windows briefly bright
+          const lightStrike = t >= 0.58 && t < 0.72;
+          const strikePhase = lightStrike ? (t - 0.58) / 0.14 : 0;
+          const winBright = lightStrike && strikePhase < 0.15 ? (1 - strikePhase / 0.15) : 0;
+          // Some windows lit normally
+          const normalLit = (f * 3 + c * 7) % 11 < 4;
+          if (normalLit || winBright > 0.1) {
+            ctx.fillStyle = winBright > 0.1
+              ? `rgba(255,255,220,${(0.3 + winBright * 0.7).toFixed(2)})`
+              : `rgba(255,230,150,${0.15 + (f * c % 5) * 0.06})`;
+            ctx.fillRect(wx, fy, 12, 7);
+          }
+        }
+      }
+
+      // Rain streaks
+      const rainSeed = Math.floor(elapsed / 50);
+      ctx.strokeStyle = 'rgba(150,180,220,0.25)'; ctx.lineWidth = 1;
+      for (let r = 0; r < 60; r++) {
+        const rx = ((r * 137 + rainSeed * 31) % cw);
+        const ry = ((r * 79 + rainSeed * 17) % ch);
+        ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx - 4, ry + 18); ctx.stroke();
+      }
+
+      // Elevator shaft highlighted — right side of building
+      const shaftX = hx + hw * 0.48, shaftW = hw * 0.08;
+      ctx.strokeStyle = 'rgba(100,150,80,0.4)'; ctx.lineWidth = 1;
+      ctx.strokeRect(shaftX, hy, shaftW, hh);
+
+      // Elevator cab moving UP (t=0.45–0.58), then struck, then DOWN (t=0.72–0.88)
+      const cabH = 20, cabW = shaftW - 4;
+      let cabFrac;
+      if (t >= 0.45 && t < 0.58) {
+        cabFrac = 1 - (t - 0.45) / 0.13;  // starts at bottom, moves up
+      } else if (t >= 0.72 && t < 0.88) {
+        cabFrac = (t - 0.72) / 0.16;       // starts at top, falls down
+      } else if (t >= 0.58 && t < 0.72) {
+        cabFrac = 0;  // at top, struck
+      } else {
+        cabFrac = 1;  // at bottom
+      }
+      const cabY = hy + cabFrac * (hh - cabH);
+      ctx.fillStyle = t >= 0.58 && t < 0.72
+        ? `rgba(255,80,30,${0.7 + 0.3 * Math.sin(elapsed * 0.05)})` // flicker after strike
+        : 'rgba(80,160,100,0.7)';
+      ctx.fillRect(shaftX + 2, cabY, cabW, cabH);
+      // Cab light line
+      ctx.fillStyle = 'rgba(255,255,200,0.5)';
+      ctx.fillRect(shaftX + 2, cabY, cabW, 2);
+
+      // Lightning bolt (t=0.58–0.68)
+      if (t >= 0.58 && t < 0.68) {
+        const lp = (t - 0.58) / 0.10;
+        const bAlpha = lp < 0.2 ? 1 : (1 - (lp - 0.2) / 0.8);
+        ctx.strokeStyle = `rgba(255,255,150,${bAlpha.toFixed(2)})`; ctx.lineWidth = 3;
+        ctx.shadowColor = '#ffff80'; ctx.shadowBlur = 20;
+        ctx.beginPath();
+        ctx.moveTo(cw * 0.55, 0);
+        ctx.lineTo(cw * 0.52, ch * 0.12); ctx.lineTo(cw * 0.56, ch * 0.22);
+        ctx.lineTo(cw * 0.50, ch * 0.35); ctx.lineTo(shaftX + shaftW / 2, cabY);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        // Flash overlay
+        ctx.fillStyle = `rgba(255,255,220,${(bAlpha * 0.35).toFixed(2)})`;
+        ctx.fillRect(0, 0, cw, ch);
+      }
+
+      // Floor counter display (center lower)
+      if (t >= 0.40 && t < 0.88) {
+        let floorNum;
+        if (t < 0.58) {
+          // Counting up: 1 → 8
+          floorNum = Math.ceil((t - 0.40) / (0.58 - 0.40) * 8);
+        } else if (t < 0.72) {
+          floorNum = '?'; // struck
+        } else {
+          // Counting down: from mid to B
+          const dn = 1 - (t - 0.72) / 0.16;
+          floorNum = dn > 0.15 ? Math.max(1, Math.ceil(dn * 6)).toString() : 'B';
+        }
+        const fx = cw / 2, fy = ch * 0.75;
+        ctx.fillStyle = 'rgba(0,0,0,0.7)'; rrect(ctx, fx - 50, fy - 32, 100, 44, 8); ctx.fill();
+        ctx.fillStyle = (floorNum === '?' || floorNum === 'B') ? '#ff4040' : '#80ff80';
+        ctx.font = `bold ${floorNum === 'B' ? 28 : 24}px monospace`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(floorNum.toString(), fx, fy - 10);
+        ctx.fillStyle = '#607080'; ctx.font = '9px monospace';
+        ctx.fillText('FLOOR', fx, fy + 8);
+        ctx.textBaseline = 'alphabetic';
+      }
+
+      ctx.globalAlpha = 1;
+    }
+
+    // Fade to black at start and end
+    if (t < 0.18) {
+      ctx.globalAlpha = t < 0.12 ? 1 : (0.18 - t) / 0.06;
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, cw, ch);
+    }
+    if (t > 0.82) {
+      ctx.globalAlpha = (t - 0.82) / 0.18;
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, cw, ch);
+    }
+    ctx.globalAlpha = 1;
+
+    // Center text
+    if (t >= 0.88) {
+      ctx.fillStyle = `rgba(100,160,100,${Math.min(1,(t - 0.88) / 0.1)})`;
+      ctx.font = 'bold 14px monospace'; ctx.textAlign = 'center';
+      ctx.fillText('SUB-BASEMENT', cw / 2, ch / 2 - 10);
+      ctx.fillStyle = `rgba(80,120,80,${Math.min(1,(t - 0.90) / 0.1)})`;
+      ctx.font = '10px monospace';
+      ctx.fillText('What lurks below?', cw / 2, ch / 2 + 8);
+    }
+
+    ctx.restore();
+  }
+
+  function drawVoteOverlay(cw, ch) {
+    const vs = levelVoteState;
+    const now = Date.now();
+
+    // ── Result screen ────────────────────────────────────────────────────
+    if (vs.result) {
+      const elapsed = now - vs.resultTime;
+      const secsLeft = Math.max(0, Math.ceil((3000 - elapsed) / 1000));
+      const area = vs.result.winner;
+      const label = vs.areaLabels[vs.areas.indexOf(area)] || area;
+      const emoji = AREA_EMOJIS[area] || '🗺️';
+
+      ctx.fillStyle = 'rgba(0,0,0,0.82)';
+      ctx.fillRect(0, 0, cw, ch);
+
+      const panW = Math.min(360, cw - 40), panH = 160;
+      const panX = (cw - panW) / 2, panY = (ch - panH) / 2;
+      ctx.fillStyle = 'rgba(30,20,50,0.96)';
+      rrect(ctx, panX, panY, panW, panH, 18); ctx.fill();
+      ctx.strokeStyle = '#a78bfa'; ctx.lineWidth = 2;
+      rrect(ctx, panX, panY, panW, panH, 18); ctx.stroke();
+
+      ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 14px monospace'; ctx.textAlign = 'center';
+      ctx.fillText('NEXT LEVEL', cw / 2, panY + 32);
+      ctx.font = '36px serif';
+      ctx.fillText(emoji, cw / 2, panY + 76);
+      ctx.font = 'bold 20px monospace'; ctx.fillStyle = '#c084fc';
+      ctx.fillText(label.toUpperCase(), cw / 2, panY + 110);
+      ctx.font = '12px monospace'; ctx.fillStyle = '#94a3b8';
+      ctx.fillText(`Starting in ${secsLeft}…`, cw / 2, panY + 140);
+      return;
+    }
+
+    // ── Voting screen ────────────────────────────────────────────────────
+    const msLeft = Math.max(0, vs.deadline - now);
+    const pct    = msLeft / 15000;
+
+    // Dim backdrop
+    ctx.fillStyle = 'rgba(0,0,0,0.78)';
+    ctx.fillRect(0, 0, cw, ch);
+
+    // Panel
+    const cols   = 2;
+    const btnW   = Math.min(160, (Math.min(cw, 380) - 32) / cols - 8);
+    const btnH   = 72;
+    const gap    = 10;
+    const rows   = Math.ceil(vs.areas.length / cols);
+    const gridW  = cols * btnW + (cols - 1) * gap;
+    const gridH  = rows * btnH + (rows - 1) * gap;
+    const panPad = 18;
+    const headerH = 54;
+    const timerH  = 8;
+    const panW   = gridW + panPad * 2;
+    const panH   = headerH + timerH + 12 + gridH + panPad;
+    const panX   = Math.round((cw - panW) / 2);
+    const panY   = Math.round((ch - panH) / 2);
+
+    ctx.fillStyle = 'rgba(15,12,30,0.97)';
+    rrect(ctx, panX, panY, panW, panH, 16); ctx.fill();
+    ctx.strokeStyle = '#4c1d95'; ctx.lineWidth = 1.5;
+    rrect(ctx, panX, panY, panW, panH, 16); ctx.stroke();
+
+    // Header
+    ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 15px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('🗺️  CHOOSE NEXT LEVEL', cw / 2, panY + 28);
+    const secsDisp = Math.ceil(msLeft / 1000);
+    ctx.font = '11px monospace'; ctx.fillStyle = pct < 0.25 ? '#f87171' : '#94a3b8';
+    ctx.fillText(`${secsDisp}s`, cw / 2, panY + 46);
+
+    // Timer bar
+    const barX = panX + panPad, barY = panY + headerH;
+    const barW = panW - panPad * 2;
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    rrect(ctx, barX, barY, barW, timerH, 4); ctx.fill();
+    ctx.fillStyle = pct < 0.25 ? '#ef4444' : pct < 0.5 ? '#f97316' : '#a78bfa';
+    rrect(ctx, barX, barY, Math.round(barW * pct), timerH, 4); ctx.fill();
+
+    // Buttons
+    voteButtonRects = [];
+    const gridX = panX + panPad;
+    const gridY = panY + headerH + timerH + 12;
+
+    vs.areas.forEach((area, i) => {
+      const col  = i % cols;
+      const row  = Math.floor(i / cols);
+      // Last item: if odd count, center it
+      const isLast = i === vs.areas.length - 1 && vs.areas.length % cols !== 0;
+      const bx   = isLast ? panX + panPad + (gridW - btnW) / 2 : gridX + col * (btnW + gap);
+      const by   = gridY + row * (btnH + gap);
+
+      voteButtonRects.push({ x: bx, y: by, w: btnW, h: btnH, area });
+
+      const isMyVote     = vs.myVote === area;
+      const isCurrent    = vs.currentArea === area;
+      const voteCount    = vs.counts[area] || 0;
+      const label        = vs.areaLabels[i] || area;
+      const emoji        = AREA_EMOJIS[area] || '🗺️';
+
+      // Button background
+      ctx.fillStyle = isMyVote
+        ? 'rgba(124,58,237,0.80)'
+        : isCurrent ? 'rgba(30,58,100,0.70)' : 'rgba(30,30,50,0.80)';
+      rrect(ctx, bx, by, btnW, btnH, 10); ctx.fill();
+
+      // Border
+      ctx.strokeStyle = isMyVote ? '#a78bfa' : isCurrent ? '#60a5fa' : 'rgba(255,255,255,0.10)';
+      ctx.lineWidth = isMyVote ? 2 : 1.5;
+      rrect(ctx, bx, by, btnW, btnH, 10); ctx.stroke();
+
+      // Emoji + label
+      ctx.font = '22px serif'; ctx.textAlign = 'center';
+      ctx.fillStyle = '#fff';
+      ctx.fillText(emoji, bx + btnW / 2, by + 28);
+      ctx.font = 'bold 9px monospace';
+      ctx.fillStyle = isMyVote ? '#ddd6fe' : '#e2e8f0';
+      ctx.fillText(label.toUpperCase(), bx + btnW / 2, by + 43);
+
+      // Vote count
+      ctx.font = '10px monospace';
+      ctx.fillStyle = voteCount > 0 ? '#a78bfa' : '#475569';
+      ctx.fillText(voteCount === 1 ? '1 vote' : `${voteCount} votes`, bx + btnW / 2, by + 58);
+
+      // "CURRENT" badge
+      if (isCurrent) {
+        ctx.font = 'bold 7px monospace'; ctx.fillStyle = '#60a5fa';
+        ctx.fillText('CURRENT', bx + btnW / 2, by + 68);
+      }
+    });
+  }
+
   function drawHUD(cw, ch) {
     const tools = ['flashlight','emf','microphone'];
     const icons  = { flashlight:'🔦', emf:'📡', microphone:'🎤' };
@@ -4856,6 +5503,79 @@
     drawMinimap(cw, ch);
     // Evidence journal overlay
     drawJournal(cw, ch);
+
+    // Hotel elevator UI
+    drawElevatorHUD(cw, ch);
+  }
+
+  function drawElevatorHUD(cw, ch) {
+    if (!S.hotelElevator) return;
+    const ev = S.hotelElevator;
+    const now = Date.now();
+
+    // "Elevator unlocked" announcement banner
+    if (ev.unlockMessage && ev.unlockMsgTimer > 0) {
+      const alpha = Math.min(1, ev.unlockMsgTimer / 800);
+      const bw = Math.min(cw - 40, 420), bh = 56, bx = (cw - bw) / 2, by = ch * 0.15;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = 'rgba(20,50,20,0.92)';
+      rrect(ctx, bx, by, bw, bh, 10); ctx.fill();
+      ctx.strokeStyle = '#40c060'; ctx.lineWidth = 1.5;
+      rrect(ctx, bx, by, bw, bh, 10); ctx.stroke();
+      ctx.fillStyle = '#80ff80'; ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center';
+      ctx.fillText('SERVICE ELEVATOR ACTIVATED', bx + bw / 2, by + 18);
+      ctx.fillStyle = '#a0d0a0'; ctx.font = '9px monospace';
+      // Word-wrap message to fit banner width
+      const words = ev.unlockMessage.split(' ');
+      let line = '', lineY = by + 32;
+      for (const w of words) {
+        const test = line ? line + ' ' + w : w;
+        if (ctx.measureText(test).width > bw - 20) {
+          ctx.fillText(line, bx + bw / 2, lineY); lineY += 13; line = w;
+        } else { line = test; }
+      }
+      if (line) ctx.fillText(line, bx + bw / 2, lineY);
+      ctx.restore();
+    }
+
+    if (!ev.unlocked || ev.activated) return;
+
+    // "Near elevator" waiting panel
+    if (ev.nearElevator) {
+      const pw = 200, ph = ev.activating ? 72 : 52, px = (cw - pw) / 2, py = ch - ph - 80;
+      ctx.fillStyle = 'rgba(10,30,15,0.92)';
+      rrect(ctx, px, py, pw, ph, 10); ctx.fill();
+      ctx.strokeStyle = '#40c060'; ctx.lineWidth = 1.5;
+      rrect(ctx, px, py, pw, ph, 10); ctx.stroke();
+
+      ctx.fillStyle = '#80ff80'; ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center';
+      ctx.fillText('SERVICE ELEVATOR  ⬆ B', px + pw / 2, py + 18);
+      ctx.fillStyle = '#a0d0a0'; ctx.font = '10px monospace';
+      ctx.fillText(`${ev.insidePlayers.length}/${ev.totalHuman} players ready`, px + pw / 2, py + 34);
+
+      if (ev.activating) {
+        const remaining = Math.max(0, ev.countdownEnd - now);
+        const progress = 1 - remaining / 3000;
+        ctx.fillStyle = 'rgba(40,80,40,0.8)';
+        ctx.fillRect(px + 10, py + 44, (pw - 20) * progress, 12);
+        ctx.strokeStyle = '#60c060'; ctx.lineWidth = 1;
+        ctx.strokeRect(px + 10, py + 44, pw - 20, 12);
+        ctx.fillStyle = '#c0ffc0'; ctx.font = 'bold 9px monospace';
+        ctx.fillText(`DESCENDING IN ${(remaining / 1000).toFixed(1)}s`, px + pw / 2, py + 53);
+      }
+    } else {
+      // Subtle "ELEVATOR READY ↓" indicator at bottom center when unlocked but not near
+      const pulse = 0.6 + 0.4 * Math.sin(now * 0.003);
+      ctx.save();
+      ctx.globalAlpha = pulse;
+      ctx.fillStyle = 'rgba(20,50,20,0.75)';
+      const iw = 180, ih = 26, ix = (cw - iw) / 2, iy = ch - ih - 10;
+      rrect(ctx, ix, iy, iw, ih, 8); ctx.fill();
+      ctx.fillStyle = '#60d060'; ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center';
+      ctx.fillText('▼  SERVICE ELEVATOR READY  ▼', ix + iw / 2, iy + 17);
+      ctx.restore();
+    }
   }
 
   function drawPOIPanel(cw, ch) {
@@ -5743,6 +6463,69 @@
       dramaticPoseFlash = { start: Date.now(), color: color || '#ff6b9d' };
     });
 
+    socket.on('ghost:vote_start', ({ areas, areaLabels, currentArea, durationMs }) => {
+      if (!S) return;
+      levelVoteState = {
+        areas, areaLabels, currentArea,
+        deadline:    Date.now() + durationMs,
+        myVote:      null,
+        counts:      Object.fromEntries(areas.map(a => [a, 0])),
+        playerVotes: {},
+        result:      null,
+        resultTime:  0,
+      };
+      voteButtonRects = [];
+    });
+
+    socket.on('ghost:vote_update', ({ counts, playerVotes }) => {
+      if (!levelVoteState) return;
+      levelVoteState.counts      = counts;
+      levelVoteState.playerVotes = playerVotes;
+    });
+
+    socket.on('ghost:vote_result', ({ winner, counts }) => {
+      if (!levelVoteState) return;
+      levelVoteState.result     = { winner, counts };
+      levelVoteState.resultTime = Date.now();
+    });
+
+    // Hotel elevator events
+    socket.on('ghost:elevator_unlocked', ({ message }) => {
+      if (!S || !S.hotelElevator) return;
+      S.hotelElevator.unlocked = true;
+      S.hotelElevator.unlockMessage = message;
+      S.hotelElevator.unlockMsgTimer = 7000;
+    });
+
+    socket.on('ghost:elevator_waiting', ({ insidePlayers, totalHuman }) => {
+      if (!S || !S.hotelElevator) return;
+      S.hotelElevator.insidePlayers = insidePlayers;
+      S.hotelElevator.totalHuman    = totalHuman;
+    });
+
+    socket.on('ghost:elevator_ready', ({ countdownMs }) => {
+      if (!S || !S.hotelElevator) return;
+      S.hotelElevator.activating   = true;
+      S.hotelElevator.countdownEnd = Date.now() + countdownMs;
+    });
+
+    socket.on('ghost:floor_transition', ({ durationMs }) => {
+      if (!S) return;
+      if (S.hotelElevator) S.hotelElevator.activated = true;
+      S.hotelCutscene = { start: Date.now(), duration: durationMs };
+    });
+
+    socket.on('ghost:floor_arrived', ({ playerStart }) => {
+      if (!S) return;
+      S.me.x = playerStart.x;
+      S.me.y = playerStart.y;
+      S.cam  = null; // reset camera
+      S.hotelCutscene  = null;
+      S.hotelBasement  = true;
+      // Reset fog grid for the now-visible basement
+      fogGrid = new Float32Array(fogGridW * fogGridH);
+    });
+
   }
 
   function unbindSocketEvents() {
@@ -5752,7 +6535,10 @@
      'ghost:respawn','ghost:signal_broadcast','ghost:key_taken','ghost:powerup_taken',
      'ghost:haunt_flicker','ghost:timer_update','ghost:time_up',
      'ghost:farewell','ghost:awareness_change','ghost:dramatic_pose',
-     'ghost:evidence','ghost:player_left'].forEach(ev => socket.off(ev));
+     'ghost:evidence','ghost:player_left',
+     'ghost:vote_start','ghost:vote_update','ghost:vote_result',
+     'ghost:elevator_unlocked','ghost:elevator_waiting','ghost:elevator_ready',
+     'ghost:floor_transition','ghost:floor_arrived'].forEach(ev => socket.off(ev));
   }
 
   // ── Init / cleanup ────────────────────────────────────────────────────────
@@ -5765,7 +6551,9 @@
     setupCanvas();
     walkPhase = 0;
     shockStart = 0;
-    rainParticles = [];
+    levelVoteState = null;
+    voteButtonRects = [];
+    rainParticles = [];   // hotelCutscene + hotelBasement are reset as part of S object in init
     leafParticles = [];
     rainSpawnAccum = 0;
     leafSpawnAccum = 0;
@@ -5822,6 +6610,22 @@
       // A8/C1: temperature tracking
       lastTemperature: 0,
       breathTimer: 0,
+      // Hotel elevator
+      hotelElevator: gd.hotelElevator ? {
+        unlocked:           gd.hotelElevator.unlocked  || false,
+        insidePlayers:      [],
+        totalHuman:         0,
+        activating:         false,
+        countdownEnd:       0,
+        activated:          gd.hotelElevator.activated || false,
+        serviceElevatorPos: gd.hotelElevator.serviceElevatorPos,
+        mainFloorCount:     gd.hotelElevator.mainFloorCount,
+        nearElevator:       false,
+        unlockMessage:      null,
+        unlockMsgTimer:     0,
+      } : null,
+      hotelCutscene: null,
+      hotelBasement: !!(gd.hotelElevator && gd.hotelElevator.activated),
     };
 
     // Init alligators for hotel
@@ -5858,7 +6662,10 @@
       }
       S.ouija = null;
     }
+    levelVoteState = null;
+    voteButtonRects = [];
     farewellGhost = null;
+    if (S) { S.hotelCutscene = null; S.hotelBasement = false; }
     celebrationParticles = [];
     ouijaCandleParticles = [];
     flickerOverride = null;

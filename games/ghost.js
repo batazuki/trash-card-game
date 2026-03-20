@@ -78,6 +78,16 @@ module.exports = function(io, helpers) {
       { title: 'Cartouche',           text: '"The name belongs to a pharaoh with no known reign, no known tomb, no known death. Yet here is the tomb."' },
       { title: 'Excavation Log',      text: '"Day 14: The night watchman quit. Said something moved inside. Day 15: We hired a new one. Day 16: He also quit."' },
     ],
+    hotel_basement: [
+      { title: 'Service Elevator Log', text: '"Car malfunction, Sept 14 1978. Elevator C failed to stop at B1. Car reached sub-basement. No survivors were using the elevator at the time." The last sentence has been crossed out and rewritten three times.' },
+      { title: 'Maintenance Notice',   text: '"The smell is normal. Do not investigate the smell." — Posted June 14, 1983. No other entries in this log.' },
+      { title: 'Boiler Room Warning',  text: '"Boiler 3 has been out of service since 1969. If you hear it running, leave immediately and do not look back." — Chief Engineer, retired 1971.' },
+      { title: 'Wine Cellar Inventory', text: '"Château Morrow, 1961 — 48 bottles. Winery closed 1963, estate demolished 1964. Labels describe a vineyard that never existed."' },
+      { title: 'Rusted Padlock',       text: '"Keys to Storage Room B. Do NOT open Storage Room B." The padlock was open when you arrived. The keys are missing.' },
+      { title: 'Wall Scratches',       text: 'Tally marks, hundreds of them. Neat at first, then increasingly frantic. The last ones are long horizontal strokes, scratched across twelve verticals at once.' },
+      { title: 'Maintenance Clipboard', text: '"Monday: replaced the candles. Tuesday: replaced the candles. Wednesday: DO NOT REPLACE THE CANDLES." No entries after Wednesday.' },
+      { title: 'Cold Room Thermometer', text: '"Must remain above 35°F at all times." Current reading: 24°F. The refrigeration unit has been disconnected since 1971. There is no power source in this room.' },
+    ],
   };
 
   const FLASH_RANGE = 280;
@@ -291,6 +301,53 @@ module.exports = function(io, helpers) {
     obs.push(rect(62,64,1,5,'shelf'), rect(65,64,1,5,'shelf'));
     obs.push(rect(2,75,4,3,'stairs'), rect(73,75,4,3,'stairs'));
     obs.push(rect(19,25,1,3,'mirror'), rect(60,25,1,3,'mirror'));
+
+    // ── SERVICE ELEVATOR to basement (lower bar section, x=33–36, y=74–76) ──
+    obs.push(rect(33,74,4,3,'elevator_b'));
+
+    // ── BASEMENT (tiles y=84–131, px y=2688–4192) ────────────────────────────
+    // North wall: gap at x=33–37 for elevator shaft
+    obs.push(rect(0,84,33,1,'stone'), rect(37,84,43,1,'stone'));
+    // South wall
+    obs.push(rect(0,131,80,1,'stone'));
+    // Basement side walls
+    obs.push(rect(0,84,1,48,'stone'), rect(79,84,1,48,'stone'));
+    // Horizontal divider at y=96: gaps at x=18–22, x=33–37, x=57–61
+    obs.push(rect(1,96,17,1,'stone'), rect(22,96,11,1,'stone'), rect(37,96,20,1,'stone'), rect(61,96,18,1,'stone'));
+    // Vertical room dividers: x=22 (wine/boiler) and x=57 (boiler/cold)
+    // Passage in each at y=115–119 for interconnection
+    obs.push(rect(22,97,1,18,'stone'), rect(22,119,1,12,'stone'));
+    obs.push(rect(57,97,1,18,'stone'), rect(57,119,1,12,'stone'));
+
+    // ── WINE CELLAR (x=1–21, y=97–131) ────────────────────────────────────────
+    obs.push(rect(2,98,4,2,'barrel'), rect(7,98,4,2,'barrel'), rect(12,98,4,2,'barrel'));
+    obs.push(rect(2,102,4,2,'barrel'), rect(7,102,4,2,'barrel'), rect(12,102,4,2,'barrel'));
+    obs.push(rect(2,106,4,2,'barrel'), rect(7,106,4,2,'barrel'), rect(12,106,4,2,'barrel'));
+    obs.push(rect(14,98,6,5,'crate'), rect(14,105,6,5,'crate'), rect(14,112,6,4,'crate'));
+    obs.push(rect(2,112,11,1,'shelf'), rect(2,116,11,1,'shelf'), rect(2,120,11,1,'shelf'));
+    obs.push(rect(4,123,8,4,'table'));
+    obs.push(rect(13,122,7,8,'coffin'));
+
+    // ── BOILER ROOM (x=23–56, y=97–131) ───────────────────────────────────────
+    obs.push(rect(27,101,7,9,'boiler'), rect(43,101,7,9,'boiler'));
+    // Horizontal pipes
+    obs.push(rect(25,100,2,1,'pipe'), rect(34,100,9,1,'pipe'), rect(50,100,2,1,'pipe'));
+    obs.push(rect(25,110,2,1,'pipe'), rect(34,110,9,1,'pipe'), rect(50,110,2,1,'pipe'));
+    // Vertical pipe connectors
+    obs.push(rect(26,100,1,2,'pipe'), rect(34,100,1,2,'pipe'), rect(42,100,1,2,'pipe'), rect(50,100,1,2,'pipe'));
+    obs.push(rect(24,121,8,3,'crate'), rect(45,121,8,3,'crate'));
+    obs.push(rect(33,122,11,4,'table'));
+    obs.push(rect(35,128,10,2,'coffin'));
+
+    // ── COLD STORAGE (x=58–78, y=97–131) ──────────────────────────────────────
+    obs.push(rect(59,98,3,5,'locker'), rect(63,98,3,5,'locker'), rect(67,98,3,5,'locker'), rect(71,98,3,5,'locker'));
+    obs.push(rect(59,105,3,5,'locker'), rect(63,105,3,5,'locker'), rect(67,105,3,5,'locker'), rect(71,105,3,5,'locker'));
+    obs.push(rect(59,112,3,4,'locker'), rect(63,112,3,4,'locker'));
+    obs.push(rect(68,112,9,2,'shelf'), rect(68,116,9,2,'shelf'), rect(68,120,9,2,'shelf'));
+    obs.push(rect(59,118,7,4,'table'));
+    obs.push(rect(59,124,18,1,'shelf'), rect(59,128,18,1,'shelf'));
+    obs.push(rect(59,122,12,8,'coffin'));
+
     return obs;
   }
 
@@ -388,8 +445,8 @@ module.exports = function(io, helpers) {
     hotel: {
       label: 'Hotel',
       bgColor: '#18121e',
-      areaWidth:  80 * T,  // 2560
-      areaHeight: 80 * T,  // 2560
+      areaWidth:  80 * T,   // 2560
+      areaHeight: 132 * T,  // 4224 (extended for basement)
       obstacles: buildHotelObstacles(),
       spawnZones: [
         { x:  96, y:  512, w: 416, h: 384 },  // wing A rooms
@@ -398,8 +455,14 @@ module.exports = function(io, helpers) {
         { x:  704, y: 1280, w: 896, h: 512 }, // pool area
         { x:  128, y: 1984, w: 512, h: 512 }, // lower section left
         { x: 1280, y: 1984, w: 896, h: 512 }, // lower section right
+        // Basement spawn zones (tagged basement:true)
+        { x:  128, y: 3072, w: 512, h: 704, basement: true }, // wine cellar / boiler west
+        { x:  896, y: 2880, w: 768, h: 896, basement: true }, // center boiler room
+        { x: 1792, y: 3072, w: 512, h: 704, basement: true }, // cold storage east
       ],
-      playerStart: { x: 1280, y: 520 },
+      playerStart:        { x: 1280,  y: 520  },
+      basementStart:      { x: 1120,  y: 2816 },
+      serviceElevatorPos: { x: 33*32, y: 74*32, w: 4*32, h: 3*32 }, // matches rect(33,74,4,3,'elevator_b')
     },
     egypt: {
       label: 'Egyptian Temple',
@@ -691,7 +754,10 @@ module.exports = function(io, helpers) {
         hotel:     { x: 256,  y: 256 },
         egypt:     { x: 512,  y: 256 },
       };
-      const corner = shyCorners[areaKey] || shyCorners.graveyard;
+      let corner = shyCorners[areaKey] || shyCorners.graveyard;
+      if (areaKey === 'hotel' && ghost.floor === 'basement') {
+        corner = { x: 256, y: 3200 }; // basement west corner
+      }
       ghost.targetX = corner.x;
       ghost.targetY = corner.y;
     }
@@ -732,6 +798,15 @@ module.exports = function(io, helpers) {
     if (ghost.personality === 'confused') {
       ghost.x = clamp(ghost.x + randomBetween(-32, 32), 0, areaWidth);
       ghost.y = clamp(ghost.y + randomBetween(-32, 32), 0, areaHeight);
+    }
+
+    // Hotel: clamp ghosts to their respective floor so they don't wander through the shaft
+    if (areaKey === 'hotel') {
+      if (ghost.floor === 'basement') {
+        ghost.y = clamp(ghost.y, 84 * T + MARGIN, areaHeight - MARGIN);
+      } else {
+        ghost.y = clamp(ghost.y, MARGIN, 79 * T - MARGIN);
+      }
     }
   }
 
@@ -775,7 +850,7 @@ module.exports = function(io, helpers) {
   }
 
   // ─── Spawn ghosts ─────────────────────────────────────────────────────────
-  function spawnGhosts(areaData, count) {
+  function spawnGhosts(spawnZones, count, startId = 0) {
     const ghosts = [];
     const usedPersonalities = [];
     for (let i = 0; i < count; i++) {
@@ -786,11 +861,11 @@ module.exports = function(io, helpers) {
       usedPersonalities.push(personality);
 
       const name = randomName(personality);
-      const pos  = randomSpawn(areaData.spawnZones);
+      const pos  = randomSpawn(spawnZones);
       const cfg  = PCONFIG[personality];
 
       ghosts.push({
-        id: i,
+        id: startId + i,
         personality,
         name,
         color: cfg.color,
@@ -1008,29 +1083,66 @@ module.exports = function(io, helpers) {
         delete gs.ouijaTimers[ghostId];
       }
     }
+    if (gs.levelVoteTimer) { clearTimeout(gs.levelVoteTimer); gs.levelVoteTimer = null; }
+    if (gs.elevator && gs.elevator.activateTimer) {
+      clearTimeout(gs.elevator.activateTimer);
+      gs.elevator.activateTimer = null;
+    }
+  }
+
+  // ─── Level Vote ───────────────────────────────────────────────────────────
+  const VOTE_AREA_KEYS = ['graveyard', 'garden', 'house', 'hotel', 'egypt'];
+  const VOTE_DURATION_MS = 15000;
+
+  function startLevelVote(state, roomId) {
+    const gs = state.ghost;
+    gs.levelVote = { votes: {} };
+    io.to(roomId).emit('ghost:vote_start', {
+      areas:       VOTE_AREA_KEYS,
+      areaLabels:  VOTE_AREA_KEYS.map(k => AREAS[k].label),
+      currentArea: gs.area,
+      durationMs:  VOTE_DURATION_MS,
+    });
+    gs.levelVoteTimer = setTimeout(() => resolveLevelVote(state, roomId), VOTE_DURATION_MS);
+  }
+
+  function resolveLevelVote(state, roomId) {
+    const gs = state.ghost;
+    if (!gs.levelVote) return;
+    if (gs.levelVoteTimer) { clearTimeout(gs.levelVoteTimer); gs.levelVoteTimer = null; }
+
+    const counts = Object.fromEntries(VOTE_AREA_KEYS.map(a => [a, 0]));
+    for (const v of Object.values(gs.levelVote.votes)) {
+      if (counts[v] !== undefined) counts[v]++;
+    }
+    const maxVotes = Math.max(...Object.values(counts));
+    const tied = VOTE_AREA_KEYS.filter(a => counts[a] === maxVotes);
+    const winner = tied[Math.floor(Math.random() * tied.length)];
+
+    gs.levelVote = null;
+    state.ghostArea = winner;
+    io.to(roomId).emit('ghost:vote_result', { winner, counts });
+    setTimeout(() => startGame(state, roomId), 3000);
   }
 
   // ─── POI Generation ───────────────────────────────────────────────────────
-  function generatePOIs(areaKey, areaData) {
+  function generatePOIs(areaKey, zones, count = 5, idOffset = 0) {
     const pool = (POI_POOLS[areaKey] || POI_POOLS.graveyard).slice();
     // Shuffle
     for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
-    const selected = pool.slice(0, 5);
-    const zones = areaData.spawnZones;
+    const selected = pool.slice(0, count);
     return selected.map((p, i) => {
       const zone = zones[i % zones.length];
-      // Scatter within zone
       const x = Math.round(zone.x + randomBetween(zone.w * 0.1, zone.w * 0.9));
       const y = Math.round(zone.y + randomBetween(zone.h * 0.1, zone.h * 0.9));
-      return { id: i, x, y, title: p.title, text: p.text };
+      return { id: idOffset + i, x, y, title: p.title, text: p.text };
     });
   }
 
-  function randomPickupPos(areaData, excludePos, minExcludeDist) {
-    const zones = areaData.spawnZones;
+  function randomPickupPos(zones, excludePos, minExcludeDist) {
     for (let attempt = 0; attempt < 30; attempt++) {
       const zone = zones[Math.floor(Math.random() * zones.length)];
       const x = Math.round(zone.x + randomBetween(zone.w * 0.15, zone.w * 0.85));
@@ -1041,6 +1153,26 @@ module.exports = function(io, helpers) {
     }
     const z0 = zones[0];
     return { x: Math.round(z0.x + z0.w / 2), y: Math.round(z0.y + z0.h / 2) };
+  }
+
+  // ─── triggerElevator ──────────────────────────────────────────────────────
+  function triggerElevator(state, roomId) {
+    const gs = state.ghost;
+    if (!gs || !gs.elevator) return;
+    gs.elevator.activated = true;
+    gs.noRespawn = true;
+    // Signal cutscene start (5 second animation)
+    io.to(roomId).emit('ghost:floor_transition', { durationMs: 6000 });
+    // After cutscene, teleport all players to basement
+    setTimeout(() => {
+      if (!state.ghost) return;
+      const areaData = AREAS[gs.area];
+      const bStart = areaData.basementStart;
+      for (const player of state.players) {
+        player.ghostPos = { x: bStart.x, y: bStart.y };
+      }
+      io.to(roomId).emit('ghost:floor_arrived', { playerStart: bStart });
+    }, 6000);
   }
 
   // ─── startGame ────────────────────────────────────────────────────────────
@@ -1054,14 +1186,46 @@ module.exports = function(io, helpers) {
                    : areaKeys[Math.floor(Math.random() * areaKeys.length)];
     const areaData = AREAS[areaKey];
 
-    // Spawn ghosts
+    // Spawn ghosts — hotel splits ghosts across main floor and basement
     const ghostCount = (state.ghostCount >= 3 && state.ghostCount <= 5) ? state.ghostCount : 3;
-    const ghosts = spawnGhosts(areaData, ghostCount);
+    let ghosts;
+    let hotelElevator = null;
+    let mainFloorCount = ghostCount;
+
+    if (areaKey === 'hotel') {
+      const mainFloorZones = areaData.spawnZones.filter(z => !z.basement);
+      const basementZones  = areaData.spawnZones.filter(z =>  z.basement);
+      mainFloorCount       = ghostCount >= 5 ? 3 : 2;
+      const basementCount  = ghostCount - mainFloorCount;
+      const mainGhosts     = spawnGhosts(mainFloorZones, mainFloorCount, 0);
+      const basementGhosts = spawnGhosts(basementZones,  basementCount,  mainFloorCount);
+      basementGhosts.forEach(g => { g.floor = 'basement'; });
+      mainGhosts.forEach(g => { g.floor = 'main'; });
+      ghosts = [...mainGhosts, ...basementGhosts];
+      hotelElevator = {
+        unlocked: false,
+        insidePlayers: new Set(),
+        activating: false,
+        activateTimer: null,
+        activated: false,
+      };
+    } else {
+      ghosts = spawnGhosts(areaData.spawnZones, ghostCount, 0);
+    }
 
     // Generate POIs and pickup positions
-    const pois = generatePOIs(areaKey, areaData);
-    const keyPos = randomPickupPos(areaData, areaData.playerStart, 500);
-    const powerupPos = randomPickupPos(areaData, keyPos, 300);
+    const mainZones = areaData.spawnZones.filter(z => !z.basement);
+    let pois;
+    if (areaKey === 'hotel') {
+      const basementZones = areaData.spawnZones.filter(z => z.basement);
+      const mainPois      = generatePOIs('hotel',          mainZones,    5, 0);
+      const bPois         = generatePOIs('hotel_basement', basementZones, 3, 5);
+      pois = [...mainPois, ...bPois];
+    } else {
+      pois = generatePOIs(areaKey, mainZones, 5, 0);
+    }
+    const keyPos    = randomPickupPos(mainZones, areaData.playerStart, 500);
+    const powerupPos = randomPickupPos(mainZones, keyPos, 300);
 
     // Build state
     state.ghost = {
@@ -1071,6 +1235,10 @@ module.exports = function(io, helpers) {
       tickRef:        null,
       identifiedCount: 0,
       totalGhosts:    ghostCount,
+      mainFloorCount,
+      mainFloorIdentified: 0,
+      elevator:       hotelElevator,
+      noRespawn:      false,
       pois,
       keyPos,
       powerupPos,
@@ -1110,6 +1278,10 @@ module.exports = function(io, helpers) {
           pois,
           keyPos,
           powerupPos,
+          hotelElevator: areaKey === 'hotel' ? {
+            serviceElevatorPos: areaData.serviceElevatorPos,
+            mainFloorCount,
+          } : null,
         },
       });
     });
@@ -1184,16 +1356,26 @@ module.exports = function(io, helpers) {
           ghostId, name: ghost.name, personality: ghost.personality,
           color: cfg.color, description: cfg.description, identifiedBy: playerIndex,
         });
+
+        // Hotel: track main-floor identifies → elevator unlock
+        if (gs.area === 'hotel' && ghost.floor !== 'basement' && gs.elevator && !gs.elevator.unlocked) {
+          gs.mainFloorIdentified = (gs.mainFloorIdentified || 0) + 1;
+          if (gs.mainFloorIdentified >= gs.mainFloorCount) {
+            gs.elevator.unlocked = true;
+            io.to(roomId).emit('ghost:elevator_unlocked', {
+              message: 'A deep rumble shakes the walls. Somewhere below, the service elevator groans to life...',
+            });
+          }
+        }
+
         if (gs.identifiedCount >= gs.totalGhosts) {
           gs.gameEnding = true;
           clearAllTimers(gs);
-          // C9 — Farewell sequence: emit farewell for each ghost, then end game after 3s
+          // Farewell sequence, then level vote
           for (const g of gs.ghosts) {
             io.to(roomId).emit('ghost:farewell', { ghostId: g.id, x: g.x, y: g.y, color: g.color });
           }
-          setTimeout(() => {
-            endGame(state, roomId, playerIndex);
-          }, 3000);
+          setTimeout(() => startLevelVote(state, roomId), 2500);
         }
       } else {
         // Wrong guess: immediately release claim, increment counter
@@ -1202,14 +1384,26 @@ module.exports = function(io, helpers) {
         io.to(roomId).emit('ghost:released', { ghostId });
 
         if (ghost.ouijaAttempts >= 3) {
-          // Ghost flees to a new location and resets
-          const areaData = AREAS[gs.area];
-          const newPos = randomSpawn(areaData.spawnZones);
-          ghost.x = newPos.x; ghost.y = newPos.y;
-          ghost.targetX = newPos.x; ghost.targetY = newPos.y;
-          ghost.found = false; ghost.ouijaAttempts = 0; ghost.stateTimer = 0;
-          io.to(roomId).emit('ghost:respawn', { ghostId, personality: ghost.personality, color: ghost.color });
-          socket.emit('ghost:wrong_name', { ghostId, attemptsLeft: 0, respawned: true });
+          if (!gs.noRespawn) {
+            // Ghost flees to a new location and resets
+            const areaData = AREAS[gs.area];
+            const floorZones = areaData.spawnZones.filter(z =>
+              ghost.floor === 'basement' ? z.basement : !z.basement
+            );
+            const spawnPool = floorZones.length ? floorZones : areaData.spawnZones;
+            const newPos = randomSpawn(spawnPool);
+            ghost.x = newPos.x; ghost.y = newPos.y;
+            ghost.targetX = newPos.x; ghost.targetY = newPos.y;
+            ghost.found = false; ghost.ouijaAttempts = 0; ghost.stateTimer = 0;
+            io.to(roomId).emit('ghost:respawn', { ghostId, personality: ghost.personality, color: ghost.color });
+            socket.emit('ghost:wrong_name', { ghostId, attemptsLeft: 0, respawned: true });
+          } else {
+            // Basement mode: release claim without respawning
+            ghost.claimedBy = null;
+            ghost.ouijaAttempts = 0;
+            io.to(roomId).emit('ghost:released', { ghostId });
+            socket.emit('ghost:wrong_name', { ghostId, attemptsLeft: 0, respawned: false });
+          }
         } else {
           socket.emit('ghost:wrong_name', { ghostId, attemptsLeft: 3 - ghost.ouijaAttempts });
         }
@@ -1228,6 +1422,62 @@ module.exports = function(io, helpers) {
     });
 
     // Close board
+    socket.on('ghost:vote_level', ({ roomId, area }) => {
+      const state = rooms.get(roomId);
+      if (!state || !state.ghost || !state.ghost.levelVote) return;
+      if (!VOTE_AREA_KEYS.includes(area)) return;
+      const playerIndex = state.players.findIndex(p => p.id === socket.id);
+      if (playerIndex === -1) return;
+      state.ghost.levelVote.votes[playerIndex] = area;
+      const counts = Object.fromEntries(VOTE_AREA_KEYS.map(a => [a, 0]));
+      for (const v of Object.values(state.ghost.levelVote.votes)) counts[v]++;
+      io.to(roomId).emit('ghost:vote_update', {
+        counts,
+        playerVotes: { ...state.ghost.levelVote.votes },
+      });
+    });
+
+    // Hotel elevator: player enters proximity
+    socket.on('ghost:enter_elevator', ({ roomId }) => {
+      const state = rooms.get(roomId);
+      if (!state || !state.ghost || state.phase !== 'playing') return;
+      const gs = state.ghost;
+      if (!gs.elevator || !gs.elevator.unlocked || gs.elevator.activated) return;
+      const playerIndex = state.players.findIndex(p => p.id === socket.id);
+      if (playerIndex === -1) return;
+      gs.elevator.insidePlayers.add(playerIndex);
+      const humanCount = state.players.filter(p => !p.isAI).length;
+      io.to(roomId).emit('ghost:elevator_waiting', {
+        insidePlayers: [...gs.elevator.insidePlayers],
+        totalHuman: humanCount,
+      });
+      // Auto-activate when all human players are inside
+      if (gs.elevator.insidePlayers.size >= humanCount && !gs.elevator.activating) {
+        gs.elevator.activating = true;
+        io.to(roomId).emit('ghost:elevator_ready', { countdownMs: 3000 });
+        gs.elevator.activateTimer = setTimeout(() => triggerElevator(state, roomId), 3000);
+      }
+    });
+
+    // Hotel elevator: player leaves proximity
+    socket.on('ghost:leave_elevator', ({ roomId }) => {
+      const state = rooms.get(roomId);
+      if (!state || !state.ghost || state.phase !== 'playing') return;
+      const gs = state.ghost;
+      if (!gs.elevator || !gs.elevator.unlocked || gs.elevator.activated) return;
+      const playerIndex = state.players.findIndex(p => p.id === socket.id);
+      if (playerIndex === -1) return;
+      gs.elevator.insidePlayers.delete(playerIndex);
+      if (gs.elevator.activating) {
+        gs.elevator.activating = false;
+        if (gs.elevator.activateTimer) { clearTimeout(gs.elevator.activateTimer); gs.elevator.activateTimer = null; }
+        io.to(roomId).emit('ghost:elevator_waiting', {
+          insidePlayers: [...gs.elevator.insidePlayers],
+          totalHuman: state.players.filter(p => !p.isAI).length,
+        });
+      }
+    });
+
     socket.on('ghost:close_board', ({ roomId, ghostId }) => {
       const state = rooms.get(roomId);
       if (!state || !state.ghost) return;
@@ -1270,6 +1520,12 @@ module.exports = function(io, helpers) {
         powerupAvailable: gs.powerupAvailable,
         hasKey:          gs.keyHolder === playerIndex,
         hasEMFUpgrade:   gs.emfUpgradedPlayers ? gs.emfUpgradedPlayers.has(playerIndex) : false,
+        hotelElevator:   gs.area === 'hotel' ? {
+          serviceElevatorPos: areaData.serviceElevatorPos,
+          mainFloorCount:     gs.mainFloorCount,
+          unlocked:           gs.elevator ? gs.elevator.unlocked  : false,
+          activated:          gs.elevator ? gs.elevator.activated : false,
+        } : null,
       },
     };
   }
