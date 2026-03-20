@@ -1167,10 +1167,12 @@
       }
     });
 
-    // Place board button (above signal, right-aligned)
+    // Place board button (below tool cluster, right-aligned)
     if (S.nearGhost && !S.nearGhost.claimedBy) {
-      const pbW = 130, pbH = 40;
-      const pbX = cw - pbW - panMargin, pbY = sigY - pbH - toolGap;
+      const toolsH = tools.length * toolH + (tools.length - 1) * toolGap;
+      const pbW = 140, pbH = 44;
+      const pbX = cw - pbW - panMargin;
+      const pbY = toolsY + toolsH + toolGap * 2;
       if (tx >= pbX && tx <= pbX + pbW && ty >= pbY && ty <= pbY + pbH) {
         socket.emit('ghost:place_board', { roomId: S.roomId, ghostId: S.nearGhost.id });
       }
@@ -5531,9 +5533,9 @@
     ctx.fillRect(0, 0, cw, ch);
 
     // Phase timeline:
-    // 0.00–0.45: stars stream from edges toward center-X
-    // 0.45–0.65: stars settle into a horizontal line at cy
-    // 0.65–0.88: line splits — top half moves up, bottom half moves down (or all split L/R)
+    // 0.00–0.45: stars stream from edges toward center vertical line
+    // 0.45–0.65: stars settle into a vertical line at cx
+    // 0.65–0.88: line splits into two full vertical lines moving left and right
     // 0.88–1.00: fade out
 
     const STAR_COUNT = 120;
@@ -5542,6 +5544,7 @@
     // Seed deterministic star positions
     if (!cs._stars) {
       cs._stars = [];
+      const HALF = STAR_COUNT / 2;
       for (let i = 0; i < STAR_COUNT; i++) {
         // Origin: random edge position
         const edge = i % 4;
@@ -5550,15 +5553,16 @@
         else if (edge === 1) { ox = cw + 10; oy = (((i * 97) % 100) / 100) * ch; }
         else if (edge === 2) { ox = (((i * 173) % 100) / 100) * cw; oy = ch + 10; }
         else                 { ox = -10; oy = (((i * 113) % 100) / 100) * ch; }
-        // Line position: evenly spread along horizontal centre line
-        const lx = (i / STAR_COUNT) * cw;
-        const ly = cy;
-        // Split destination: top half of line goes up, bottom half goes down (two lines)
-        const half = i < STAR_COUNT / 2;
-        const splitDy = half ? -ch * 0.38 : ch * 0.38;
+        // Line position: evenly spread along vertical centre line
+        // First HALF covers full height going left, second HALF covers full height going right
+        const slot = i < HALF ? i : i - HALF;
+        const lx = cx;
+        const ly = (slot / HALF) * ch;
+        // Split destination: first half goes left, second half goes right — each keeps full height
+        const splitDir = i < HALF ? -1 : 1;
         cs._stars.push({
           ox, oy, lx, ly,
-          sx: lx, sy: ly + splitDy,
+          sx: cx + splitDir * cw * 0.36, sy: ly,
           size: 1.0 + ((i * 17) % 10) / 10 * 1.2,
         });
       }
@@ -5568,26 +5572,26 @@
       let px, py;
 
       if (t < 0.45) {
-        // Phase 1: stream from edge to line position
+        // Phase 1: stream from edge to vertical line position
         const p = t / 0.45;
         const ease = 1 - Math.pow(1 - p, 3);
         px = star.ox + (star.lx - star.ox) * ease;
         py = star.oy + (star.ly - star.oy) * ease;
       } else if (t < 0.65) {
-        // Phase 2: on the line, tiny oscillation settling
+        // Phase 2: on the vertical line, tiny horizontal oscillation settling
         const p = (t - 0.45) / 0.20;
         const jitter = Math.sin(p * Math.PI) * 3 * (1 - p);
-        px = star.lx;
-        py = star.ly + jitter;
+        px = star.lx + jitter;
+        py = star.ly;
       } else if (t < 0.88) {
-        // Phase 3: split outward
+        // Phase 3: split — lines move left and right, keeping full vertical extent
         const p = (t - 0.65) / 0.23;
         const ease = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
-        px = star.lx;
-        py = star.ly + (star.sy - star.ly) * ease;
+        px = star.lx + (star.sx - star.lx) * ease;
+        py = star.ly;
       } else {
         // Phase 4: keep split position
-        px = star.lx;
+        px = star.sx;
         py = star.sy;
       }
 
@@ -5788,14 +5792,21 @@
     ctx.fillStyle = sigCool ? '#666' : '#ffaa60'; ctx.font = 'bold 9px monospace';
     ctx.fillText(sigCool ? `${Math.ceil(S.signalCooldown / 1000)}s` : 'SIGNAL', panX + panW / 2, sigY + 28);
 
-    // Place Board button (above signal, right-aligned, when near ghost)
+    // Place Board button (below tool cluster, right-aligned, when near ghost)
     if (S.nearGhost && !S.nearGhost.claimedBy) {
-      const pbW = 130, pbH = 40;
-      const pbX = cw - pbW - panMargin, pbY = sigY - pbH - toolGap;
-      ctx.fillStyle = 'rgba(140,70,220,0.9)'; rrect(ctx, pbX, pbY, pbW, pbH, 12); ctx.fill();
-      ctx.strokeStyle = '#c084fc'; ctx.lineWidth = 1.5; rrect(ctx, pbX, pbY, pbW, pbH, 12); ctx.stroke();
+      const pbW = 140, pbH = 44;
+      const pbX = cw - pbW - panMargin;
+      const pbY = toolsY + toolsH + toolGap * 2;
+      const pulse = 0.82 + 0.18 * Math.sin(Date.now() / 380);
+      ctx.save();
+      ctx.shadowColor = '#a855f7';
+      ctx.shadowBlur = 10 + 6 * Math.abs(Math.sin(Date.now() / 380));
+      ctx.fillStyle = `rgba(${Math.round(130 + 20 * pulse)},55,${Math.round(210 + 20 * pulse)},0.92)`;
+      rrect(ctx, pbX, pbY, pbW, pbH, 13); ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle = '#d8b4fe'; ctx.lineWidth = 1.5; rrect(ctx, pbX, pbY, pbW, pbH, 13); ctx.stroke();
       ctx.fillStyle = '#fff'; ctx.font = 'bold 13px monospace'; ctx.textAlign = 'center';
-      ctx.fillText('✦ Place Board', pbX + pbW / 2, pbY + 26);
+      ctx.fillText('✦ Place Board', pbX + pbW / 2, pbY + 28);
     }
 
     // Tool buttons (vertical stack)
@@ -6387,10 +6398,26 @@
     // Toggle button (top-right, just below the top bar)
     const topH = 44;
     const tbW = 36, tbH = 26, tbX = cw - tbW - 6, tbY = topH + 4;
-    ctx.fillStyle = mmOpen ? 'rgba(40,60,40,0.85)' : 'rgba(20,20,30,0.80)';
-    rrect(ctx, tbX, tbY, tbW, tbH, 5); ctx.fill();
-    ctx.fillStyle = '#94a3b8'; ctx.font = '11px monospace'; ctx.textAlign = 'center';
-    ctx.fillText('[M]', tbX + tbW / 2, tbY + 17);
+    ctx.fillStyle = mmOpen ? 'rgba(30,55,35,0.90)' : 'rgba(20,20,30,0.82)';
+    rrect(ctx, tbX, tbY, tbW, tbH, 6); ctx.fill();
+    if (mmOpen) {
+      ctx.strokeStyle = 'rgba(74,222,128,0.45)'; ctx.lineWidth = 1.2;
+      rrect(ctx, tbX, tbY, tbW, tbH, 6); ctx.stroke();
+    }
+    // Map icon: bordered grid rectangle with player dot
+    const icx = tbX + tbW / 2, icy = tbY + tbH / 2;
+    const mapCol = mmOpen ? '#4ade80' : '#6b7280';
+    ctx.strokeStyle = mapCol; ctx.lineWidth = 1.2;
+    // Outer map frame
+    rrect(ctx, icx - 9, icy - 7, 18, 14, 2); ctx.stroke();
+    // Inner grid cross
+    ctx.beginPath();
+    ctx.moveTo(icx, icy - 7); ctx.lineTo(icx, icy + 7);
+    ctx.moveTo(icx - 9, icy); ctx.lineTo(icx + 9, icy);
+    ctx.stroke();
+    // Player dot (bottom-left quadrant)
+    ctx.fillStyle = mmOpen ? '#4ade80' : '#94a3b8';
+    ctx.beginPath(); ctx.arc(icx - 4, icy + 3, 2, 0, Math.PI * 2); ctx.fill();
 
     if (!mmOpen) return;
 
