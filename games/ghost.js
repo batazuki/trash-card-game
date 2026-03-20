@@ -1110,6 +1110,8 @@ module.exports = function(io, helpers) {
     const gs = state.ghost;
     if (!gs.levelVote) return;
     if (gs.levelVoteTimer) { clearTimeout(gs.levelVoteTimer); gs.levelVoteTimer = null; }
+    // Guard: room may have ended (all players quit) while vote was pending
+    if (state.phase !== 'playing') { gs.levelVote = null; return; }
 
     const counts = Object.fromEntries(VOTE_AREA_KEYS.map(a => [a, 0]));
     for (const v of Object.values(gs.levelVote.votes)) {
@@ -1434,6 +1436,12 @@ module.exports = function(io, helpers) {
         counts,
         playerVotes: { ...state.ghost.levelVote.votes },
       });
+      // Early resolution: if all human players have now voted, don't wait for timer
+      const humanPlayers = state.players.filter(p => !p.isAI);
+      if (humanPlayers.length > 0 &&
+          Object.keys(state.ghost.levelVote.votes).length >= humanPlayers.length) {
+        resolveLevelVote(state, roomId);
+      }
     });
 
     // Hotel elevator: player enters proximity

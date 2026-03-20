@@ -510,7 +510,7 @@ io.on("connection", socket => {
     if (!state || state.phase !== "lobby") return;
     const pi = state.players.findIndex(p => p.id === socket.id);
     if (pi === -1) return;
-    state.players[pi].lobbyAvatar = parseInt(avatar) || 0;
+    state.players[pi].lobbyAvatar = Math.max(0, Math.min(3, parseInt(avatar) || 0));
     const playerList = state.players.map(p => ({ name: p.name, avatar: p.lobbyAvatar || 0 }));
     io.to(roomId).emit("lobbyUpdate", { players: playerList, ...getLobbyConfig(state) });
   });
