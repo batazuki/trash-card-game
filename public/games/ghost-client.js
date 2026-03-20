@@ -1039,7 +1039,7 @@
   function onTouchStart(e) {
     e.preventDefault();
     gaInit(S && S.area); // start audio on first user gesture
-    if (S && S.titleCard && S.titleCard.inputGated) return;
+    if (S && ((S.hotelIntroCutscene && !S.hotelIntroCutscene.done) || (S.titleCard && S.titleCard.inputGated))) return;
     for (const t of e.changedTouches) {
       if (t.clientX < canvas.clientWidth * 0.5 && !joy.active && !(S && S.ouija)) {
         Object.assign(joy, { active:true, id:t.identifier, bx:t.clientX, by:t.clientY, dx:0, dy:0, angle:0, mag:0 });
@@ -1092,7 +1092,7 @@
   }
 
   function handleTap(cx, cy) {
-    if (S && S.titleCard && S.titleCard.inputGated) return;
+    if (S && ((S.hotelIntroCutscene && !S.hotelIntroCutscene.done) || (S.titleCard && S.titleCard.inputGated))) return;
     const tx = cx, ty = cy;
     const cw = cssW, ch = cssH;
 
@@ -1192,6 +1192,8 @@
   }
 
   function update(dt) {
+    // Hotel intro cutscene gates all input until done
+    if (S.hotelIntroCutscene && !S.hotelIntroCutscene.done) return;
     if (S.titleCard && !S.titleCard.done) {
       S.titleCard.inputGated = (Date.now() - S.titleCard.start) < 2500;
       if (!S.titleCard.inputGated) S.titleCard.done = true;
@@ -1998,6 +2000,12 @@
     if (!S || !canvas) return;
     const cw = cssW, ch = cssH;
 
+    // Hotel intro cutscene — completely overrides rendering until done
+    if (S.hotelIntroCutscene && !S.hotelIntroCutscene.done) {
+      drawHotelIntroCutscene(cw, ch);
+      return;
+    }
+
     if (S.ouija) { renderOuija(cw, ch); return; }
 
     ctx.clearRect(0, 0, cw, ch);
@@ -2090,6 +2098,7 @@
     }
     ctx.restore();
 
+    if (S.hotelVictoryCutscene) { drawHotelVictoryCutscene(cw, ch); return; }
     if (S.hotelCutscene) { drawHotelCutscene(cw, ch); return; }
     if (levelVoteState) { drawVoteOverlay(cw, ch); return; }
     drawHUD(cw, ch);
@@ -4570,18 +4579,21 @@
     // ── Per-level static light sources ──────────────────────────────────
     const area = AREA_DEFS[S.area];
 
-    // #5 Graveyard + House: torch and candle obstacles emit real warm light
-    if (S.area === 'graveyard' || S.area === 'house') {
+    // #5 Graveyard + House + Hotel: torch and candle obstacles emit real warm light
+    if (S.area === 'graveyard' || S.area === 'house' || S.area === 'hotel') {
       for (const ob of area.obstacles) {
         if (ob.type !== 'torch' && ob.type !== 'candle') continue;
         const lx = ob.x + ob.w/2 - S.cam.x, ly = ob.y - S.cam.y;
-        if (lx < -140 || lx > cw+140 || ly < -140 || ly > ch+140) continue;
+        if (lx < -200 || lx > cw+200 || ly < -200 || ly > ch+200) continue;
         const flicker = getFlicker(now, ob.x + ob.y);
-        const lr = 75 * flicker;
+        // Candles are slightly smaller than torches
+        const baseR = ob.type === 'torch' ? 130 : 90;
+        const lr = baseR * flicker;
         const tg = dc.createRadialGradient(lx, ly, 0, lx, ly, lr);
-        tg.addColorStop(0, `rgba(255,240,180,${(0.55 * flicker).toFixed(3)})`);
-        tg.addColorStop(0.4, `rgba(255,200,100,${(0.28 * flicker).toFixed(3)})`);
-        tg.addColorStop(1, 'rgba(255,160,60,0)');
+        tg.addColorStop(0,   `rgba(255,240,180,${(0.92 * flicker).toFixed(3)})`);
+        tg.addColorStop(0.3, `rgba(255,210,130,${(0.65 * flicker).toFixed(3)})`);
+        tg.addColorStop(0.6, `rgba(255,170,80,${(0.30 * flicker).toFixed(3)})`);
+        tg.addColorStop(1,   'rgba(255,140,40,0)');
         dc.fillStyle = tg;
         dc.beginPath(); dc.arc(lx, ly, lr, 0, Math.PI*2); dc.fill();
       }
@@ -4592,13 +4604,14 @@
       for (const ob of area.obstacles) {
         if (ob.type !== 'fireplace') continue;
         const lx = ob.x + ob.w/2 - S.cam.x, ly = ob.y + ob.h/2 - S.cam.y;
-        if (lx < -200 || lx > cw+200 || ly < -200 || ly > ch+200) continue;
+        if (lx < -280 || lx > cw+280 || ly < -280 || ly > ch+280) continue;
         const flicker = getFlicker(now, ob.x + ob.y * 2);
-        const lr = 130 * flicker;
+        const lr = 200 * flicker;
         const fg = dc.createRadialGradient(lx, ly, 0, lx, ly, lr);
-        fg.addColorStop(0, `rgba(255,220,160,${(0.65 * flicker).toFixed(3)})`);
-        fg.addColorStop(0.4, `rgba(255,160,60,${(0.38 * flicker).toFixed(3)})`);
-        fg.addColorStop(1, 'rgba(255,100,30,0)');
+        fg.addColorStop(0,   `rgba(255,230,170,${(0.90 * flicker).toFixed(3)})`);
+        fg.addColorStop(0.25, `rgba(255,190,100,${(0.65 * flicker).toFixed(3)})`);
+        fg.addColorStop(0.55, `rgba(255,130,50,${(0.30 * flicker).toFixed(3)})`);
+        fg.addColorStop(1,   'rgba(255,80,20,0)');
         dc.fillStyle = fg;
         dc.beginPath(); dc.arc(lx, ly, lr, 0, Math.PI*2); dc.fill();
       }
@@ -4611,11 +4624,11 @@
         const lx = ob.x + ob.w / 2 - S.cam.x, ly = ob.y + ob.h / 2 - S.cam.y;
         if (lx < -120 || lx > cw + 120 || ly < -120 || ly > ch + 120) continue;
         const cf = 0.75 + 0.25 * Math.sin(now * 0.003 + ob.x * 0.01);
-        const cr = 80 * cf;
+        const cr = 130 * cf;
         const cg = dc.createRadialGradient(lx, ly, 0, lx, ly, cr);
-        cg.addColorStop(0, `rgba(80,255,80,${(0.45 * cf).toFixed(3)})`);
-        cg.addColorStop(0.5, `rgba(40,200,60,${(0.22 * cf).toFixed(3)})`);
-        cg.addColorStop(1, 'rgba(20,180,40,0)');
+        cg.addColorStop(0,   `rgba(100,255,100,${(0.70 * cf).toFixed(3)})`);
+        cg.addColorStop(0.4, `rgba(50,220,70,${(0.38 * cf).toFixed(3)})`);
+        cg.addColorStop(1,   'rgba(20,190,40,0)');
         dc.fillStyle = cg;
         dc.beginPath(); dc.arc(lx, ly, cr, 0, Math.PI * 2); dc.fill();
       }
@@ -4626,25 +4639,27 @@
       for (const ob of area.obstacles) {
         if (ob.type !== 'sconce') continue;
         const lx = ob.x + ob.w / 2 - S.cam.x, ly = ob.y + ob.h / 2 - S.cam.y;
-        if (lx < -100 || lx > cw + 100 || ly < -100 || ly > ch + 100) continue;
+        if (lx < -160 || lx > cw + 160 || ly < -160 || ly > ch + 160) continue;
         const sf = getFlicker(now, ob.x * 3 + ob.y);
-        const sr = 60 * sf;
+        const sr = 100 * sf;
         const sg = dc.createRadialGradient(lx, ly, 0, lx, ly, sr);
-        sg.addColorStop(0, `rgba(255,200,100,${(0.48 * sf).toFixed(3)})`);
-        sg.addColorStop(1, 'rgba(255,160,60,0)');
+        sg.addColorStop(0,   `rgba(255,210,130,${(0.78 * sf).toFixed(3)})`);
+        sg.addColorStop(0.4, `rgba(255,170,80,${(0.42 * sf).toFixed(3)})`);
+        sg.addColorStop(1,   'rgba(255,140,50,0)');
         dc.fillStyle = sg;
         dc.beginPath(); dc.arc(lx, ly, sr, 0, Math.PI * 2); dc.fill();
       }
-      // Coffin basement candles — tiny warm flicker near each coffin
+      // Coffin basement candles — dim warm flicker near each coffin
       for (const ob of area.obstacles) {
         if (ob.type !== 'coffin') continue;
         const lcx = ob.x + ob.w / 2 - S.cam.x, lcy = ob.y - 4 - S.cam.y;
-        if (lcx < -80 || lcx > cw + 80 || lcy < -80 || lcy > ch + 80) continue;
+        if (lcx < -100 || lcx > cw + 100 || lcy < -100 || lcy > ch + 100) continue;
         const cfl = getFlicker(now, ob.x * 5 + ob.y);
-        const clr = 45 * cfl;
+        const clr = 65 * cfl;
         const clg = dc.createRadialGradient(lcx, lcy, 0, lcx, lcy, clr);
-        clg.addColorStop(0, `rgba(255,220,140,${(0.38 * cfl).toFixed(3)})`);
-        clg.addColorStop(1, 'rgba(255,180,80,0)');
+        clg.addColorStop(0,   `rgba(255,230,160,${(0.58 * cfl).toFixed(3)})`);
+        clg.addColorStop(0.5, `rgba(255,190,90,${(0.28 * cfl).toFixed(3)})`);
+        clg.addColorStop(1,   'rgba(255,160,60,0)');
         dc.fillStyle = clg;
         dc.beginPath(); dc.arc(lcx, lcy, clr, 0, Math.PI * 2); dc.fill();
       }
@@ -4658,11 +4673,14 @@
         const lx = ob.x + ob.w/2 - S.cam.x, ly = ob.y - S.cam.y;
         if (lx < -120 || lx > cw+120 || ly < -120 || ly > ch+120) continue;
         const lampFlicker = getFlicker(now, ob.x * 2 + ob.y);
-        const lg = dc.createRadialGradient(lx, ly, 0, lx, ly, 90 * lampFlicker);
-        lg.addColorStop(0, `rgba(255,255,200,${(0.55 * lampFlicker).toFixed(3)})`);
-        lg.addColorStop(1, 'rgba(255,255,200,0)');
+        const lampR = 150 * lampFlicker;
+        const lg = dc.createRadialGradient(lx, ly, 0, lx, ly, lampR);
+        lg.addColorStop(0,   `rgba(255,255,210,${(0.88 * lampFlicker).toFixed(3)})`);
+        lg.addColorStop(0.3, `rgba(255,250,180,${(0.55 * lampFlicker).toFixed(3)})`);
+        lg.addColorStop(0.7, `rgba(255,230,140,${(0.20 * lampFlicker).toFixed(3)})`);
+        lg.addColorStop(1,   'rgba(255,210,100,0)');
         dc.fillStyle = lg;
-        dc.beginPath(); dc.arc(lx, ly, 90 * lampFlicker, 0, Math.PI*2); dc.fill();
+        dc.beginPath(); dc.arc(lx, ly, lampR, 0, Math.PI*2); dc.fill();
       }
       // #9 Fountain — cool blue landmark light source
       const fnx = 1600 - S.cam.x, fny = 1120 - S.cam.y;
@@ -4717,13 +4735,14 @@
       ];
       for (const cp of chandelierPositions) {
         const lx = cp.x - S.cam.x, ly = cp.y - S.cam.y;
-        if (lx < -240 || lx > cw+240 || ly < -240 || ly > ch+240) continue;
-        const flicker = 0.88 + 0.12 * Math.sin(now * 0.0032 + cp.y * 0.001);
-        const lr = 165 * flicker;
+        if (lx < -300 || lx > cw+300 || ly < -300 || ly > ch+300) continue;
+        const flicker = 0.90 + 0.10 * Math.sin(now * 0.0032 + cp.y * 0.001);
+        const lr = 220 * flicker;
         const cg = dc.createRadialGradient(lx, ly, 0, lx, ly, lr);
-        cg.addColorStop(0, `rgba(255,245,200,${(0.62 * flicker).toFixed(3)})`);
-        cg.addColorStop(0.4, `rgba(255,210,120,${(0.38 * flicker).toFixed(3)})`);
-        cg.addColorStop(1, 'rgba(255,190,80,0)');
+        cg.addColorStop(0,   `rgba(255,248,210,${(0.88 * flicker).toFixed(3)})`);
+        cg.addColorStop(0.25, `rgba(255,230,160,${(0.62 * flicker).toFixed(3)})`);
+        cg.addColorStop(0.55, `rgba(255,200,100,${(0.28 * flicker).toFixed(3)})`);
+        cg.addColorStop(1,   'rgba(255,170,60,0)');
         dc.fillStyle = cg;
         dc.beginPath(); dc.arc(lx, ly, lr, 0, Math.PI*2); dc.fill();
       }
@@ -4734,12 +4753,12 @@
         const sflicker = 0.82 + 0.18 * Math.sin(now * 0.0025 + si * 1.7);
         for (const swx of [96, aw - 96]) {
           const lx2 = swx - S.cam.x, ly2 = swy - S.cam.y;
-          if (lx2 < -130 || lx2 > cw+130 || ly2 < -130 || ly2 > ch+130) continue;
-          const lr2 = 60 * sflicker;
+          if (lx2 < -180 || lx2 > cw+180 || ly2 < -180 || ly2 > ch+180) continue;
+          const lr2 = 100 * sflicker;
           const sg = dc.createRadialGradient(lx2, ly2, 0, lx2, ly2, lr2);
-          sg.addColorStop(0, `rgba(255,200,120,${(0.52 * sflicker).toFixed(3)})`);
-          sg.addColorStop(0.5, `rgba(255,170,80,${(0.28 * sflicker).toFixed(3)})`);
-          sg.addColorStop(1, 'rgba(255,150,50,0)');
+          sg.addColorStop(0,   `rgba(255,215,140,${(0.80 * sflicker).toFixed(3)})`);
+          sg.addColorStop(0.4, `rgba(255,180,90,${(0.45 * sflicker).toFixed(3)})`);
+          sg.addColorStop(1,   'rgba(255,150,50,0)');
           dc.fillStyle = sg;
           dc.beginPath(); dc.arc(lx2, ly2, lr2, 0, Math.PI*2); dc.fill();
         }
@@ -4756,25 +4775,26 @@
         dc.fillStyle = pg;
         dc.beginPath(); dc.arc(plx, ply, 185 * ppulse, 0, Math.PI*2); dc.fill();
       }
-      // #17 Elevator proximity glow — warm amber as player approaches
+      // #17 Elevator glow — always-on ambient, brightens as player approaches
       for (const ob of area.obstacles) {
         if (ob.type !== 'elevator' && ob.type !== 'elevator_b') continue;
+        const elx = ob.x + ob.w/2 - S.cam.x, ely = ob.y + ob.h/2 - S.cam.y;
+        if (elx < -180 || elx > cw+180 || ely < -180 || ely > ch+180) continue;
         const edist = Math.hypot(S.me.x - (ob.x + ob.w/2), S.me.y - (ob.y + ob.h/2));
-        if (edist > 200) continue;
-        const elx = ob.x + ob.w/2 - S.cam.x, ely = ob.y + ob.h - 20 - S.cam.y;
-        const eInt = Math.max(0, 1 - edist/200);
-        const ePulse = 0.6 + 0.4 * Math.sin(now * 0.0028 + ob.x * 0.01);
-        const er = 35 * ePulse;
+        const eProx = Math.max(0.25, 1 - edist / 350); // 0.25 minimum always-on glow
+        const ePulse = 0.70 + 0.30 * Math.sin(now * 0.0028 + ob.x * 0.01);
+        const er = 80 * eProx * ePulse;
         const eg = dc.createRadialGradient(elx, ely, 0, elx, ely, er);
-        // elevator_b glows green when unlocked
         const isServiceElev = ob.type === 'elevator_b';
         const eUnlocked = isServiceElev && S.hotelElevator && S.hotelElevator.unlocked;
         if (eUnlocked) {
-          eg.addColorStop(0, `rgba(60,255,80,${(0.50 * eInt * ePulse).toFixed(3)})`);
-          eg.addColorStop(1, 'rgba(40,200,60,0)');
+          eg.addColorStop(0,   `rgba(80,255,100,${(0.72 * eProx * ePulse).toFixed(3)})`);
+          eg.addColorStop(0.5, `rgba(40,200,70,${(0.35 * eProx).toFixed(3)})`);
+          eg.addColorStop(1,   'rgba(20,180,50,0)');
         } else {
-          eg.addColorStop(0, `rgba(255,230,100,${(0.52 * eInt * ePulse).toFixed(3)})`);
-          eg.addColorStop(1, 'rgba(255,200,60,0)');
+          eg.addColorStop(0,   `rgba(255,240,140,${(0.72 * eProx * ePulse).toFixed(3)})`);
+          eg.addColorStop(0.5, `rgba(255,200,80,${(0.35 * eProx).toFixed(3)})`);
+          eg.addColorStop(1,   'rgba(255,170,40,0)');
         }
         dc.fillStyle = eg;
         dc.beginPath(); dc.arc(elx, ely, er, 0, Math.PI*2); dc.fill();
@@ -4817,24 +4837,26 @@
       for (const ob of area.obstacles) {
         if (ob.type !== 'torch') continue;
         const lx = ob.x + ob.w/2 - S.cam.x, ly = ob.y - S.cam.y;
-        if (lx < -120 || lx > cw+120 || ly < -120 || ly > ch+120) continue;
+        if (lx < -200 || lx > cw+200 || ly < -200 || ly > ch+200) continue;
         const flicker = getFlicker(now, ob.x + ob.y);
-        const tr = 70 * flicker;
+        const tr = 140 * flicker;
         const tg = dc.createRadialGradient(lx, ly, 0, lx, ly, tr);
-        tg.addColorStop(0, `rgba(255,200,100,${(0.68 * flicker).toFixed(3)})`);
-        tg.addColorStop(0.5, `rgba(255,160,50,${(0.35 * flicker).toFixed(3)})`);
-        tg.addColorStop(1, 'rgba(255,140,30,0)');
+        tg.addColorStop(0,   `rgba(255,210,110,${(0.92 * flicker).toFixed(3)})`);
+        tg.addColorStop(0.3, `rgba(255,170,60,${(0.60 * flicker).toFixed(3)})`);
+        tg.addColorStop(0.6, `rgba(255,130,30,${(0.28 * flicker).toFixed(3)})`);
+        tg.addColorStop(1,   'rgba(255,110,20,0)');
         dc.fillStyle = tg;
         dc.beginPath(); dc.arc(lx, ly, tr, 0, Math.PI*2); dc.fill();
       }
       // Central altar golden radiance
       const alx = (40*32+160) - S.cam.x, aly = (28*32+80) - S.cam.y;
-      if (alx > -280 && alx < cw+280 && aly > -280 && aly < ch+280) {
+      if (alx > -320 && alx < cw+320 && aly > -320 && aly < ch+320) {
         const apulse = 0.85 + 0.15 * Math.sin(now * 0.0022);
-        const alg = dc.createRadialGradient(alx, aly, 0, alx, aly, 160 * apulse);
-        alg.addColorStop(0, `rgba(255,230,100,${(0.40 * apulse).toFixed(3)})`);
-        alg.addColorStop(0.5, `rgba(255,200,60,${(0.18 * apulse).toFixed(3)})`);
-        alg.addColorStop(1, 'rgba(255,180,40,0)');
+        const alg = dc.createRadialGradient(alx, aly, 0, alx, aly, 220 * apulse);
+        alg.addColorStop(0,   `rgba(255,240,110,${(0.65 * apulse).toFixed(3)})`);
+        alg.addColorStop(0.35, `rgba(255,210,70,${(0.35 * apulse).toFixed(3)})`);
+        alg.addColorStop(0.7, `rgba(255,180,40,${(0.14 * apulse).toFixed(3)})`);
+        alg.addColorStop(1,   'rgba(255,160,30,0)');
         dc.fillStyle = alg;
         dc.beginPath(); dc.arc(alx, aly, 160 * apulse, 0, Math.PI*2); dc.fill();
       }
@@ -4856,13 +4878,15 @@
       ];
       for (const ot of obeliskTips) {
         const otx = ot.x - S.cam.x, oty = ot.y - S.cam.y;
-        if (otx < -80 || otx > cw+80 || oty < -80 || oty > ch+80) continue;
+        if (otx < -140 || otx > cw+140 || oty < -140 || oty > ch+140) continue;
         const opglow = 0.55 + 0.45 * Math.sin(now * 0.0028 + ot.x * 0.002);
-        const org = dc.createRadialGradient(otx, oty, 0, otx, oty, 35 * opglow);
-        org.addColorStop(0, `rgba(255,220,80,${(0.42 * opglow).toFixed(3)})`);
-        org.addColorStop(1, 'rgba(255,200,40,0)');
+        const otR = 70 * opglow;
+        const org = dc.createRadialGradient(otx, oty, 0, otx, oty, otR);
+        org.addColorStop(0,   `rgba(255,230,100,${(0.70 * opglow).toFixed(3)})`);
+        org.addColorStop(0.4, `rgba(255,200,50,${(0.38 * opglow).toFixed(3)})`);
+        org.addColorStop(1,   'rgba(255,180,30,0)');
         dc.fillStyle = org;
-        dc.beginPath(); dc.arc(otx, oty, 35 * opglow, 0, Math.PI*2); dc.fill();
+        dc.beginPath(); dc.arc(otx, oty, otR, 0, Math.PI*2); dc.fill();
       }
     }
 
@@ -5175,6 +5199,405 @@
       ctx.fillText('What lurks below?', cw / 2, ch / 2 + 8);
     }
 
+    ctx.restore();
+  }
+
+  // ── Hotel Intro Cutscene ──────────────────────────────────────────────────
+  // Car approaching Hollywood Tower Hotel, dark night with lightning
+  // Duration: 7.5 s  → marks done at t=1 so titleCard can begin
+  function drawHotelIntroCutscene(cw, ch) {
+    const cs = S.hotelIntroCutscene;
+    if (!cs) return;
+    const now = Date.now();
+    const elapsed = now - cs.start;
+    const t = Math.min(1, elapsed / cs.duration);
+
+    // Mark done slightly before end so titleCard starts seamlessly
+    if (t >= 0.98 && !cs.done) cs.done = true;
+
+    ctx.save();
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, cw, ch);
+
+    const fade = t < 0.07 ? t / 0.07 : t > 0.90 ? (1 - t) / 0.10 : 1;
+
+    if (t >= 0.05 && t < 0.95) {
+      ctx.globalAlpha = fade;
+
+      // ── Night sky ──
+      const sky = ctx.createLinearGradient(0, 0, 0, ch * 0.62);
+      sky.addColorStop(0, '#04020d');
+      sky.addColorStop(0.5, '#0b0824');
+      sky.addColorStop(1, '#141030');
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, cw, ch);
+
+      // Stars (static seed)
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      for (let s = 0; s < 80; s++) {
+        const sx = ((s * 251 + 137) % 997) / 997 * cw;
+        const sy = ((s * 389 + 71)  % 883) / 883 * ch * 0.5;
+        const sr = s % 5 === 0 ? 1.3 : 0.7;
+        ctx.beginPath(); ctx.arc(sx, sy, sr, 0, Math.PI * 2); ctx.fill();
+      }
+
+      // Distant fog / low clouds
+      const fogGrad = ctx.createLinearGradient(0, ch * 0.50, 0, ch * 0.68);
+      fogGrad.addColorStop(0, 'rgba(20,16,40,0)');
+      fogGrad.addColorStop(1, 'rgba(30,24,50,0.72)');
+      ctx.fillStyle = fogGrad; ctx.fillRect(0, ch * 0.50, cw, ch * 0.18);
+
+      // ── Hollywood Tower Hotel silhouette ──
+      const bx = cw * 0.20, bw = cw * 0.60;
+      const groundY = ch * 0.82;
+
+      // Ground / driveway
+      const driveGrad = ctx.createLinearGradient(0, groundY, 0, ch);
+      driveGrad.addColorStop(0, '#12100a'); driveGrad.addColorStop(1, '#0a0808');
+      ctx.fillStyle = driveGrad; ctx.fillRect(0, groundY, cw, ch - groundY);
+      // Wet pavement reflection strip
+      ctx.fillStyle = 'rgba(60,50,80,0.25)';
+      ctx.fillRect(0, groundY, cw, 6);
+
+      // Wing structures (lower flanking buildings)
+      const wingH = ch * 0.32;
+      ctx.fillStyle = '#0d0b1a';
+      ctx.fillRect(bx, groundY - wingH, bw * 0.18, wingH);               // left wing
+      ctx.fillRect(bx + bw * 0.82, groundY - wingH, bw * 0.18, wingH);   // right wing
+
+      // Main tower body
+      const towerX = bx + bw * 0.22, towerW = bw * 0.56, towerH = ch * 0.54;
+      ctx.fillStyle = '#0e0c1c';
+      ctx.fillRect(towerX, groundY - towerH, towerW, towerH);
+
+      // Art Deco setbacks
+      const sb1X = towerX + towerW * 0.08, sb1W = towerW * 0.84, sb1Y = groundY - towerH - ch * 0.07;
+      ctx.fillRect(sb1X, sb1Y, sb1W, ch * 0.07);
+      const sb2X = towerX + towerW * 0.18, sb2W = towerW * 0.64, sb2Y = sb1Y - ch * 0.06;
+      ctx.fillRect(sb2X, sb2Y, sb2W, ch * 0.06);
+
+      // Upper spire / water tower
+      const spireX = towerX + towerW * 0.35, spireW = towerW * 0.30, spireY = sb2Y - ch * 0.12;
+      ctx.fillStyle = '#0b0a16';
+      ctx.fillRect(spireX, spireY, spireW, ch * 0.12);
+      // Spire tip
+      ctx.beginPath();
+      ctx.moveTo(spireX + spireW / 2, spireY - ch * 0.06);
+      ctx.lineTo(spireX, spireY); ctx.lineTo(spireX + spireW, spireY);
+      ctx.closePath(); ctx.fill();
+
+      // Flagpoles
+      ctx.strokeStyle = '#302a50'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(towerX + towerW * 0.22, sb2Y); ctx.lineTo(towerX + towerW * 0.22, sb2Y - ch * 0.08); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(towerX + towerW * 0.78, sb2Y); ctx.lineTo(towerX + towerW * 0.78, sb2Y - ch * 0.08); ctx.stroke();
+
+      // Art Deco vertical decorative lines on main tower
+      ctx.strokeStyle = 'rgba(60,50,100,0.45)'; ctx.lineWidth = 1;
+      for (let vl = 0; vl < 5; vl++) {
+        const vlx = towerX + (vl + 1) * towerW / 6;
+        ctx.beginPath(); ctx.moveTo(vlx, groundY); ctx.lineTo(vlx, groundY - towerH); ctx.stroke();
+      }
+
+      // Windows — hotel grid
+      const floors = 9, cols = 7;
+      const winW = towerW / cols * 0.45, winH = towerH / floors * 0.38;
+      for (let f = 0; f < floors; f++) {
+        for (let c = 0; c < cols; c++) {
+          const wx = towerX + (c + 0.5) * towerW / cols - winW / 2;
+          const wy = groundY - towerH + (f + 0.55) * towerH / floors - winH / 2;
+          const litSeed = (f * 13 + c * 7) % 17;
+          const lit = litSeed < 5;
+          if (lit) {
+            ctx.fillStyle = `rgba(255,220,130,${0.12 + litSeed * 0.03})`;
+            ctx.fillRect(wx, wy, winW, winH);
+          }
+        }
+      }
+      // Wing windows
+      const wFloors = 5, wCols = 3;
+      for (let side = 0; side < 2; side++) {
+        const wx0 = side === 0 ? bx : bx + bw * 0.82;
+        const ww = bw * 0.18;
+        for (let f = 0; f < wFloors; f++) {
+          for (let c = 0; c < wCols; c++) {
+            const wwx = wx0 + (c + 0.5) * ww / wCols - 5;
+            const wwy = groundY - wingH + (f + 0.6) * wingH / wFloors - 4;
+            const lit = (f + c + side * 3) % 4 === 0;
+            if (lit) { ctx.fillStyle = 'rgba(255,200,80,0.10)'; ctx.fillRect(wwx, wwy, 10, 7); }
+          }
+        }
+      }
+
+      // Sign / marquee on main building entrance
+      const signY = groundY - ch * 0.08, signH = ch * 0.05, signW = bw * 0.30;
+      const signX = bx + (bw - signW) / 2;
+      ctx.fillStyle = 'rgba(10,8,20,0.9)';
+      ctx.fillRect(signX, signY, signW, signH);
+      ctx.strokeStyle = 'rgba(160,120,200,0.55)'; ctx.lineWidth = 1;
+      ctx.strokeRect(signX, signY, signW, signH);
+      ctx.fillStyle = `rgba(200,170,240,${0.6 + 0.4 * Math.sin(elapsed * 0.003)})`;
+      ctx.font = `bold ${Math.max(8, signH * 0.55)}px serif`; ctx.textAlign = 'center';
+      ctx.fillText('TOWER HOTEL', signX + signW / 2, signY + signH * 0.7);
+
+      // ── Lightning ──
+      // Three strikes timed at t≈0.18, 0.45, 0.70
+      const strikes = [0.18, 0.45, 0.70];
+      for (const st of strikes) {
+        const lp = (t - st) / 0.08;
+        if (lp >= 0 && lp < 1) {
+          const la = lp < 0.2 ? lp / 0.2 : Math.max(0, 1 - (lp - 0.2) / 0.8);
+          // Flash
+          ctx.fillStyle = `rgba(230,240,255,${(la * 0.25).toFixed(3)})`;
+          ctx.fillRect(0, 0, cw, ch);
+          // Bolt
+          const boltX = towerX + towerW * (0.3 + ((st * 100) % 40) / 100);
+          ctx.save();
+          ctx.strokeStyle = `rgba(200,220,255,${la.toFixed(2)})`; ctx.lineWidth = 2.5;
+          ctx.shadowColor = '#c0d0ff'; ctx.shadowBlur = 16;
+          ctx.beginPath();
+          ctx.moveTo(boltX + towerW * 0.05, 0);
+          ctx.lineTo(boltX - towerW * 0.03, ch * 0.12);
+          ctx.lineTo(boltX + towerW * 0.06, ch * 0.22);
+          ctx.lineTo(boltX - towerW * 0.02, ch * 0.34);
+          ctx.lineTo(boltX, spireY);
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+          ctx.restore();
+        }
+      }
+
+      // ── Rain ──
+      ctx.save();
+      ctx.strokeStyle = 'rgba(140,170,210,0.22)'; ctx.lineWidth = 1;
+      const rainSeed = Math.floor(elapsed / 40);
+      for (let r = 0; r < 80; r++) {
+        const rx = ((r * 139 + rainSeed * 29) % (cw * 10)) / 10;
+        const ry = ((r * 83  + rainSeed * 13) % (ch  * 10)) / 10;
+        ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx - 3, ry + 15); ctx.stroke();
+      }
+      ctx.restore();
+
+      // ── Car approaching hotel ──
+      // Moves from right (t=0.10) to center-left driveway (t=0.80)
+      const carProgress = Math.max(0, Math.min(1, (t - 0.10) / 0.70));
+      // Ease-in-out cubic
+      const ce = carProgress < 0.5
+        ? 4 * carProgress * carProgress * carProgress
+        : 1 - Math.pow(-2 * carProgress + 2, 3) / 2;
+      const carX = cw * 0.92 - ce * (cw * 0.60);
+      const carY = groundY - ch * 0.035;
+      const carW = cw * 0.13, carH = ch * 0.055;
+
+      // Headlight beams (perspective cones ahead of car)
+      if (carProgress > 0.05) {
+        const beamAlpha = 0.08 + 0.04 * Math.sin(elapsed * 0.002);
+        ctx.save();
+        // Left headlight beam
+        const lg = ctx.createRadialGradient(carX, carY + carH * 0.4, 0, carX - cw * 0.22, carY + carH * 0.5, cw * 0.30);
+        lg.addColorStop(0, `rgba(255,250,200,${beamAlpha * 3})`);
+        lg.addColorStop(1, 'rgba(255,250,200,0)');
+        ctx.fillStyle = lg;
+        ctx.beginPath();
+        ctx.moveTo(carX, carY + carH * 0.35);
+        ctx.lineTo(carX - cw * 0.35, carY + carH * 0.20);
+        ctx.lineTo(carX - cw * 0.35, carY + carH * 0.80);
+        ctx.closePath(); ctx.fill();
+        // Right headlight beam
+        const rg = ctx.createRadialGradient(carX, carY + carH * 0.6, 0, carX - cw * 0.22, carY + carH * 0.5, cw * 0.30);
+        rg.addColorStop(0, `rgba(255,250,200,${beamAlpha * 3})`);
+        rg.addColorStop(1, 'rgba(255,250,200,0)');
+        ctx.fillStyle = rg;
+        ctx.beginPath();
+        ctx.moveTo(carX, carY + carH * 0.65);
+        ctx.lineTo(carX - cw * 0.35, carY + carH * 0.20);
+        ctx.lineTo(carX - cw * 0.35, carY + carH * 0.80);
+        ctx.closePath(); ctx.fill();
+        ctx.restore();
+      }
+
+      // Car body (1940s silhouette)
+      ctx.save();
+      ctx.translate(carX, carY);
+      // Shadow under car
+      const carShadow = ctx.createRadialGradient(carW * 0.4, carH + 4, 0, carW * 0.4, carH + 4, carW * 0.55);
+      carShadow.addColorStop(0, 'rgba(0,0,0,0.5)'); carShadow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = carShadow; ctx.fillRect(-carW * 0.1, carH - 2, carW * 1.2, carH * 0.6);
+      // Main body
+      ctx.fillStyle = '#1a1628';
+      ctx.beginPath();
+      ctx.moveTo(carW * 0.05, carH);
+      ctx.lineTo(0, carH * 0.72);
+      ctx.lineTo(carW * 0.12, carH * 0.45);
+      ctx.lineTo(carW * 0.28, carH * 0.22);
+      ctx.lineTo(carW * 0.70, carH * 0.18);
+      ctx.lineTo(carW * 0.88, carH * 0.38);
+      ctx.lineTo(carW, carH * 0.60);
+      ctx.lineTo(carW, carH);
+      ctx.closePath(); ctx.fill();
+      // Roof
+      ctx.fillStyle = '#120f20';
+      ctx.beginPath();
+      ctx.moveTo(carW * 0.22, carH * 0.45);
+      ctx.lineTo(carW * 0.30, carH * 0.18);
+      ctx.lineTo(carW * 0.70, carH * 0.15);
+      ctx.lineTo(carW * 0.82, carH * 0.42);
+      ctx.closePath(); ctx.fill();
+      // Windows (dark tint)
+      ctx.fillStyle = 'rgba(80,70,120,0.4)';
+      ctx.beginPath();
+      ctx.moveTo(carW * 0.25, carH * 0.42);
+      ctx.lineTo(carW * 0.32, carH * 0.22);
+      ctx.lineTo(carW * 0.68, carH * 0.20);
+      ctx.lineTo(carW * 0.78, carH * 0.42);
+      ctx.closePath(); ctx.fill();
+      // Headlights (two small glowing circles on left side = front)
+      ctx.fillStyle = `rgba(255,250,200,${0.7 + 0.3 * Math.sin(elapsed * 0.003)})`;
+      ctx.beginPath(); ctx.arc(carW * 0.04, carH * 0.58, carW * 0.035, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(carW * 0.04, carH * 0.72, carW * 0.030, 0, Math.PI * 2); ctx.fill();
+      // Wheels
+      ctx.fillStyle = '#0a0810';
+      ctx.beginPath(); ctx.arc(carW * 0.20, carH, carH * 0.26, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(carW * 0.80, carH, carH * 0.26, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#2a2438';
+      ctx.beginPath(); ctx.arc(carW * 0.20, carH, carH * 0.14, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(carW * 0.80, carH, carH * 0.14, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+
+      // Wet road reflection of car
+      ctx.save();
+      ctx.globalAlpha = 0.12;
+      ctx.scale(1, -0.25);
+      ctx.translate(0, -(groundY + 2) * 4 - (groundY - carY - carH));
+      ctx.fillStyle = '#1a1628';
+      ctx.fillRect(carX, carY, carW, carH * 0.8);
+      ctx.restore();
+
+      ctx.globalAlpha = 1;
+    }
+
+    // Fade overlay
+    if (t < 0.07) {
+      ctx.globalAlpha = 1 - t / 0.07;
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, cw, ch);
+    } else if (t > 0.90) {
+      ctx.globalAlpha = (t - 0.90) / 0.10;
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, cw, ch);
+    }
+    ctx.globalAlpha = 1;
+
+    // Title text fades in at t=0.30, stays until t=0.80
+    if (t >= 0.30 && t < 0.85) {
+      const ta = t < 0.38 ? (t - 0.30) / 0.08 : t > 0.78 ? (0.85 - t) / 0.07 : 1;
+      ctx.save();
+      ctx.globalAlpha = ta;
+      ctx.textAlign = 'center';
+      ctx.font = `bold ${Math.min(36, cw / 10)}px Georgia,serif`;
+      ctx.fillStyle = '#c8a0d8';
+      ctx.shadowColor = '#8040a0'; ctx.shadowBlur = 18;
+      ctx.fillText('The Tower Hotel', cw / 2, ch * 0.12);
+      ctx.shadowBlur = 0;
+      ctx.font = `italic ${Math.min(14, cw / 26)}px Georgia,serif`;
+      ctx.fillStyle = 'rgba(180,160,200,0.80)';
+      ctx.fillText('Some guests never check out…', cw / 2, ch * 0.12 + Math.min(36, cw / 10) * 0.9);
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  // ── Hotel Victory Star Cutscene ───────────────────────────────────────────
+  // Stars fly from screen edges, form a line, split into two lines going out
+  // Duration: 3.5 s, then calls showCaseFile()
+  (function initHotelVictoryStars() {})(); // namespace placeholder — stars built lazily
+
+  function drawHotelVictoryCutscene(cw, ch) {
+    const cs = S.hotelVictoryCutscene;
+    if (!cs) return;
+    const now = Date.now();
+    const elapsed = now - cs.start;
+    const t = Math.min(1, elapsed / cs.duration);
+
+    // At end, launch case file
+    if (t >= 1 && !cs._ended) {
+      cs._ended = true;
+      setTimeout(() => showCaseFile(), 80);
+    }
+
+    ctx.save();
+
+    // Dark background (fade in from game)
+    const bgAlpha = Math.min(1, t / 0.12);
+    ctx.fillStyle = `rgba(0,0,8,${bgAlpha.toFixed(3)})`;
+    ctx.fillRect(0, 0, cw, ch);
+
+    // Phase timeline:
+    // 0.00–0.45: stars stream from edges toward center-X
+    // 0.45–0.65: stars settle into a horizontal line at cy
+    // 0.65–0.88: line splits — top half moves up, bottom half moves down (or all split L/R)
+    // 0.88–1.00: fade out
+
+    const STAR_COUNT = 120;
+    const cx = cw / 2, cy = ch / 2;
+
+    // Seed deterministic star positions
+    if (!cs._stars) {
+      cs._stars = [];
+      for (let i = 0; i < STAR_COUNT; i++) {
+        // Origin: random edge position
+        const edge = i % 4;
+        let ox, oy;
+        if      (edge === 0) { ox = (((i * 137) % 100) / 100) * cw; oy = -10; }
+        else if (edge === 1) { ox = cw + 10; oy = (((i * 97) % 100) / 100) * ch; }
+        else if (edge === 2) { ox = (((i * 173) % 100) / 100) * cw; oy = ch + 10; }
+        else                 { ox = -10; oy = (((i * 113) % 100) / 100) * ch; }
+        // Line position: evenly spread along horizontal centre line
+        const lx = (i / STAR_COUNT) * cw;
+        const ly = cy;
+        // Split destination: top half of line goes up, bottom half goes down (two lines)
+        const half = i < STAR_COUNT / 2;
+        const splitDy = half ? -ch * 0.38 : ch * 0.38;
+        cs._stars.push({
+          ox, oy, lx, ly,
+          sx: lx, sy: ly + splitDy,
+          size: 1.0 + ((i * 17) % 10) / 10 * 1.2,
+        });
+      }
+    }
+
+    for (const star of cs._stars) {
+      let px, py;
+
+      if (t < 0.45) {
+        // Phase 1: stream from edge to line position
+        const p = t / 0.45;
+        const ease = 1 - Math.pow(1 - p, 3);
+        px = star.ox + (star.lx - star.ox) * ease;
+        py = star.oy + (star.ly - star.oy) * ease;
+      } else if (t < 0.65) {
+        // Phase 2: on the line, tiny oscillation settling
+        const p = (t - 0.45) / 0.20;
+        const jitter = Math.sin(p * Math.PI) * 3 * (1 - p);
+        px = star.lx;
+        py = star.ly + jitter;
+      } else if (t < 0.88) {
+        // Phase 3: split outward
+        const p = (t - 0.65) / 0.23;
+        const ease = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+        px = star.lx;
+        py = star.ly + (star.sy - star.ly) * ease;
+      } else {
+        // Phase 4: keep split position
+        px = star.lx;
+        py = star.sy;
+      }
+
+      const alpha = t > 0.88 ? (1 - (t - 0.88) / 0.12) : 1;
+      ctx.globalAlpha = Math.max(0, alpha);
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(Math.round(px), Math.round(py), star.size, star.size);
+    }
+
+    ctx.globalAlpha = 1;
     ctx.restore();
   }
 
@@ -5540,6 +5963,49 @@
     }
 
     if (!ev.unlocked || ev.activated) return;
+
+    // Directional arrow pointing toward elevator (screen-edge compass style)
+    if (!ev.nearElevator && ev.serviceElevatorPos && S.cam) {
+      const ep = ev.serviceElevatorPos;
+      const ecx = ep.x + ep.w / 2, ecy = ep.y + ep.h / 2;
+      const dx = ecx - S.me.x, dy = ecy - S.me.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > 160) { // only show when not on top of it
+        const dir = Math.atan2(dy, dx);
+        const cos = Math.cos(dir), sin = Math.sin(dir);
+        const margin = 54;
+        // Find where ray from center hits screen edge
+        let t = Infinity;
+        if (cos > 0.001)  t = Math.min(t, (cw / 2 - margin) / cos);
+        else if (cos < -0.001) t = Math.min(t, (cw / 2 - margin) / (-cos));
+        if (sin > 0.001)  t = Math.min(t, (ch / 2 - margin) / sin);
+        else if (sin < -0.001) t = Math.min(t, (ch / 2 - margin) / (-sin));
+        const ax = cw / 2 + cos * t, ay = ch / 2 + sin * t;
+        const pulse = 0.70 + 0.30 * Math.sin(now * 0.004);
+        ctx.save();
+        ctx.translate(ax, ay);
+        ctx.rotate(dir);
+        ctx.globalAlpha = pulse;
+        // Outer glow
+        ctx.shadowColor = '#40ff60'; ctx.shadowBlur = 12;
+        ctx.fillStyle = '#22c55e';
+        ctx.strokeStyle = '#000a';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(16, 0); ctx.lineTo(-10, -9); ctx.lineTo(-6, 0); ctx.lineTo(-10, 9);
+        ctx.closePath();
+        ctx.fill(); ctx.stroke();
+        ctx.shadowBlur = 0;
+        // Distance label
+        ctx.rotate(-dir);
+        ctx.globalAlpha = pulse * 0.85;
+        ctx.fillStyle = '#000a';
+        ctx.fillRect(-18, 14, 36, 13);
+        ctx.fillStyle = '#80ff80'; ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center';
+        ctx.fillText(`${Math.round(dist)}px`, 0, 24);
+        ctx.restore();
+      }
+    }
 
     // "Near elevator" waiting panel
     if (ev.nearElevator) {
@@ -6003,6 +6469,29 @@
     ctx.closePath();
     ctx.fill();
 
+    // Hotel service elevator marker (when unlocked, not yet activated)
+    if (S.hotelElevator && S.hotelElevator.unlocked && !S.hotelElevator.activated) {
+      const ep = S.hotelElevator.serviceElevatorPos;
+      if (ep) {
+        const emx = mmX + (ep.x + ep.w / 2) * sc, emy = mmY + (ep.y + ep.h / 2) * sc;
+        const epulse = 0.6 + 0.4 * Math.sin(Date.now() * 0.005);
+        // Pulsing green cross/diamond
+        ctx.save();
+        ctx.globalAlpha = epulse;
+        ctx.strokeStyle = '#40ff60'; ctx.lineWidth = 1.5;
+        ctx.shadowColor = '#40ff60'; ctx.shadowBlur = 4;
+        ctx.beginPath(); // diamond
+        ctx.moveTo(emx, emy - 5); ctx.lineTo(emx + 5, emy);
+        ctx.lineTo(emx, emy + 5); ctx.lineTo(emx - 5, emy);
+        ctx.closePath(); ctx.stroke();
+        ctx.fillStyle = `rgba(40,255,80,${(epulse * 0.4).toFixed(2)})`;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    }
+
     ctx.restore();
 
     // Ghost proximity pulse border
@@ -6321,6 +6810,14 @@
       if (tool !== undefined) p.activeTool = tool;
     });
 
+    socket.on('ghost:evidence', ({ type, playerIndex }) => {
+      if (!S || playerIndex !== S.myPlayerIndex) return;
+      const labels = { cold_presence: '🌡 Cold Presence detected!', emf_level5: '📡 EMF Level 5 reading!' };
+      S.attemptsMsg = labels[type] || '🔍 Evidence detected!';
+      clearTimeout(S.attemptsMsgTimer);
+      S.attemptsMsgTimer = setTimeout(() => { if (S) S.attemptsMsg = null; }, 3000);
+    });
+
     socket.on('ghost:player_left', ({ playerIndex }) => {
       if (!S) return;
       delete S.otherPlayers[playerIndex];
@@ -6359,7 +6856,11 @@
       S.celebPulse = { start: Date.now() };
       showReveal(name, personality, color, description, identifiedBy === S.myPlayerIndex);
       if (S.identified >= S.totalGhosts) {
-        setTimeout(() => showCaseFile(), 400);
+        if (S.area === 'hotel') {
+          setTimeout(() => { if (S) S.hotelVictoryCutscene = { start: Date.now(), duration: 3500 }; }, 800);
+        } else {
+          setTimeout(() => showCaseFile(), 400);
+        }
       }
     });
 
@@ -6501,6 +7002,9 @@
       if (!S || !S.hotelElevator) return;
       S.hotelElevator.insidePlayers = insidePlayers;
       S.hotelElevator.totalHuman    = totalHuman;
+      // Reset countdown state — server cancelled the activation (player left)
+      S.hotelElevator.activating   = false;
+      S.hotelElevator.countdownEnd  = 0;
     });
 
     socket.on('ghost:elevator_ready', ({ countdownMs }) => {
@@ -6626,6 +7130,9 @@
       } : null,
       hotelCutscene: null,
       hotelBasement: !!(gd.hotelElevator && gd.hotelElevator.activated),
+      hotelIntroCutscene: (gd.area === 'hotel' && !gd.hotelElevator?.activated)
+        ? { start: Date.now(), duration: 7500, done: false } : null,
+      hotelVictoryCutscene: null,
     };
 
     // Init alligators for hotel
@@ -6646,7 +7153,8 @@
       }
     }
 
-    S.titleCard = { start: Date.now(), done: false, inputGated: true };
+    const introDuration = S.hotelIntroCutscene ? S.hotelIntroCutscene.duration : 0;
+    S.titleCard = { start: Date.now() + introDuration, done: false, inputGated: true };
 
     bindSocketEvents();
     startLoop();
@@ -6665,7 +7173,7 @@
     levelVoteState = null;
     voteButtonRects = [];
     farewellGhost = null;
-    if (S) { S.hotelCutscene = null; S.hotelBasement = false; }
+    if (S) { S.hotelCutscene = null; S.hotelBasement = false; S.hotelIntroCutscene = null; S.hotelVictoryCutscene = null; }
     celebrationParticles = [];
     ouijaCandleParticles = [];
     flickerOverride = null;

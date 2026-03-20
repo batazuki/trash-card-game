@@ -1399,9 +1399,8 @@ module.exports = function(io, helpers) {
             socket.emit('ghost:wrong_name', { ghostId, attemptsLeft: 0, respawned: true });
           } else {
             // Basement mode: release claim without respawning
-            ghost.claimedBy = null;
+            // (ghost:released already emitted above; just reset attempts)
             ghost.ouijaAttempts = 0;
-            io.to(roomId).emit('ghost:released', { ghostId });
             socket.emit('ghost:wrong_name', { ghostId, attemptsLeft: 0, respawned: false });
           }
         } else {
