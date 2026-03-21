@@ -34,6 +34,7 @@
 
   --font: 'Nunito', sans-serif;
   --font-display: 'Fredoka', 'Nunito', sans-serif;
+  --font-arcade: 'Syne', 'Fredoka', sans-serif;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -2181,51 +2182,68 @@ body.game-ghost .ghost-count-btn.active {
 .game-card {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  padding: 16px 10px 14px;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  min-height: 158px;
   border-radius: 20px;
-  background: rgba(255,255,255,0.72);
-  border: 1.5px solid rgba(244,114,182,0.30);
+  background: #0a0a12;
+  border: 1.5px solid rgba(255,255,255,0.10);
   cursor: pointer;
-  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
   text-align: center;
   user-select: none;
   touch-action: manipulation;
-  box-shadow: 0 3px 14px rgba(236,72,153,0.10), inset 0 1px 0 rgba(255,255,255,0.85);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.06);
+  justify-content: flex-end;
+  overflow: hidden;
 }
 .game-card:active { transform: scale(0.94); }
 .game-card-icon {
-  font-size: 28px;
+  font-size: 44px;
   line-height: 1;
   display: block;
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  filter: drop-shadow(0 4px 14px rgba(0,0,0,0.55));
+  pointer-events: none;
 }
 .game-card-name {
-  font-size: 13px;
-  font-weight: 900;
-  color: var(--text);
-  line-height: 1.2;
+  font-family: var(--font-arcade);
+  font-size: 15px;
+  font-weight: 800;
+  color: #f1f5f9;
+  line-height: 1.15;
   display: block;
+  letter-spacing: 0.01em;
 }
 .game-card-tagline {
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 600;
-  color: var(--text-dim);
+  color: rgba(255,255,255,0.44);
   line-height: 1.35;
   display: block;
 }
 .game-card-players {
-  font-size: 9px;
+  font-size: 8.5px;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--accent);
-  display: block;
+  letter-spacing: 0.6px;
+  color: var(--gc, var(--accent));
+  display: inline-block;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 5px;
+  padding: 1px 5px;
+  margin-top: 2px;
 }
 .game-card-learn {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
-  color: var(--accent2);
+  color: rgba(255,255,255,0.28);
   background: none;
   border: none;
   cursor: pointer;
@@ -2233,8 +2251,9 @@ body.game-ghost .ghost-count-btn.active {
   padding: 2px 0 0;
   touch-action: manipulation;
   user-select: none;
+  display: block;
 }
-.game-card-learn:hover { text-decoration: underline; }
+.game-card-learn:hover { color: rgba(255,255,255,0.65); text-decoration: underline; }
 
 /* ── Friends section ── */
 #friends-section {
@@ -2275,19 +2294,15 @@ body.game-ghost .ghost-count-btn.active {
 
 /* ── Eleven theme: carousel overrides ── */
 body.game-trash-eleven .game-card {
-  background: rgba(0,0,50,0.55);
   border-color: rgba(0,229,255,0.2);
   box-shadow: 0 2px 10px rgba(0,229,255,0.06);
 }
 body.game-trash-eleven .game-card.selected {
   border-color: #e50914;
-  background: rgba(229,9,20,0.12);
   box-shadow: 0 4px 18px rgba(229,9,20,0.3);
 }
-body.game-trash-eleven .game-card-name { color: var(--text); }
-body.game-trash-eleven .game-card-tagline { color: var(--text-dim); }
 body.game-trash-eleven .game-card-players { color: #00e5ff; }
-body.game-trash-eleven .game-card-learn { color: #00b4cc; }
+body.game-trash-eleven .game-card-learn { color: rgba(0,180,204,0.45); }
 body.game-trash-eleven .pregame-game-badge {
   background: rgba(0,0,40,0.55);
   border-color: rgba(0,229,255,0.2);
@@ -2441,29 +2456,30 @@ body.game-hockey .gear-btn:hover {
   margin-bottom: 2px;
 }
 .btn-back {
-  background: none;
-  border: none;
+  background: rgba(255,255,255,0.62);
+  border: 1.5px solid rgba(244,114,182,0.38);
   font-family: var(--font);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
-  color: var(--text-dim);
+  color: var(--text);
   cursor: pointer;
-  padding: 6px 8px 6px 2px;
-  border-radius: 10px;
+  padding: 7px 13px;
+  border-radius: 12px;
   touch-action: manipulation;
   user-select: none;
-  transition: color 0.15s, background 0.15s;
+  transition: background 0.15s, box-shadow 0.15s;
   flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(236,72,153,0.12);
 }
-.btn-back:hover  { color: var(--text); background: rgba(255,255,255,0.5); }
+.btn-back:hover  { background: rgba(255,255,255,0.9); box-shadow: 0 3px 14px rgba(236,72,153,0.22); }
 .btn-back:active { transform: scale(0.95); }
 
 .game-view-title {
-  font-size: 13px;
-  font-weight: 900;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 2px;
+  font-family: var(--font-arcade);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: 0.02em;
   flex: 1;
   text-align: right;
 }
@@ -2500,35 +2516,52 @@ body.game-hockey .gear-btn:hover {
 /* Selected state picks up the game's own color */
 .game-card.selected {
   border-color: var(--gc, var(--accent));
-  background: color-mix(in srgb, var(--gc, var(--accent)) 10%, rgba(255,255,255,0.8));
+  border-width: 2px;
   transform: translateY(-2px);
 }
 
-/* card-body: wraps all text content */
+/* card-body: wraps all text content — sits at card bottom */
 .game-card-body {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 4px;
+  align-items: flex-start;
+  gap: 3px;
   width: 100%;
+  padding: 9px 13px 12px;
+  position: relative;
+  z-index: 3;
+  border-radius: 0 0 19px 19px;
 }
 
-/* Ghost Detective (7th/odd last card) spans full width */
+/* Ghost Detective (7th/odd last card) — horizontal poster */
 .game-card:last-child:nth-child(odd) {
   grid-column: 1 / -1;
   flex-direction: row;
-  gap: 14px;
-  align-items: center;
-  padding: 12px 18px;
-  display: flex;
+  min-height: 90px;
+  align-items: stretch;
   text-align: left;
+  justify-content: flex-start;
 }
-.game-card:last-child:nth-child(odd) .game-card-icon { font-size: 32px; flex-shrink: 0; }
-.game-card:last-child:nth-child(odd) .game-card-name { font-size: 15px; }
+.game-card:last-child:nth-child(odd) .game-card-icon {
+  position: relative;
+  top: auto; left: auto;
+  transform: none;
+  font-size: 44px;
+  flex-shrink: 0;
+  width: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 0 20px rgba(139,92,246,0.65)) drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+  pointer-events: none;
+}
+.game-card:last-child:nth-child(odd) .game-card-name { font-size: 17px; }
 .game-card:last-child:nth-child(odd) .game-card-body {
   flex: 1;
   align-items: flex-start;
-  gap: 2px;
+  justify-content: center;
+  border-radius: 0 19px 19px 0;
+  gap: 3px;
 }
 
 /* ── Main view: join card ── */
@@ -3040,14 +3073,7 @@ body.game-ghost .pregame-settings-text {
   animation: lobbyFadeUp 0.35s cubic-bezier(0.4, 0, 0.2, 1) 0.17s both;
 }
 
-/* ── Per-game card tint at rest ── */
-.game-card[data-game="trash"]        { background-image: linear-gradient(135deg, rgba(236,72,153,0.18) 0%, transparent 65%); }
-.game-card[data-game="trash-eleven"] { background-image: linear-gradient(135deg, rgba(220,38,38,0.18)  0%, transparent 65%); }
-.game-card[data-game="war"]          { background-image: linear-gradient(135deg, rgba(249,115,22,0.18) 0%, transparent 65%); }
-.game-card[data-game="solitaire"]    { background-image: linear-gradient(135deg, rgba(16,185,129,0.18) 0%, transparent 65%); }
-.game-card[data-game="hockey"]       { background-image: linear-gradient(135deg, rgba(59,130,246,0.18) 0%, transparent 65%); }
-.game-card[data-game="sketch"]       { background-image: linear-gradient(135deg, rgba(245,158,11,0.18) 0%, transparent 65%); }
-.game-card[data-game="ghost"]        { background-image: linear-gradient(135deg, rgba(139,92,246,0.18) 0%, transparent 65%); }
+/* ── Per-game card tint at rest — superseded by B4 arcade scenes ── */
 
 /* ── Player join slide-in animation ── */
 @keyframes playerSlideIn {
@@ -3108,7 +3134,7 @@ body.game-ghost .pregame-game-badge {
    ═══════════════════════════════════════════════ */
 .game-card {
   transform-style: preserve-3d;
-  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out, border-color 0.15s, background 0.15s;
+  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out, border-color 0.15s;
 }
 .game-card::after {
   content: '';
@@ -3126,40 +3152,65 @@ body.game-ghost .pregame-game-badge {
 }
 
 /* ═══════════════════════════════════════════════
-   B4 — CARD ILLUSTRATED MINI-BACKGROUNDS
-   Applied directly on the card element (not ::before) so the
-   accent-bar ::before remains a clean 4px strip.
+   B4 — ARCADE POSTER SCENE BACKGROUNDS
+   Each game gets a distinct atmospheric dark scene.
+   Bottom gradient = dark info-panel zone for text.
+   Ghost card uses a left→right gradient (horizontal).
    ═══════════════════════════════════════════════ */
-.game-card[data-game="ghost"] {
-  background-image: linear-gradient(135deg, rgba(139,92,246,0.18) 0%, transparent 65%),
-    radial-gradient(ellipse at 70% 30%, rgba(30,20,70,0.28) 0%, rgba(10,8,26,0.22) 60%);
-}
+
+/* Trash — deep casino felt, green spotlight */
 .game-card[data-game="trash"] {
-  background-image: linear-gradient(135deg, rgba(236,72,153,0.18) 0%, transparent 65%),
-    radial-gradient(ellipse at center, rgba(45,90,39,0.26) 0%, rgba(26,58,20,0.20) 100%);
+  background-image:
+    linear-gradient(to top, rgba(3,10,4,0.94) 0%, rgba(3,10,4,0.88) 36%, rgba(3,10,4,0.10) 56%, transparent 70%),
+    radial-gradient(ellipse at 50% 36%, rgba(18,76,32,1) 0%, rgba(6,32,12,1) 55%, rgba(2,8,4,1) 100%);
 }
-.game-card[data-game="war"] {
-  background-image: linear-gradient(135deg, rgba(249,115,22,0.18) 0%, transparent 65%),
-    linear-gradient(135deg, rgba(139,26,26,0.24) 0%, rgba(26,26,139,0.22) 100%);
-}
-.game-card[data-game="solitaire"] {
-  background-image: linear-gradient(135deg, rgba(16,185,129,0.18) 0%, transparent 65%),
-    radial-gradient(ellipse at center, rgba(26,77,46,0.26) 0%, rgba(13,41,24,0.20) 100%);
-}
-.game-card[data-game="hockey"] {
-  background-image: linear-gradient(135deg, rgba(59,130,246,0.18) 0%, transparent 65%),
-    linear-gradient(180deg, rgba(10,42,74,0.24) 0%, rgba(10,61,92,0.24) 50%, rgba(26,96,128,0.22) 100%);
-}
-.game-card[data-game="sketch"] {
-  background-image: linear-gradient(135deg, rgba(245,158,11,0.18) 0%, transparent 65%),
-    linear-gradient(135deg, rgba(80,50,0,0.26) 0%, rgba(42,20,0,0.22) 100%);
-}
-.game-card[data-game="oldmaid"] {
-  background-image: linear-gradient(135deg, rgba(74,26,110,0.24) 0%, rgba(42,10,78,0.22) 100%);
-}
+
+/* Trash/Eleven — dark noir, deep crimson and midnight blue */
 .game-card[data-game="trash-eleven"] {
-  background-image: linear-gradient(135deg, rgba(220,38,38,0.18) 0%, transparent 65%),
-    linear-gradient(135deg, rgba(26,10,10,0.24) 0%, rgba(10,10,42,0.22) 100%);
+  background-image:
+    linear-gradient(to top, rgba(8,2,2,0.96) 0%, rgba(8,2,2,0.88) 36%, rgba(8,2,2,0.10) 56%, transparent 70%),
+    linear-gradient(158deg, rgba(96,8,6,1) 0%, rgba(38,4,4,1) 45%, rgba(4,2,18,1) 100%);
+}
+
+/* War — crimson battle sky, scorched earth */
+.game-card[data-game="war"] {
+  background-image:
+    linear-gradient(to top, rgba(10,2,0,0.96) 0%, rgba(10,2,0,0.88) 36%, rgba(10,2,0,0.10) 56%, transparent 70%),
+    linear-gradient(172deg, rgba(116,16,6,1) 0%, rgba(64,8,2,1) 42%, rgba(14,6,2,1) 100%);
+}
+
+/* Solitaire — casino emerald baize */
+.game-card[data-game="solitaire"] {
+  background-image:
+    linear-gradient(to top, rgba(0,10,5,0.96) 0%, rgba(0,10,5,0.88) 36%, rgba(0,10,5,0.10) 56%, transparent 70%),
+    radial-gradient(ellipse at 50% 40%, rgba(0,74,30,1) 0%, rgba(0,38,14,1) 55%, rgba(0,12,5,1) 100%);
+}
+
+/* Hockey — deep icy rink, polar blue */
+.game-card[data-game="hockey"] {
+  background-image:
+    linear-gradient(to top, rgba(0,6,20,0.96) 0%, rgba(0,6,20,0.88) 36%, rgba(0,6,20,0.10) 56%, transparent 70%),
+    radial-gradient(ellipse at 50% 38%, rgba(4,58,118,1) 0%, rgba(2,28,72,1) 55%, rgba(0,6,28,1) 100%);
+}
+
+/* Sketch — warm amber studio, artist's dark room */
+.game-card[data-game="sketch"] {
+  background-image:
+    linear-gradient(to top, rgba(16,7,0,0.96) 0%, rgba(16,7,0,0.88) 36%, rgba(16,7,0,0.10) 56%, transparent 70%),
+    linear-gradient(152deg, rgba(94,50,8,1) 0%, rgba(50,26,4,1) 50%, rgba(18,9,2,1) 100%);
+}
+
+/* Ghost Detective — haunted indigo night (horizontal: left scene, right info) */
+.game-card[data-game="ghost"] {
+  background-image:
+    linear-gradient(to right, rgba(4,2,18,0.0) 0%, rgba(4,2,18,0.72) 44%, rgba(4,2,18,0.94) 100%),
+    radial-gradient(ellipse at 28% 50%, rgba(68,20,210,1) 0%, rgba(24,6,92,1) 50%, rgba(4,2,18,1) 100%);
+}
+
+.game-card[data-game="oldmaid"] {
+  background-image:
+    linear-gradient(to top, rgba(8,2,14,0.96) 0%, rgba(8,2,14,0.88) 36%, rgba(8,2,14,0.10) 56%, transparent 70%),
+    linear-gradient(135deg, rgba(74,26,110,1) 0%, rgba(32,8,60,1) 100%);
 }
 
 /* ═══════════════════════════════════════════════

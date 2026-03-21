@@ -1138,7 +1138,7 @@
     const panW = 76, panMargin = 8, panX = cw - panW - panMargin;
     const toolH = 48, toolGap = 5;
     const toolsY = Math.round(ch * 0.44 - 30);
-    const sigH = 36, sigY = toolsY - sigH - toolGap;
+    const sigH = 44, sigY = toolsY - sigH - toolGap;
 
     // Signal button (right panel, above tools)
     if (tx >= panX && tx <= panX + panW && ty >= sigY && ty <= sigY + sigH) {
@@ -1152,8 +1152,8 @@
       return;
     }
 
-    // Journal button (top bar, right)
-    const jbW = 38, jbH = 32, jbX = cw - jbW - 6, jbY = (topH - jbH) / 2;
+    // Journal button (top bar, left — after ghost icons)
+    const jbW = 34, jbH = 30, jbX = 10 + (S.totalGhosts || 0) * 20 + 8, jbY = (topH - jbH) / 2;
     if (tx >= jbX && tx <= jbX + jbW && ty >= jbY && ty <= jbY + jbH) {
       S.journal = !S.journal; return;
     }
@@ -1174,6 +1174,8 @@
         if (S.activeTool !== t) {
           gaSfxTool();
           S.activeTool = t;
+          S.toolSwitchFlash = Date.now();
+          S.toolSwitchTool = t;
           // C2: init mic audio when microphone tool activated and a ghost personality is known
           if (t === 'microphone') {
             const foundPersonality = MIC.personality || (() => {
@@ -1193,7 +1195,7 @@
     // Place board button (bottom center-right)
     if (S.nearGhost && !S.nearGhost.claimedBy) {
       const pbW = 148, pbH = 46;
-      const pbX = Math.round(cw / 2 + 10);
+      const pbX = Math.round(cw * 0.52 + 4);
       const pbY = ch - pbH - 28;
       if (tx >= pbX && tx <= pbX + pbW && ty >= pbY && ty <= pbY + pbH) {
         socket.emit('ghost:place_board', { roomId: S.roomId, ghostId: S.nearGhost.id });
@@ -6853,7 +6855,7 @@
     const toolH = 48, toolGap = 5;
     const toolsH = tools.length * toolH + (tools.length - 1) * toolGap;
     const toolsY = Math.round(ch * 0.44 - 30);
-    const sigH = 36;
+    const sigH = 44;
     const sigY = toolsY - sigH - toolGap;
 
     // ── Top info bar ───────────────────────────────────────────────────
@@ -6862,24 +6864,27 @@
     ctx.fillStyle = 'rgba(255,255,255,0.06)';
     ctx.fillRect(0, topH - 1, cw, 1);  // subtle glass edge
 
-    // Ghost progress (left)
-    ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 13px monospace'; ctx.textAlign = 'left';
-    ctx.fillText(`👻 ${S.identified}/${S.totalGhosts}`, 14, 27);
+    // Ghost progress: icon row (bright = identified, dim = remaining)
+    ctx.font = '13px serif';
+    ctx.textAlign = 'left';
+    for (let _g = 0; _g < (S.totalGhosts || 0); _g++) {
+      ctx.globalAlpha = _g < S.identified ? 1.0 : 0.22;
+      ctx.fillText('👻', 10 + _g * 20, 25);
+    }
+    ctx.globalAlpha = 1;
 
     // Area label (center)
     ctx.fillStyle = '#94a3b8'; ctx.font = '12px monospace'; ctx.textAlign = 'center';
     ctx.fillText(AREA_DEFS[S.area]?.label || '', cw / 2, 27);
 
-    // Role badge (based on avatar)
-    const roleNames = ['Pirate', 'Explorer', 'Officer', 'Medic'];
-    const roleIcons = ['\uD83C\uDFF4\u200D\u2620\uFE0F', '\uD83C\uDF3F', '\uD83D\uDC6E', '\u2695\uFE0F'];
-    const myRole = roleNames[S.me.avatar || 0] || roleNames[0];
-    const myRoleIcon = roleIcons[S.me.avatar || 0] || roleIcons[0];
-    ctx.fillStyle = '#6b7280'; ctx.font = '10px monospace'; ctx.textAlign = 'left';
-    ctx.fillText(`${myRoleIcon} ${myRole}`, 14, 40);
+    // Avatar indicator: correct 6-avatar icons (Detective/Witch/Explorer/Hunter/Scientist/Kid)
+    const avIcons = ['🔦', '🧙', '🌿', '🏹', '🧪', '⭐'];
+    const myAvIcon = avIcons[Math.min(S.me.avatar || 0, avIcons.length - 1)];
+    ctx.font = '11px serif'; ctx.textAlign = 'left';
+    ctx.fillText(myAvIcon, 12, 41);
 
-    // Journal toggle button (right, inside top bar)
-    const jbW = 38, jbH = 32, jbX = cw - jbW - 6, jbY = (topH - jbH) / 2;
+    // Journal toggle button (left side, after ghost icons)
+    const jbW = 34, jbH = 30, jbX = 10 + (S.totalGhosts || 0) * 20 + 8, jbY = (topH - jbH) / 2;
     ctx.fillStyle = S.journal ? 'rgba(124,58,237,0.85)' : 'rgba(255,255,255,0.08)';
     rrect(ctx, jbX, jbY, jbW, jbH, 8); ctx.fill();
     if (S.journal) { ctx.strokeStyle = '#a78bfa'; ctx.lineWidth = 1.5; rrect(ctx, jbX, jbY, jbW, jbH, 8); ctx.stroke(); }
@@ -6890,18 +6895,22 @@
 
     // Signal button (above tool cluster)
     const sigCool = S.signalCooldown > 0;
-    ctx.fillStyle = sigCool ? 'rgba(20,20,30,0.82)' : 'rgba(160,50,10,0.90)';
+    const sigPulse = !sigCool ? (Math.sin(Date.now() / 520) * 0.5 + 0.5) : 0;
+    ctx.fillStyle = sigCool ? 'rgba(20,20,30,0.82)' : `rgba(${210 + Math.round(sigPulse * 18)},72,0,0.95)`;
     rrect(ctx, panX, sigY, panW, sigH, 10); ctx.fill();
-    if (!sigCool) { ctx.strokeStyle = '#ff8040'; ctx.lineWidth = 1.5; rrect(ctx, panX, sigY, panW, sigH, 10); ctx.stroke(); }
-    ctx.font = '14px serif'; ctx.textAlign = 'center';
-    ctx.fillText('📣', panX + panW / 2, sigY + 14);
-    ctx.fillStyle = sigCool ? '#666' : '#ffaa60'; ctx.font = 'bold 9px monospace';
-    ctx.fillText(sigCool ? `${Math.ceil(S.signalCooldown / 1000)}s` : 'SIGNAL', panX + panW / 2, sigY + 28);
+    if (!sigCool) {
+      ctx.strokeStyle = `rgba(255,${130 + Math.round(sigPulse * 70)},50,${0.65 + sigPulse * 0.35})`;
+      ctx.lineWidth = 1.8; rrect(ctx, panX, sigY, panW, sigH, 10); ctx.stroke();
+    }
+    ctx.font = '15px serif'; ctx.textAlign = 'center';
+    ctx.fillText('📣', panX + panW / 2, sigY + 18);
+    ctx.fillStyle = sigCool ? '#555' : '#ffcc88'; ctx.font = 'bold 11px monospace';
+    ctx.fillText(sigCool ? `${Math.ceil(S.signalCooldown / 1000)}s` : 'SIGNAL', panX + panW / 2, sigY + 34);
 
     // Place Board button (bottom center-right, away from minimap)
     if (S.nearGhost && !S.nearGhost.claimedBy) {
       const pbW = 148, pbH = 46;
-      const pbX = Math.round(cw / 2 + 10);
+      const pbX = Math.round(cw * 0.52 + 4);
       const pbY = ch - pbH - 28;
       const t0 = Date.now();
       const pulse = 0.80 + 0.20 * Math.sin(t0 / 370);
@@ -6937,10 +6946,10 @@
           ctx.fillStyle = '#ffdd00'; ctx.font = 'bold 8px monospace';
           ctx.fillText('2×', bx + panW - 10, by + 13);
         }
-        // 5 segmented bars
-        const nbars = 5, barH = [6,8,10,12,14];
+        // 5 segmented bars (wider + taller for readability)
+        const nbars = 5, barH = [8,11,13,16,19];
         const litBars = Math.round((sig / 100) * nbars);
-        const segW = 8, segGap = 3;
+        const segW = 10, segGap = 3;
         const totalW = nbars * segW + (nbars - 1) * segGap;
         const startX = bx + (panW - totalW) / 2;
         const baseY = by + toolH - 5;
@@ -6951,6 +6960,12 @@
           const barColor = b >= 4 ? '#ff2244' : b >= 3 ? '#ff8800' : b >= 2 ? '#ffdd00' : '#00ff88';
           ctx.fillStyle = lit ? barColor : 'rgba(255,255,255,0.12)';
           ctx.fillRect(sx, baseY - sh, segW, sh);
+        }
+        // Percentage readout when signal is detected
+        if (sig > 8) {
+          ctx.fillStyle = active ? 'rgba(0,255,136,0.85)' : 'rgba(68,187,119,0.7)';
+          ctx.font = 'bold 8px monospace'; ctx.textAlign = 'center';
+          ctx.fillText(`${Math.round(sig)}%`, bx + panW / 2, by + 24);
         }
         if (active && sig > 0) {
           const pulse = (Math.sin(Date.now() / 180) + 1) / 2;
@@ -6964,10 +6979,10 @@
         ctx.fillStyle = active ? 'rgba(96,165,250,0.85)' : 'rgba(20,20,30,0.78)';
         rrect(ctx, bx, by, panW, toolH, 10); ctx.fill();
         if (active) { ctx.strokeStyle = '#60a5fa'; ctx.lineWidth = 2; rrect(ctx, bx, by, panW, toolH, 10); ctx.stroke(); }
-        ctx.font = '20px serif'; ctx.textAlign = 'center';
-        ctx.fillText(icons[t], bx + panW / 2, by + 23);
-        ctx.fillStyle = active ? '#93c5fd' : '#64748b'; ctx.font = 'bold 8px monospace';
-        ctx.fillText(labels[t], bx + panW / 2, by + 35);
+        ctx.fillStyle = active ? '#93c5fd' : '#64748b'; ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center';
+        ctx.fillText(labels[t] || t.toUpperCase().slice(0, 5), bx + panW / 2, by + 13);
+        ctx.font = '20px serif';
+        ctx.fillText(icons[t], bx + panW / 2, by + 32);
         // Signal bar
         ctx.fillStyle = 'rgba(255,255,255,0.18)';
         ctx.fillRect(bx + 6, by + toolH - 9, panW - 12, 4);
@@ -6975,6 +6990,27 @@
         ctx.fillRect(bx + 6, by + toolH - 9, (panW - 12) * (sig / 100), 4);
       }
     });
+
+    // Tool switch flash ring
+    if (S.toolSwitchFlash && S.toolSwitchTool) {
+      const elapsed = Date.now() - S.toolSwitchFlash;
+      if (elapsed < 380) {
+        const flashAlpha = (1 - elapsed / 380) * 0.85;
+        const flashR = 5 + (elapsed / 380) * 24;
+        const tIdx = tools.indexOf(S.toolSwitchTool);
+        if (tIdx >= 0) {
+          ctx.save();
+          ctx.strokeStyle = `rgba(255,255,255,${flashAlpha})`;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(panX + panW / 2, toolsY + tIdx * (toolH + toolGap) + toolH / 2, flashR, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+      } else {
+        S.toolSwitchFlash = 0;
+      }
+    }
 
     // C1: Thermometer bar for Doctor avatar (index 3)
     if (S.me.avatar === 3) {
