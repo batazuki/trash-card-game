@@ -860,6 +860,42 @@ function buildAvatarStatHTML(av) {
   return statLabel(av.flashMult, '🔦') + statLabel(av.emfMult, '📡') + statLabel(av.soundMult, '🎙️');
 }
 
+// ── Ghost avatar portrait canvas renderer ─────────────────────────────────
+function drawAvatarPortrait(cvs, av) {
+  const w = cvs.width, h = cvs.height;
+  const cx = w / 2, cy = Math.round(h * 0.62);
+  const r  = Math.round(Math.min(w, h) * 0.34);
+  const c  = cvs.getContext("2d");
+  c.clearRect(0, 0, w, h);
+  // Atmospheric aura
+  const aura = c.createRadialGradient(cx, cy, 0, cx, cy, r * 1.7);
+  aura.addColorStop(0,   av.body + 'aa');
+  aura.addColorStop(0.5, av.body + '33');
+  aura.addColorStop(1,   av.body + '00');
+  c.fillStyle = aura;
+  c.beginPath(); c.arc(cx, cy, r * 1.7, 0, Math.PI * 2); c.fill();
+  // Body sphere with gradient
+  const bodyGrd = c.createRadialGradient(cx - r * 0.22, cy - r * 0.22, 0, cx, cy, r);
+  bodyGrd.addColorStop(0,    av.body + 'ff');
+  bodyGrd.addColorStop(0.65, av.body + 'ee');
+  bodyGrd.addColorStop(1,    av.body + '88');
+  c.fillStyle = bodyGrd;
+  c.shadowColor = av.body; c.shadowBlur = 10;
+  c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.fill();
+  c.shadowBlur = 0;
+  // Rim highlight
+  c.strokeStyle = 'rgba(255,255,255,0.22)'; c.lineWidth = 1.5;
+  c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.stroke();
+  // Glint arc
+  c.strokeStyle = 'rgba(255,255,255,0.18)'; c.lineWidth = 1;
+  c.beginPath(); c.arc(cx - r * 0.22, cy - r * 0.22, r * 0.38, Math.PI * 0.9, Math.PI * 1.55); c.stroke();
+  // Emoji
+  const emojiPx = Math.round(r * 1.1);
+  c.font = `${emojiPx}px serif`;
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText(av.emoji, cx, cy - r * 0.62);
+}
+
 // ── Ghost avatar picker ────────────────────────────────────────────────────
 function buildGhostAvatarPicker() {
   const grid = $("ghost-avatar-grid");
@@ -869,15 +905,12 @@ function buildGhostAvatarPicker() {
     const btn = document.createElement("button");
     btn.className = "ghost-avatar-btn" + (idx === _ghostAvatar ? " active" : "");
     btn.setAttribute("aria-label", av.name);
+    btn.style.setProperty("--av-color", av.body);
+    btn.style.animationDelay = `${idx * 0.06}s`;
 
     const cvs = document.createElement("canvas");
-    cvs.width = 44; cvs.height = 48;
-    const c = cvs.getContext("2d");
-    c.fillStyle = av.body;
-    c.beginPath(); c.arc(22, 28, 16, 0, Math.PI * 2); c.fill();
-    c.strokeStyle = "rgba(255,255,255,0.3)"; c.lineWidth = 1.5; c.stroke();
-    c.font = "18px sans-serif"; c.textAlign = "center"; c.textBaseline = "middle";
-    c.fillText(av.emoji, 22, 20);
+    cvs.width = 58; cvs.height = 64;
+    drawAvatarPortrait(cvs, av);
 
     const label = document.createElement("span");
     label.className = "ghost-avatar-name";
@@ -1069,15 +1102,12 @@ function showAvatarSelectOverlay(timeoutMs) {
   GHOST_AVATAR_DEFS.forEach((av, idx) => {
     const card = document.createElement("button");
     card.className = "avatar-select-card" + (idx === _ghostAvatar ? " active" : "");
+    card.style.setProperty("--av-color", av.body);
+    card.style.animationDelay = `${0.12 + idx * 0.07}s`;
 
     const cvs = document.createElement("canvas");
-    cvs.width = 54; cvs.height = 60;
-    const c = cvs.getContext("2d");
-    c.fillStyle = av.body;
-    c.beginPath(); c.arc(27, 36, 20, 0, Math.PI * 2); c.fill();
-    c.strokeStyle = "rgba(255,255,255,0.4)"; c.lineWidth = 2; c.stroke();
-    c.font = "22px sans-serif"; c.textAlign = "center"; c.textBaseline = "middle";
-    c.fillText(av.emoji, 27, 24);
+    cvs.width = 70; cvs.height = 78;
+    drawAvatarPortrait(cvs, av);
 
     const name = document.createElement("div");
     name.className = "avatar-select-name";
@@ -1371,6 +1401,7 @@ function doQuitGame() {
   local.gameType = savedGame;
   $("shared-reaction-bar").classList.add("hidden");
   if (window._syncCarousel) window._syncCarousel(savedGame);
+  setLobbyBusy(false);
   // Show lobby at the game selection view, not the main view
   const mainView = document.getElementById("lobby-main-view");
   const gameView = document.getElementById("lobby-game-view");

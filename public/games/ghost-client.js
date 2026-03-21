@@ -4952,6 +4952,45 @@
     dc.fillStyle = ag;
     dc.beginPath(); dc.arc(sx, sy, 48, 0, Math.PI*2); dc.fill();
 
+    // Headlamp — small warm forward cone when flashlight is not active
+    if (S.activeTool !== 'flashlight') {
+      const hlFacing = S.me.facing;
+      const hlX = sx + Math.cos(hlFacing) * 14;
+      const hlY = sy + Math.sin(hlFacing) * 14;
+      const hlR = 82, hlAngle = Math.PI / 3.4;
+      const hlG = dc.createRadialGradient(hlX, hlY, 0, hlX, hlY, hlR);
+      hlG.addColorStop(0,    'rgba(255,255,218,0.44)');
+      hlG.addColorStop(0.50, 'rgba(255,255,200,0.24)');
+      hlG.addColorStop(1,    'rgba(255,255,180,0)');
+      dc.fillStyle = hlG;
+      dc.beginPath();
+      dc.moveTo(hlX, hlY);
+      dc.arc(hlX, hlY, hlR, hlFacing - hlAngle, hlFacing + hlAngle);
+      dc.closePath();
+      dc.fill();
+    }
+
+    // Headlamps — other players when not using flashlight
+    for (const p of Object.values(S.otherPlayers)) {
+      if (p.activeTool === 'flashlight') continue;
+      const px = p.x - S.cam.x, py = p.y - S.cam.y;
+      if (px < -150 || px > cw + 150 || py < -150 || py > ch + 150) continue;
+      const phl = p.facing || 0;
+      const phlX = px + Math.cos(phl) * 14;
+      const phlY = py + Math.sin(phl) * 14;
+      const phlR = 72, phlAngle = Math.PI / 3.4;
+      const phlG = dc.createRadialGradient(phlX, phlY, 0, phlX, phlY, phlR);
+      phlG.addColorStop(0,    'rgba(255,255,205,0.34)');
+      phlG.addColorStop(0.50, 'rgba(255,255,190,0.18)');
+      phlG.addColorStop(1,    'rgba(255,255,175,0)');
+      dc.fillStyle = phlG;
+      dc.beginPath();
+      dc.moveTo(phlX, phlY);
+      dc.arc(phlX, phlY, phlR, phl - phlAngle, phl + phlAngle);
+      dc.closePath();
+      dc.fill();
+    }
+
     // ── Per-level static light sources ──────────────────────────────────
     const area = AREA_DEFS[S.area];
 
@@ -5283,11 +5322,13 @@
 
     // Flashlight body dot — small glowing dot at the held position
     if (S.activeTool === 'flashlight') {
+      const dotSx = Math.round(S.me.x - S.cam.x);
+      const dotSy = Math.round(S.me.y - S.cam.y);
       const facing2 = S.me.facing;
       const holdOffX2 = Math.cos(facing2) * 16 + Math.cos(facing2 + Math.PI / 2) * 6;
       const holdOffY2 = Math.sin(facing2) * 16 + Math.sin(facing2 + Math.PI / 2) * 6;
-      const fx2 = sx + holdOffX2;
-      const fy2 = sy + holdOffY2;
+      const fx2 = dotSx + holdOffX2;
+      const fy2 = dotSy + holdOffY2;
       ctx.save();
       ctx.beginPath();
       ctx.arc(fx2, fy2, 3, 0, Math.PI * 2);
@@ -6192,175 +6233,344 @@
     if (t >= 0.04 && t < 0.96) {
       ctx.globalAlpha = fade;
 
-      // ── Sky — blazing desert atmosphere ──
+      // ── Sky — scorched desert, sun low and angry ──
       const sky = ctx.createLinearGradient(0, 0, 0, ch * 0.64);
-      sky.addColorStop(0,    '#0d1a3a');  // deep indigo zenith
-      sky.addColorStop(0.28, '#2a3e72');  // mid blue
-      sky.addColorStop(0.60, '#6f8fc8');  // dusty hazy blue
-      sky.addColorStop(0.85, '#c8a05a');  // ochre near horizon
-      sky.addColorStop(1,    '#e8b86a');  // bright amber horizon
+      sky.addColorStop(0,    '#08122a');
+      sky.addColorStop(0.20, '#182a52');
+      sky.addColorStop(0.48, '#3d5888');
+      sky.addColorStop(0.70, '#8a5e28');
+      sky.addColorStop(0.86, '#c87c30');
+      sky.addColorStop(1,    '#e09040');
       ctx.fillStyle = sky;
       ctx.fillRect(0, 0, cw, ch * 0.64);
 
-      // Sun — blazing white-gold disc
-      const sunX = cw * 0.78, sunY = ch * 0.13;
-      const sunR  = Math.min(cw, ch) * 0.048;
-      const sunGl = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sunR * 5.5);
-      sunGl.addColorStop(0,    'rgba(255,255,230,0.92)');
-      sunGl.addColorStop(0.18, 'rgba(255,230,130,0.45)');
-      sunGl.addColorStop(0.50, 'rgba(255,200,80,0.14)');
-      sunGl.addColorStop(1,    'rgba(255,180,60,0)');
-      ctx.fillStyle = sunGl;
-      ctx.beginPath(); ctx.arc(sunX, sunY, sunR * 5.5, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#fffde8';
-      ctx.beginPath(); ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2); ctx.fill();
-      // inner corona ring
-      ctx.strokeStyle = 'rgba(255,240,160,0.55)'; ctx.lineWidth = sunR * 0.22;
-      ctx.beginPath(); ctx.arc(sunX, sunY, sunR * 1.28, 0, Math.PI * 2); ctx.stroke();
+      // Dust atmosphere band at horizon
+      const horizDust = ctx.createLinearGradient(0, ch * 0.48, 0, ch * 0.66);
+      horizDust.addColorStop(0,   'rgba(190,130,55,0)');
+      horizDust.addColorStop(0.5, 'rgba(210,155,65,0.20)');
+      horizDust.addColorStop(1,   'rgba(190,130,55,0)');
+      ctx.fillStyle = horizDust;
+      ctx.fillRect(0, ch * 0.48, cw, ch * 0.18);
 
-      // Heat haze shimmer on horizon
-      const hazeY = ch * 0.60;
-      const hazeH = ch * 0.06;
-      for (let hi = 0; hi < 4; hi++) {
-        const hPhase = elapsed * 0.0012 + hi * 0.78;
-        const hOff   = Math.sin(hPhase) * 3;
-        const hG = ctx.createLinearGradient(0, hazeY + hOff, 0, hazeY + hazeH + hOff);
-        hG.addColorStop(0, 'rgba(235,185,80,0.08)');
-        hG.addColorStop(0.5, 'rgba(255,210,100,0.14)');
-        hG.addColorStop(1, 'rgba(235,185,80,0)');
+      // Sun position
+      const sunX = cw * 0.78, sunY = ch * 0.13;
+      const sunR  = Math.min(cw, ch) * 0.046;
+
+      // ── Crepuscular / god rays from sun ──
+      ctx.save();
+      const rayAngles = [0.18, 0.52, 0.88, 1.20, 1.60, 2.05, 2.55, 3.10, 3.70, 4.30, 4.90, 5.50];
+      const rayWidths  = [0.06, 0.04, 0.07, 0.03, 0.05, 0.08, 0.04, 0.06, 0.03, 0.05, 0.07, 0.04];
+      const rayAlphas  = [0.038, 0.022, 0.050, 0.018, 0.032, 0.058, 0.020, 0.040, 0.016, 0.028, 0.045, 0.025];
+      const rayDrift   = elapsed * 0.000038;
+      const rLen = Math.max(cw, ch) * 1.9;
+      for (let ri = 0; ri < rayAngles.length; ri++) {
+        const rA  = rayAngles[ri] + rayDrift + Math.sin(elapsed * 0.00025 + ri) * 0.04;
+        const rA1 = rA - rayWidths[ri];
+        const rA2 = rA + rayWidths[ri];
+        const pA  = rA + Math.PI / 2;
+        const wEnd = rLen * Math.sin(rayWidths[ri]);
+        const pulse = 0.65 + 0.35 * Math.sin(elapsed * 0.00035 + ri * 1.7);
+        const rAlpha = rayAlphas[ri] * pulse;
+        const rG = ctx.createLinearGradient(sunX, sunY, sunX + Math.cos(rA) * rLen, sunY + Math.sin(rA) * rLen);
+        rG.addColorStop(0,    `rgba(255,218,110,${rAlpha * 3.5})`);
+        rG.addColorStop(0.10, `rgba(255,200,90,${rAlpha})`);
+        rG.addColorStop(0.45, `rgba(245,180,70,${rAlpha * 0.35})`);
+        rG.addColorStop(1,    'rgba(235,165,55,0)');
+        ctx.fillStyle = rG;
+        ctx.beginPath();
+        ctx.moveTo(sunX, sunY);
+        ctx.lineTo(sunX + Math.cos(rA) * rLen + Math.cos(pA) * wEnd,
+                   sunY + Math.sin(rA) * rLen + Math.sin(pA) * wEnd);
+        ctx.lineTo(sunX + Math.cos(rA) * rLen - Math.cos(pA) * wEnd,
+                   sunY + Math.sin(rA) * rLen - Math.sin(pA) * wEnd);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // ── Sun disc ──
+      const sunGl = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sunR * 6.5);
+      sunGl.addColorStop(0,    'rgba(255,255,225,0.95)');
+      sunGl.addColorStop(0.14, 'rgba(255,228,125,0.55)');
+      sunGl.addColorStop(0.38, 'rgba(255,198,75,0.18)');
+      sunGl.addColorStop(0.70, 'rgba(255,172,50,0.06)');
+      sunGl.addColorStop(1,    'rgba(255,155,38,0)');
+      ctx.fillStyle = sunGl;
+      ctx.beginPath(); ctx.arc(sunX, sunY, sunR * 6.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fffdec';
+      ctx.beginPath(); ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,238,158,0.52)'; ctx.lineWidth = sunR * 0.24;
+      ctx.beginPath(); ctx.arc(sunX, sunY, sunR * 1.30, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,215,100,0.16)'; ctx.lineWidth = sunR * 0.55;
+      ctx.beginPath(); ctx.arc(sunX, sunY, sunR * 2.1, 0, Math.PI * 2); ctx.stroke();
+
+      // ── Thin cirrus wisps ──
+      ctx.save();
+      for (let ci = 0; ci < 5; ci++) {
+        const cxOff = (elapsed * 0.012 * (ci % 2 === 0 ? 1 : 0.65) + ci * cw * 0.28) % (cw * 1.6) - cw * 0.3;
+        const cyPos = ch * (0.05 + ci * 0.055);
+        ctx.strokeStyle = `rgba(255,238,198,${0.055 + (ci % 3) * 0.018})`;
+        ctx.lineWidth = 1.2 + (ci % 3) * 0.8;
+        ctx.beginPath();
+        ctx.moveTo(cxOff, cyPos);
+        ctx.bezierCurveTo(cxOff + cw * 0.09, cyPos - ch * 0.008, cxOff + cw * 0.21, cyPos + ch * 0.007, cxOff + cw * 0.34, cyPos - ch * 0.004);
+        ctx.stroke();
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.moveTo(cxOff + cw * 0.03, cyPos + ch * 0.006);
+        ctx.bezierCurveTo(cxOff + cw * 0.11, cyPos + ch * 0.002, cxOff + cw * 0.20, cyPos + ch * 0.010, cxOff + cw * 0.28, cyPos + ch * 0.005);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // ── Heat haze shimmer ──
+      const hazeY = ch * 0.58;
+      for (let hi = 0; hi < 6; hi++) {
+        const hOff = Math.sin(elapsed * 0.0015 + hi * 0.58) * 4.5;
+        const hG = ctx.createLinearGradient(0, hazeY + hOff, 0, hazeY + ch * 0.07 + hOff);
+        hG.addColorStop(0,   'rgba(210,165,70,0)');
+        hG.addColorStop(0.45,'rgba(235,195,90,0.15)');
+        hG.addColorStop(1,   'rgba(210,165,70,0)');
         ctx.fillStyle = hG;
-        ctx.fillRect(0, hazeY + hOff, cw, hazeH);
+        ctx.fillRect(0, hazeY + hOff, cw, ch * 0.07);
       }
 
       // ── Sand / desert ground ──
       const groundY = ch * 0.63;
       const sandG = ctx.createLinearGradient(0, groundY, 0, ch);
-      sandG.addColorStop(0,    '#d4904a');  // warm golden sand at horizon
-      sandG.addColorStop(0.18, '#c47e38');
-      sandG.addColorStop(0.55, '#a86428');
-      sandG.addColorStop(1,    '#7a4818');  // deeper ochre at bottom
+      sandG.addColorStop(0,    '#be7832');
+      sandG.addColorStop(0.22, '#a86828');
+      sandG.addColorStop(0.58, '#8e5218');
+      sandG.addColorStop(1,    '#643808');
       ctx.fillStyle = sandG;
       ctx.fillRect(0, groundY, cw, ch - groundY);
 
-      // Sand surface texture — subtle cross-ripple marks
-      ctx.strokeStyle = 'rgba(120,72,22,0.18)'; ctx.lineWidth = 0.6;
-      for (let ri = 0; ri < 10; ri++) {
-        const ry = groundY + (ri + 0.5) * (ch - groundY) / 10;
-        ctx.beginPath(); ctx.moveTo(0, ry); ctx.lineTo(cw, ry); ctx.stroke();
+      // Sand ripple texture — wavy lines, varied opacity
+      for (let ri = 0; ri < 20; ri++) {
+        const ry   = groundY + (ri + 0.5) * (ch - groundY) / 20;
+        const rAlp = 0.07 + (ri % 5) * 0.035;
+        ctx.strokeStyle = `rgba(75,42,10,${rAlp})`;
+        ctx.lineWidth = 0.4 + (ri % 4) * 0.15;
+        const wv = Math.sin(elapsed * 0.0009 + ri * 0.5) * 2.5;
+        ctx.beginPath();
+        ctx.moveTo(0, ry + wv);
+        ctx.bezierCurveTo(cw * 0.28, ry + wv + 2, cw * 0.62, ry + wv - 1.5, cw, ry + wv * 0.4);
+        ctx.stroke();
+      }
+      // Wind-scalloped crest highlights between ripples
+      for (let si = 0; si < 10; si++) {
+        const sy = groundY + ch * 0.03 + si * (ch - groundY - ch * 0.03) / 10;
+        ctx.strokeStyle = 'rgba(195,148,70,0.09)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, sy - 1.5);
+        ctx.bezierCurveTo(cw * 0.32, sy - 3, cw * 0.65, sy + 1.2, cw, sy);
+        ctx.stroke();
       }
 
-      // Foreground dune shapes (organic silhouette waves)
-      const duneG = ctx.createLinearGradient(0, ch * 0.72, 0, ch);
-      duneG.addColorStop(0, '#b87238');
-      duneG.addColorStop(1, '#8a5220');
-      ctx.fillStyle = duneG;
-      ctx.beginPath();
-      ctx.moveTo(0, ch);
-      ctx.lineTo(0, ch * 0.88);
-      ctx.bezierCurveTo(cw * 0.12, ch * 0.82, cw * 0.20, ch * 0.78, cw * 0.32, ch * 0.82);
-      ctx.bezierCurveTo(cw * 0.44, ch * 0.86, cw * 0.52, ch * 0.74, cw * 0.65, ch * 0.80);
-      ctx.bezierCurveTo(cw * 0.78, ch * 0.86, cw * 0.88, ch * 0.84, cw, ch * 0.78);
-      ctx.lineTo(cw, ch);
-      ctx.closePath(); ctx.fill();
-
-      // Dune crest highlight (light catching top of near dune)
-      ctx.strokeStyle = 'rgba(230,185,110,0.35)'; ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(0, ch * 0.88);
-      ctx.bezierCurveTo(cw * 0.12, ch * 0.82, cw * 0.20, ch * 0.78, cw * 0.32, ch * 0.82);
-      ctx.bezierCurveTo(cw * 0.44, ch * 0.86, cw * 0.52, ch * 0.74, cw * 0.65, ch * 0.80);
-      ctx.bezierCurveTo(cw * 0.78, ch * 0.86, cw * 0.88, ch * 0.84, cw, ch * 0.78);
-      ctx.stroke();
-
-      // ── Pyramids on horizon ──
-      // Slight zoom as jeep approaches (very subtle parallax)
+      // ── Pyramids — shorter/wider, aged limestone ──
       const camZoom  = 1 + t * 0.06;
-      const pyrBaseY = groundY + ch * 0.014;  // just below horizon
-      const pyrCX    = cw * 0.36;             // pyramid cluster centre-x
+      const pyrBaseY = groundY + ch * 0.012;
+      const pyrCX    = cw * 0.36;
 
       const drawPyramid = (cx, apexY, baseW) => {
-        const halfW  = baseW / 2;
+        const ax     = pyrCX + (cx - pyrCX) * camZoom;
+        const abW    = baseW * camZoom;
+        const aHW    = abW / 2;
+        const rawApexY = pyrBaseY - (pyrBaseY - apexY) * camZoom;
         const baseY  = pyrBaseY;
-        // Zoom pivot around pyrCX,pyrBaseY
-        const ax  = pyrCX + (cx - pyrCX) * camZoom;
-        const abW = baseW * camZoom;
-        const aHW = abW / 2;
-        const aApexY = pyrBaseY - (pyrBaseY - apexY) * camZoom;
+        // Blunted apex — millennia of erosion removed the capstone
+        const bluntOff = (baseY - rawApexY) * 0.038;
+        const aApexY   = rawApexY + bluntOff;
+        const apexHW   = aHW * 0.032;
+        const height   = baseY - aApexY;
 
-        // Left (lit) face
+        // ── Lit (west/sunward) face — aged gray-beige limestone ──
         const litG = ctx.createLinearGradient(ax - aHW, baseY, ax, aApexY);
-        litG.addColorStop(0, 'rgba(220,182,110,0.96)');
-        litG.addColorStop(1, 'rgba(195,155,85,0.96)');
+        litG.addColorStop(0,    'rgba(192,166,122,0.97)');
+        litG.addColorStop(0.35, 'rgba(178,152,108,0.97)');
+        litG.addColorStop(0.72, 'rgba(162,138,96,0.97)');
+        litG.addColorStop(1,    'rgba(145,122,84,0.97)');
         ctx.fillStyle = litG;
         ctx.beginPath();
-        ctx.moveTo(ax, aApexY);
+        ctx.moveTo(ax - apexHW, aApexY);
+        ctx.lineTo(ax + apexHW, aApexY);
+        ctx.lineTo(ax + aHW * 0.06, baseY);
         ctx.lineTo(ax - aHW, baseY);
-        ctx.lineTo(ax + aHW * 0.08, baseY);
         ctx.closePath(); ctx.fill();
 
-        // Right (shadow) face
+        // ── Shadow (east) face — deep warm shadow ──
         const shadG = ctx.createLinearGradient(ax + aHW, baseY, ax, aApexY);
-        shadG.addColorStop(0, 'rgba(145,108,52,0.96)');
-        shadG.addColorStop(1, 'rgba(120,88,38,0.96)');
+        shadG.addColorStop(0,    'rgba(72,50,25,0.97)');
+        shadG.addColorStop(0.45, 'rgba(58,38,16,0.97)');
+        shadG.addColorStop(1,    'rgba(46,28,10,0.97)');
         ctx.fillStyle = shadG;
         ctx.beginPath();
-        ctx.moveTo(ax, aApexY);
-        ctx.lineTo(ax + aHW * 0.08, baseY);
+        ctx.moveTo(ax - apexHW, aApexY);
+        ctx.lineTo(ax + apexHW, aApexY);
         ctx.lineTo(ax + aHW, baseY);
+        ctx.lineTo(ax + aHW * 0.06, baseY);
         ctx.closePath(); ctx.fill();
 
-        // Stone course lines on lit face
-        const courses = 5;
-        ctx.strokeStyle = 'rgba(80,50,15,0.12)'; ctx.lineWidth = 0.6;
-        for (let li = 1; li < courses; li++) {
-          const prog = li / courses;
-          const ly   = aApexY + (baseY - aApexY) * prog;
-          const lx0  = ax - aHW * prog;
-          const lx1  = ax + aHW * 0.08 * prog;
+        // ── Stone courses — many, irregular heights, bottom-heavy ──
+        const numCourses = Math.max(10, Math.round(height / (ch * 0.016)));
+        // Lit face
+        ctx.lineWidth = 0.5;
+        for (let li = 1; li < numCourses; li++) {
+          const prog = Math.pow(li / numCourses, 1.5);
+          const ly   = aApexY + height * prog;
+          const lx0  = ax - aHW * prog - apexHW * (1 - prog);
+          const lx1  = ax + aHW * 0.06 * prog + apexHW * (1 - prog);
+          const lineAlpha = 0.10 + (li % 4) * 0.05 + (li % 7) * 0.018;
+          ctx.strokeStyle = `rgba(55,34,10,${lineAlpha})`;
+          ctx.beginPath(); ctx.moveTo(lx0, ly); ctx.lineTo(lx1, ly); ctx.stroke();
+          // Occasional eroded block gap
+          if (li % 6 === 3 && li > 4) {
+            ctx.strokeStyle = 'rgba(100,72,32,0.20)';
+            ctx.lineWidth = 0.9;
+            const gapX = lx0 + (lx1 - lx0) * (0.28 + (li * 0.19) % 0.44);
+            ctx.beginPath(); ctx.moveTo(gapX, ly - ch * 0.0025); ctx.lineTo(gapX, ly + ch * 0.0035); ctx.stroke();
+            ctx.lineWidth = 0.5;
+          }
+        }
+        // Shadow face courses
+        for (let li = 1; li < numCourses; li++) {
+          const prog = Math.pow(li / numCourses, 1.5);
+          const ly   = aApexY + height * prog;
+          const lx0  = ax + aHW * 0.06 * prog + apexHW * (1 - prog);
+          const lx1  = ax + aHW * prog;
+          ctx.strokeStyle = `rgba(28,16,4,${0.08 + (li % 5) * 0.03})`;
+          ctx.lineWidth = 0.4;
           ctx.beginPath(); ctx.moveTo(lx0, ly); ctx.lineTo(lx1, ly); ctx.stroke();
         }
 
-        // Ground shadow (cast eastward)
-        ctx.fillStyle = 'rgba(90,50,10,0.18)';
+        // ── Weathering stains — dark vertical streaks on lit face ──
+        const stainCount = 3 + Math.round(aHW / (ch * 0.04));
+        for (let st = 0; st < stainCount; st++) {
+          const stX  = ax - aHW + aHW * (0.18 + st * (0.72 / stainCount));
+          const stY0 = aApexY + height * (0.08 + (st % 3) * 0.07);
+          const stY1 = aApexY + height * (0.50 + (st % 4) * 0.10);
+          const stW  = Math.max(1, aHW * 0.012);
+          const stG  = ctx.createLinearGradient(stX, stY0, stX, stY1);
+          stG.addColorStop(0,   'rgba(65,42,16,0)');
+          stG.addColorStop(0.35,`rgba(65,42,16,${0.09 + (st % 3) * 0.03})`);
+          stG.addColorStop(1,   'rgba(65,42,16,0)');
+          ctx.fillStyle = stG;
+          ctx.fillRect(stX - stW / 2, stY0, stW, stY1 - stY0);
+        }
+
+        // ── Sand drift — wind-piled at left base corner ──
+        const driftG = ctx.createRadialGradient(ax - aHW + aHW * 0.12, baseY, 0, ax - aHW + aHW * 0.12, baseY, aHW * 0.42);
+        driftG.addColorStop(0, 'rgba(185,145,82,0.58)');
+        driftG.addColorStop(1, 'rgba(185,145,82,0)');
+        ctx.fillStyle = driftG;
+        ctx.fillRect(ax - aHW, baseY - ch * 0.016, aHW * 0.55, ch * 0.016);
+
+        // ── Cast shadow east across sand ──
+        const shdG = ctx.createLinearGradient(ax + aHW * 0.06, baseY, ax + aHW * 3.5, baseY + ch * 0.018);
+        shdG.addColorStop(0, 'rgba(48,26,4,0.48)');
+        shdG.addColorStop(1, 'rgba(48,26,4,0)');
+        ctx.fillStyle = shdG;
         ctx.beginPath();
-        ctx.moveTo(ax + aHW, baseY);
-        ctx.lineTo(ax + aHW * 2.8, baseY + ch * 0.006);
-        ctx.lineTo(ax, baseY + ch * 0.004);
+        ctx.moveTo(ax + aHW * 0.06, baseY);
+        ctx.lineTo(ax + aHW * 3.5,  baseY + ch * 0.018);
+        ctx.lineTo(ax + aHW * 3.8,  baseY + ch * 0.022);
+        ctx.lineTo(ax + aHW * 0.06, baseY + ch * 0.006);
         ctx.closePath(); ctx.fill();
       };
 
-      // Great Pyramid (Khufu) — tallest, leftmost
-      drawPyramid(pyrCX - cw * 0.10, groundY - ch * 0.26, cw * 0.22);
-      // Khafre — slightly smaller, behind-right
-      drawPyramid(pyrCX + cw * 0.06, groundY - ch * 0.20, cw * 0.17);
-      // Menkaure — smallest, furthest right
-      drawPyramid(pyrCX + cw * 0.19, groundY - ch * 0.13, cw * 0.11);
+      // Khufu — shorter and wider (squat, monumental)
+      drawPyramid(pyrCX - cw * 0.10, groundY - ch * 0.19, cw * 0.28);
+      // Khafre — mid-size
+      drawPyramid(pyrCX + cw * 0.07, groundY - ch * 0.15, cw * 0.22);
+      // Menkaure — smallest
+      drawPyramid(pyrCX + cw * 0.20, groundY - ch * 0.09, cw * 0.14);
 
-      // Sphinx silhouette (low profile, in front of Khafre base)
+      // Atmospheric distance haze washing over pyramids
+      const pyrHaze = ctx.createLinearGradient(0, groundY - ch * 0.20, 0, groundY);
+      pyrHaze.addColorStop(0,   'rgba(165,118,60,0)');
+      pyrHaze.addColorStop(0.65,'rgba(178,132,66,0.10)');
+      pyrHaze.addColorStop(1,   'rgba(192,145,72,0.22)');
+      ctx.fillStyle = pyrHaze;
+      ctx.fillRect(cw * 0.12, groundY - ch * 0.20, cw * 0.50, ch * 0.20);
+
+      // ── Sphinx silhouette ──
       {
         const sX = (pyrCX + cw * 0.02) * camZoom + pyrCX * (1 - camZoom);
         const sY  = pyrBaseY;
-        const sW  = cw * 0.072 * camZoom, sH = ch * 0.055 * camZoom;
-        ctx.fillStyle = 'rgba(175,135,68,0.90)';
-        // Body
+        const sW  = cw * 0.082 * camZoom, sH = ch * 0.060 * camZoom;
+        ctx.fillStyle = 'rgba(155,115,52,0.88)';
         ctx.beginPath();
-        ctx.moveTo(sX - sW * 0.5, sY);
-        ctx.lineTo(sX - sW * 0.5, sY - sH * 0.55);
-        ctx.bezierCurveTo(sX - sW * 0.3, sY - sH * 0.62, sX + sW * 0.15, sY - sH * 0.65, sX + sW * 0.50, sY - sH * 0.55);
-        ctx.lineTo(sX + sW * 0.50, sY);
+        ctx.moveTo(sX - sW * 0.52, sY);
+        ctx.lineTo(sX - sW * 0.52, sY - sH * 0.52);
+        ctx.bezierCurveTo(sX - sW * 0.28, sY - sH * 0.62, sX + sW * 0.18, sY - sH * 0.64, sX + sW * 0.52, sY - sH * 0.52);
+        ctx.lineTo(sX + sW * 0.52, sY);
         ctx.closePath(); ctx.fill();
-        // Head
         ctx.beginPath();
-        ctx.arc(sX - sW * 0.28, sY - sH * 0.72, sH * 0.28, 0, Math.PI * 2);
+        ctx.arc(sX - sW * 0.30, sY - sH * 0.70, sH * 0.27, 0, Math.PI * 2);
         ctx.fill();
-        // Headdress nemes stripe
-        ctx.fillStyle = 'rgba(140,100,40,0.80)';
-        ctx.fillRect(sX - sW * 0.42, sY - sH * 0.90, sH * 0.10, sH * 0.38);
-        ctx.fillRect(sX - sW * 0.14, sY - sH * 0.90, sH * 0.10, sH * 0.38);
+        ctx.fillStyle = 'rgba(110,76,24,0.78)';
+        ctx.fillRect(sX - sW * 0.44, sY - sH * 0.88, sH * 0.09, sH * 0.36);
+        ctx.fillRect(sX - sW * 0.14, sY - sH * 0.88, sH * 0.09, sH * 0.36);
+        // Shadow on sphinx body
+        const sphSh = ctx.createLinearGradient(sX - sW * 0.1, sY - sH, sX + sW * 0.52, sY);
+        sphSh.addColorStop(0, 'rgba(0,0,0,0)');
+        sphSh.addColorStop(1, 'rgba(0,0,0,0.32)');
+        ctx.fillStyle = sphSh;
+        ctx.beginPath();
+        ctx.moveTo(sX - sW * 0.52, sY);
+        ctx.lineTo(sX - sW * 0.52, sY - sH * 0.52);
+        ctx.bezierCurveTo(sX - sW * 0.28, sY - sH * 0.62, sX + sW * 0.18, sY - sH * 0.64, sX + sW * 0.52, sY - sH * 0.52);
+        ctx.lineTo(sX + sW * 0.52, sY);
+        ctx.closePath(); ctx.fill();
       }
 
-      // ── Jeep approaching from right ──
-      // Moves from right edge (t=0.10) toward left-centre (t=0.85)
+      // ── Mid dune (background layer) ──
+      const duneMidG = ctx.createLinearGradient(0, ch * 0.72, 0, ch * 0.86);
+      duneMidG.addColorStop(0, 'rgba(172,122,58,0.65)');
+      duneMidG.addColorStop(1, 'rgba(136,92,35,0.65)');
+      ctx.fillStyle = duneMidG;
+      ctx.beginPath();
+      ctx.moveTo(0, ch);
+      ctx.lineTo(0, ch * 0.84);
+      ctx.bezierCurveTo(cw * 0.16, ch * 0.76, cw * 0.36, ch * 0.72, cw * 0.56, ch * 0.77);
+      ctx.bezierCurveTo(cw * 0.72, ch * 0.81, cw * 0.86, ch * 0.80, cw, ch * 0.75);
+      ctx.lineTo(cw, ch);
+      ctx.closePath(); ctx.fill();
+
+      // ── Foreground dune (nearer) ──
+      const duneG = ctx.createLinearGradient(0, ch * 0.76, 0, ch);
+      duneG.addColorStop(0,   '#9e5822');
+      duneG.addColorStop(0.5, '#7e4015');
+      duneG.addColorStop(1,   '#582c08');
+      ctx.fillStyle = duneG;
+      ctx.beginPath();
+      ctx.moveTo(0, ch);
+      ctx.lineTo(0, ch * 0.91);
+      ctx.bezierCurveTo(cw * 0.10, ch * 0.85, cw * 0.22, ch * 0.81, cw * 0.35, ch * 0.85);
+      ctx.bezierCurveTo(cw * 0.47, ch * 0.89, cw * 0.55, ch * 0.77, cw * 0.68, ch * 0.83);
+      ctx.bezierCurveTo(cw * 0.81, ch * 0.89, cw * 0.91, ch * 0.87, cw, ch * 0.81);
+      ctx.lineTo(cw, ch);
+      ctx.closePath(); ctx.fill();
+
+      // Dune crest sunlight
+      ctx.strokeStyle = 'rgba(222,172,96,0.48)'; ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(0, ch * 0.91);
+      ctx.bezierCurveTo(cw * 0.10, ch * 0.85, cw * 0.22, ch * 0.81, cw * 0.35, ch * 0.85);
+      ctx.bezierCurveTo(cw * 0.47, ch * 0.89, cw * 0.55, ch * 0.77, cw * 0.68, ch * 0.83);
+      ctx.bezierCurveTo(cw * 0.81, ch * 0.89, cw * 0.91, ch * 0.87, cw, ch * 0.81);
+      ctx.stroke();
+      // Wind shadow under crest
+      ctx.strokeStyle = 'rgba(45,22,4,0.24)'; ctx.lineWidth = 4.5;
+      ctx.beginPath();
+      ctx.moveTo(0, ch * 0.913);
+      ctx.bezierCurveTo(cw * 0.10, ch * 0.853, cw * 0.22, ch * 0.813, cw * 0.35, ch * 0.853);
+      ctx.bezierCurveTo(cw * 0.47, ch * 0.893, cw * 0.55, ch * 0.773, cw * 0.68, ch * 0.833);
+      ctx.bezierCurveTo(cw * 0.81, ch * 0.893, cw * 0.91, ch * 0.873, cw, ch * 0.813);
+      ctx.stroke();
+
+      // ── Jeep ──
       const jeepProg = Math.max(0, Math.min(1, (t - 0.10) / 0.75));
       const jEase   = jeepProg < 0.5
         ? 4 * jeepProg * jeepProg * jeepProg
@@ -6369,179 +6579,163 @@
       const jeepX       = cw * 0.95 - jEase * (cw * 0.62);
       const jw          = cw  * 0.115, jh = ch * 0.068;
 
-      // Dust trail behind jeep (puffs scrolling right)
-      for (let d = 0; d < 9; d++) {
-        const dAge  = ((elapsed * 0.00055 + d * 0.22) % 1);
-        const dX    = jeepX + jw * 0.52 + dAge * jw * 2.0;
-        const dY    = jeepGroundY - jh * 0.08 - dAge * jh * 0.85;
-        const dR    = jh * 0.14 + dAge * jh * 0.55;
-        const dAlp  = (1 - dAge) * 0.28;
+      // Dust trail — heavier and billowing
+      for (let d = 0; d < 14; d++) {
+        const dAge  = ((elapsed * 0.00055 + d * 0.18) % 1);
+        const dX    = jeepX + jw * 0.52 + dAge * jw * 2.8;
+        const dY    = jeepGroundY - jh * 0.08 - dAge * jh * 1.1;
+        const dR    = jh * 0.18 + dAge * jh * 0.72;
+        const dAlp  = (1 - dAge) * 0.32;
         const dG    = ctx.createRadialGradient(dX, dY, 0, dX, dY, dR);
-        dG.addColorStop(0, `rgba(210,168,90,${dAlp})`);
-        dG.addColorStop(1, 'rgba(210,168,90,0)');
+        dG.addColorStop(0,   `rgba(195,148,72,${dAlp})`);
+        dG.addColorStop(0.5, `rgba(178,132,58,${dAlp * 0.5})`);
+        dG.addColorStop(1,   'rgba(175,130,55,0)');
         ctx.fillStyle = dG;
         ctx.beginPath(); ctx.arc(dX, dY, dR, 0, Math.PI * 2); ctx.fill();
       }
 
-      // Jeep body
       ctx.save();
       ctx.translate(jeepX, jeepGroundY);
-
-      // Wheel bounce
       const bounce = Math.sin(elapsed * 0.016) * jh * 0.022 * (jeepProg > 0.05 ? 1 : 0);
       ctx.translate(0, bounce);
 
-      // Ground shadow
       const jShadow = ctx.createRadialGradient(0, jh * 0.30, 0, 0, jh * 0.30, jw * 0.60);
-      jShadow.addColorStop(0, 'rgba(0,0,0,0.32)');
-      jShadow.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = jShadow;
-      ctx.fillRect(-jw * 0.60, 0, jw * 1.2, jh * 0.55);
+      jShadow.addColorStop(0, 'rgba(0,0,0,0.32)'); jShadow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = jShadow; ctx.fillRect(-jw * 0.60, 0, jw * 1.2, jh * 0.55);
 
-      // Chassis underside
       ctx.fillStyle = '#1e1608';
       ctx.fillRect(-jw * 0.48, -jh * 0.06, jw * 0.96, jh * 0.18);
-
-      // Main body — olive military
       ctx.fillStyle = '#4a5820';
       ctx.beginPath();
-      ctx.moveTo(-jw * 0.50, 0);
-      ctx.lineTo(-jw * 0.50, -jh * 0.30);
-      ctx.lineTo(-jw * 0.36, -jh * 0.62);
-      ctx.lineTo(-jw * 0.08, -jh * 0.72);
-      ctx.lineTo( jw * 0.30, -jh * 0.68);
-      ctx.lineTo( jw * 0.50, -jh * 0.22);
-      ctx.lineTo( jw * 0.50,  0);
-      ctx.closePath(); ctx.fill();
-
-      // Side highlight (sun catching top-left)
+      ctx.moveTo(-jw * 0.50, 0); ctx.lineTo(-jw * 0.50, -jh * 0.30);
+      ctx.lineTo(-jw * 0.36, -jh * 0.62); ctx.lineTo(-jw * 0.08, -jh * 0.72);
+      ctx.lineTo( jw * 0.30, -jh * 0.68); ctx.lineTo( jw * 0.50, -jh * 0.22);
+      ctx.lineTo( jw * 0.50,  0); ctx.closePath(); ctx.fill();
       ctx.fillStyle = 'rgba(200,210,140,0.18)';
       ctx.beginPath();
-      ctx.moveTo(-jw * 0.50, -jh * 0.30);
-      ctx.lineTo(-jw * 0.36, -jh * 0.62);
-      ctx.lineTo(-jw * 0.08, -jh * 0.72);
-      ctx.lineTo(-jw * 0.08, -jh * 0.50);
-      ctx.lineTo(-jw * 0.40, -jh * 0.30);
-      ctx.closePath(); ctx.fill();
-
-      // Roll-bar frame
+      ctx.moveTo(-jw * 0.50, -jh * 0.30); ctx.lineTo(-jw * 0.36, -jh * 0.62);
+      ctx.lineTo(-jw * 0.08, -jh * 0.72); ctx.lineTo(-jw * 0.08, -jh * 0.50);
+      ctx.lineTo(-jw * 0.40, -jh * 0.30); ctx.closePath(); ctx.fill();
       ctx.strokeStyle = '#2e3410'; ctx.lineWidth = Math.max(1.5, jw * 0.030);
       ctx.beginPath();
-      ctx.moveTo(-jw * 0.35, -jh * 0.62);
-      ctx.lineTo(-jw * 0.35, -jh * 1.02);
-      ctx.lineTo( jw * 0.30, -jh * 0.98);
-      ctx.lineTo( jw * 0.30, -jh * 0.68);
-      ctx.stroke();
-
-      // Windshield glass
+      ctx.moveTo(-jw * 0.35, -jh * 0.62); ctx.lineTo(-jw * 0.35, -jh * 1.02);
+      ctx.lineTo( jw * 0.30, -jh * 0.98); ctx.lineTo( jw * 0.30, -jh * 0.68); ctx.stroke();
       ctx.fillStyle = 'rgba(160,220,240,0.38)';
       ctx.beginPath();
-      ctx.moveTo(-jw * 0.36, -jh * 0.62);
-      ctx.lineTo(-jw * 0.50, -jh * 0.30);
-      ctx.lineTo(-jw * 0.10, -jh * 0.30);
-      ctx.lineTo(-jw * 0.08, -jh * 0.72);
+      ctx.moveTo(-jw * 0.36, -jh * 0.62); ctx.lineTo(-jw * 0.50, -jh * 0.30);
+      ctx.lineTo(-jw * 0.10, -jh * 0.30); ctx.lineTo(-jw * 0.08, -jh * 0.72);
       ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = 'rgba(80,100,60,0.55)'; ctx.lineWidth = 0.8;
-      ctx.stroke();
-
-      // Front hood & grille (jeep faces left)
+      ctx.strokeStyle = 'rgba(80,100,60,0.55)'; ctx.lineWidth = 0.8; ctx.stroke();
       ctx.fillStyle = '#3e4c18';
       ctx.fillRect(-jw * 0.52, -jh * 0.42, jw * 0.06, jh * 0.34);
-      // Grille slats
       ctx.strokeStyle = '#2a3010'; ctx.lineWidth = 0.7;
       for (let gs = 0; gs < 4; gs++) {
         const gy = -jh * 0.38 + gs * jh * 0.09;
         ctx.beginPath(); ctx.moveTo(-jw * 0.52, gy); ctx.lineTo(-jw * 0.46, gy); ctx.stroke();
       }
-      // Headlight (small round)
       ctx.fillStyle = `rgba(255,248,200,${0.65 + 0.25 * Math.sin(elapsed * 0.004)})`;
       ctx.beginPath(); ctx.arc(-jw * 0.50, -jh * 0.28, jw * 0.040, 0, Math.PI * 2); ctx.fill();
-
-      // Spare wheel on back
       ctx.fillStyle = '#1e1a08';
       ctx.beginPath(); ctx.arc(jw * 0.46, -jh * 0.30, jh * 0.25, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#3a3418';
       ctx.beginPath(); ctx.arc(jw * 0.46, -jh * 0.30, jh * 0.14, 0, Math.PI * 2); ctx.fill();
-
-      // Wheels
       const drawWheel = (wx, wy) => {
         ctx.fillStyle = '#18140a';
         ctx.beginPath(); ctx.arc(wx, wy, jh * 0.30, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = '#302c18';
         ctx.beginPath(); ctx.arc(wx, wy, jh * 0.17, 0, Math.PI * 2); ctx.fill();
-        // Hub spokes
         ctx.strokeStyle = '#4a4428'; ctx.lineWidth = 1.2;
         const spinAngle = elapsed * 0.010 * (jeepProg > 0.05 ? 1 : 0);
         for (let sp = 0; sp < 5; sp++) {
           const sa = spinAngle + sp * Math.PI * 2 / 5;
-          ctx.beginPath();
-          ctx.moveTo(wx, wy);
-          ctx.lineTo(wx + Math.cos(sa) * jh * 0.15, wy + Math.sin(sa) * jh * 0.15);
-          ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(wx, wy);
+          ctx.lineTo(wx + Math.cos(sa) * jh * 0.15, wy + Math.sin(sa) * jh * 0.15); ctx.stroke();
         }
       };
-      drawWheel(-jw * 0.30, 0);
-      drawWheel( jw * 0.28, 0);
+      drawWheel(-jw * 0.30, 0); drawWheel(jw * 0.28, 0);
+      ctx.restore();
 
-      ctx.restore();  // end jeep translate
-
-      // ── Wind-blown sand streaks ──
-      // Multiple bands at different heights and speeds
+      // ── Wind-blown sand streaks — dense, diagonal, gradient-colored ──
       const sandBands = [
-        { yFrac: 0.68, speed: 0.055, count: 24, lenMin: 18, lenMax: 55, alpha: 0.20, thick: 0.7 },
-        { yFrac: 0.72, speed: 0.042, count: 18, lenMin: 22, lenMax: 70, alpha: 0.17, thick: 0.9 },
-        { yFrac: 0.78, speed: 0.070, count: 28, lenMin: 12, lenMax: 40, alpha: 0.24, thick: 0.6 },
-        { yFrac: 0.84, speed: 0.035, count: 14, lenMin: 30, lenMax: 90, alpha: 0.14, thick: 1.1 },
-        { yFrac: 0.90, speed: 0.085, count: 20, lenMin: 10, lenMax: 35, alpha: 0.28, thick: 0.5 },
-        { yFrac: 0.96, speed: 0.050, count: 16, lenMin: 25, lenMax: 80, alpha: 0.18, thick: 1.3 },
+        { yFrac: 0.64, speed: 0.068, count: 34, lenMin: 22, lenMax: 75,  alpha: 0.26, thick: 0.5, yVar: 10 },
+        { yFrac: 0.68, speed: 0.050, count: 28, lenMin: 28, lenMax: 92,  alpha: 0.24, thick: 0.7, yVar: 12 },
+        { yFrac: 0.72, speed: 0.088, count: 40, lenMin: 16, lenMax: 55,  alpha: 0.32, thick: 0.5, yVar: 9  },
+        { yFrac: 0.76, speed: 0.038, count: 22, lenMin: 38, lenMax: 115, alpha: 0.22, thick: 1.0, yVar: 14 },
+        { yFrac: 0.80, speed: 0.100, count: 36, lenMin: 14, lenMax: 48,  alpha: 0.38, thick: 0.4, yVar: 10 },
+        { yFrac: 0.85, speed: 0.058, count: 28, lenMin: 32, lenMax: 105, alpha: 0.24, thick: 1.1, yVar: 13 },
+        { yFrac: 0.90, speed: 0.115, count: 44, lenMin: 10, lenMax: 40,  alpha: 0.44, thick: 0.4, yVar: 8  },
+        { yFrac: 0.95, speed: 0.072, count: 24, lenMin: 45, lenMax: 135, alpha: 0.30, thick: 1.4, yVar: 16 },
       ];
+      const windSlope = -0.055;  // slight downward diagonal
       for (const band of sandBands) {
         const bandSeed = elapsed * band.speed * 200;
-        ctx.strokeStyle = `rgba(225,190,115,${band.alpha})`; ctx.lineWidth = band.thick;
         for (let s = 0; s < band.count; s++) {
-          const sx  = ((s * 179 + bandSeed) % (cw * 1.1));
-          const sy  = ch * band.yFrac + (((s * 31) % 20) - 10);
-          const len = band.lenMin + (s * 53) % (band.lenMax - band.lenMin);
-          // Fade-in at left edge (use screen position for correct edge detection)
-          const edgeFade = Math.min(1, (sx % cw) / 30);
-          ctx.globalAlpha = fade * edgeFade;
-          ctx.beginPath();
-          ctx.moveTo(sx % cw, sy);
-          ctx.lineTo(Math.max(0, (sx % cw) - len), sy);
-          ctx.stroke();
+          const sx     = ((s * 179 + bandSeed) % (cw * 1.15));
+          const sy     = ch * band.yFrac + (((s * 31) % (band.yVar * 2)) - band.yVar);
+          const len    = band.lenMin + (s * 53) % (band.lenMax - band.lenMin);
+          const scrX   = sx % cw;
+          const edgeFade = Math.min(1, scrX / 38);
+          const endX   = Math.max(0, scrX - len);
+          const endY   = sy + len * windSlope;
+          const sG = ctx.createLinearGradient(endX, sy, scrX, sy);
+          sG.addColorStop(0,   'rgba(178,138,68,0)');
+          sG.addColorStop(0.4, `rgba(222,182,105,${band.alpha * edgeFade})`);
+          sG.addColorStop(1,   `rgba(210,168,88,${band.alpha * edgeFade * 0.6})`);
+          ctx.strokeStyle = sG;
+          ctx.lineWidth   = band.thick;
+          ctx.globalAlpha = fade;
+          ctx.beginPath(); ctx.moveTo(scrX, sy); ctx.lineTo(endX, endY); ctx.stroke();
         }
+      }
+      ctx.globalAlpha = fade;
+
+      // ── Airborne sand plumes (billowing off dune crests) ──
+      for (let p = 0; p < 7; p++) {
+        const pPhase = (elapsed * 0.00046 + p * 0.20) % 1;
+        const pX  = cw * (0.04 + p * 0.14) + Math.sin(elapsed * 0.00055 + p * 1.3) * cw * 0.03;
+        const pY  = ch * 0.79 - pPhase * ch * 0.16;
+        const pR  = cw * 0.038 + pPhase * cw * 0.09;
+        const pA  = pPhase < 0.18 ? pPhase / 0.18 : pPhase > 0.68 ? (1 - pPhase) / 0.32 : 0.24;
+        const pG  = ctx.createRadialGradient(pX, pY, 0, pX, pY, pR);
+        pG.addColorStop(0,   `rgba(205,162,82,${pA * 0.95})`);
+        pG.addColorStop(0.5, `rgba(188,148,68,${pA * 0.42})`);
+        pG.addColorStop(1,   'rgba(178,138,60,0)');
+        ctx.fillStyle = pG;
         ctx.globalAlpha = fade;
+        ctx.beginPath(); ctx.arc(pX, pY, pR, 0, Math.PI * 2); ctx.fill();
       }
 
-      // Sand motes — tiny particles rising and drifting (foreground atmosphere)
-      for (let m = 0; m < 30; m++) {
-        const mT    = ((elapsed * 0.00035 + m * 0.13) % 1);
-        const mX    = ((m * 211 + elapsed * 0.012) % cw);
-        const mY    = ch * (0.60 + (1 - mT) * 0.38);
-        const mSize = 1 + (m % 3) * 0.8;
-        const mAlp  = mT < 0.2 ? mT / 0.2 : mT > 0.8 ? (1 - mT) / 0.2 : 0.32 + (m % 5) * 0.06;
+      // ── Sand motes — particles drifting up ──
+      for (let m = 0; m < 55; m++) {
+        const mT    = ((elapsed * 0.00028 + m * 0.105) % 1);
+        const mX    = ((m * 211 + elapsed * 0.015) % cw);
+        const mY    = ch * (0.57 + (1 - mT) * 0.42);
+        const mSize = 0.7 + (m % 4) * 0.65;
+        const mAlp  = mT < 0.14 ? mT / 0.14 : mT > 0.72 ? (1 - mT) / 0.28 : 0.25 + (m % 5) * 0.065;
         ctx.globalAlpha = fade * mAlp;
-        ctx.fillStyle = '#e0bc78';
+        ctx.fillStyle = m % 3 === 0 ? '#dab86a' : m % 3 === 1 ? '#c8a254' : '#e8cc8a';
         ctx.beginPath(); ctx.arc(mX, mY, mSize, 0, Math.PI * 2); ctx.fill();
       }
       ctx.globalAlpha = fade;
 
-      // ── Vulture circling overhead ──
+      // ── Overall dust atmosphere veil ──
+      const dustVeil = ctx.createLinearGradient(0, 0, 0, ch);
+      dustVeil.addColorStop(0,   'rgba(168,112,35,0)');
+      dustVeil.addColorStop(0.5, 'rgba(182,122,40,0.06)');
+      dustVeil.addColorStop(1,   'rgba(198,138,48,0.14)');
+      ctx.fillStyle = dustVeil;
+      ctx.fillRect(0, 0, cw, ch);
+
+      // ── Vulture circling ──
       const vAngle  = elapsed * 0.0008;
-      const vCX     = cw * 0.35, vCY = ch * 0.24;
-      const vRadius = cw * 0.10;
-      const vX      = vCX + Math.cos(vAngle) * vRadius;
-      const vY      = vCY + Math.sin(vAngle) * vRadius * 0.35;
-      const vW      = cw * 0.028;
+      const vCX = cw * 0.35, vCY = ch * 0.24, vRadius = cw * 0.10;
+      const vX  = vCX + Math.cos(vAngle) * vRadius;
+      const vY  = vCY + Math.sin(vAngle) * vRadius * 0.35;
+      const vW  = cw * 0.028;
       ctx.save();
-      ctx.translate(vX, vY);
-      ctx.rotate(vAngle + Math.PI * 0.5);
-      ctx.fillStyle = 'rgba(18,12,6,0.82)';
-      // Body
-      ctx.beginPath();
-      ctx.ellipse(0, 0, vW * 0.22, vW * 0.12, 0, 0, Math.PI * 2);
-      ctx.fill();
-      // Wings (swept back)
+      ctx.translate(vX, vY); ctx.rotate(vAngle + Math.PI * 0.5);
+      ctx.fillStyle = 'rgba(18,12,6,0.85)';
+      ctx.beginPath(); ctx.ellipse(0, 0, vW * 0.22, vW * 0.12, 0, 0, Math.PI * 2); ctx.fill();
       ctx.beginPath();
       ctx.moveTo(-vW * 0.18, 0);
       ctx.quadraticCurveTo(-vW * 0.50, -vW * 0.18, -vW * 0.75,  vW * 0.06);
@@ -6565,7 +6759,7 @@
     }
     ctx.globalAlpha = 1;
 
-    // Title text fades in at t=0.28, stays until t=0.82
+    // Title text
     if (t >= 0.28 && t < 0.86) {
       const ta = t < 0.36 ? (t - 0.28) / 0.08 : t > 0.78 ? (0.86 - t) / 0.08 : 1;
       ctx.save();
@@ -6573,7 +6767,7 @@
       ctx.textAlign = 'center';
       ctx.font = `bold ${Math.min(36, cw / 10)}px Georgia,serif`;
       ctx.fillStyle = '#e8c870';
-      ctx.shadowColor = '#a07820'; ctx.shadowBlur = 20;
+      ctx.shadowColor = '#a07820'; ctx.shadowBlur = 24;
       ctx.fillText('The Egyptian Temple', cw / 2, ch * 0.12);
       ctx.shadowBlur = 0;
       ctx.font = `italic ${Math.min(14, cw / 26)}px Georgia,serif`;
@@ -6877,8 +7071,8 @@
     ctx.fillStyle = '#94a3b8'; ctx.font = '12px monospace'; ctx.textAlign = 'center';
     ctx.fillText(AREA_DEFS[S.area]?.label || '', cw / 2, 27);
 
-    // Avatar indicator: correct 6-avatar icons (Detective/Witch/Explorer/Hunter/Scientist/Kid)
-    const avIcons = ['🔦', '🧙', '🌿', '🏹', '🧪', '⭐'];
+    // Avatar indicator — matches GHOST_AVATAR_DEFS order: Pirate, Explorer, Police, Doctor
+    const avIcons = ['🏴‍☠️', '🌿', '👮', '⚕️'];
     const myAvIcon = avIcons[Math.min(S.me.avatar || 0, avIcons.length - 1)];
     ctx.font = '11px serif'; ctx.textAlign = 'left';
     ctx.fillText(myAvIcon, 12, 41);
