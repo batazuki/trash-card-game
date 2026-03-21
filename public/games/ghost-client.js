@@ -552,7 +552,7 @@
       pathColor: '#22182e',
     },
     egypt: {
-      areaWidth: 2880, areaHeight: 2240, bgColor: '#1a1208', label: 'Egyptian Temple',
+      areaWidth: 2880, areaHeight: 2240, bgColor: '#3c2a16', label: 'Egyptian Temple',
       playerStart: { x: 1440, y: 480 }, obstacles: buildEgyptObs(),
       obsColors: {
         stone:       '#5a4830',
@@ -566,7 +566,7 @@
         gold:        '#e8c840',
         default:     '#7a5a2a',
       },
-      pathColor: '#2a1c0e',
+      pathColor: '#2e200e',
     },
   };
 
@@ -2458,23 +2458,104 @@
     }
 
     else if (areaName === 'egypt') {
-      // Sandy floor — scattered sand ripple patches
-      for (let i = 0; i < 22; i++) {
+      // ── Ancient pyramid stone floor ──────────────────────────────────────────
+      // Large limestone slab blocks with mortar joints, hairline cracks, sand drifts
+      const bW = 96, bH = 48;  // block width × height in pixels (3×1.5 tiles)
+      const mortar = '#1e1208';
+
+      // Viewport cull: only draw blocks touching the visible area
+      const vx0 = Math.max(0, S.cam ? Math.floor(S.cam.x / bW) * bW : 0);
+      const vy0 = Math.max(0, S.cam ? Math.floor(S.cam.y / bH) * bH - bH : 0);
+      const vx1 = Math.min(aw, S.cam ? S.cam.x + cssW + bW * 2 : aw);
+      const vy1 = Math.min(ah, S.cam ? S.cam.y + cssH + bH * 2 : ah);
+
+      for (let row = Math.floor(vy0 / bH); row * bH < vy1; row++) {
+        const by = row * bH;
+        if (by + bH < vy0 || by > vy1) continue;
+        // Alternate rows offset by half a block (running bond pattern)
+        const rowOff = (row & 1) ? bW / 2 : 0;
+        const colStart = Math.floor((vx0 - rowOff) / bW);
+        const colEnd   = Math.ceil((vx1 - rowOff) / bW);
+
+        for (let col = colStart; col <= colEnd; col++) {
+          const bx = col * bW + rowOff;
+          if (bx + bW < 0 || bx > aw) continue;
+
+          // Deterministic per-block tint (stable — no flicker)
+          const seed = (row & 0x3f) * 53 + (col & 0x3f) * 17;
+          const v = (Math.sin(seed * 0.731) * 0.5 + 0.5);  // 0-1
+
+          // Stone face — warm sandstone, slight value variation
+          const r = Math.round(88  + v * 18);   // 88-106
+          const g = Math.round(62  + v * 12);   // 62-74
+          const b = Math.round(30  + v * 10);   // 30-40
+          ctx.fillStyle = `rgb(${r},${g},${b})`;
+          ctx.fillRect(bx + 1, by + 1, bW - 2, bH - 2);
+
+          // Top-face catch light (simulates torchlight from above-left)
+          ctx.fillStyle = 'rgba(255,210,120,0.07)';
+          ctx.fillRect(bx + 1, by + 1, bW - 2, 5);
+          ctx.fillRect(bx + 1, by + 1, 5, bH - 2);
+
+          // Bottom/right face shadow (depth illusion)
+          ctx.fillStyle = 'rgba(0,0,0,0.14)';
+          ctx.fillRect(bx + 1, by + bH - 5, bW - 2, 4);
+          ctx.fillRect(bx + bW - 5, by + 1, 4, bH - 2);
+
+          // Hairline crack on ~15% of blocks
+          if (v < 0.15) {
+            ctx.strokeStyle = 'rgba(0,0,0,0.22)';
+            ctx.lineWidth = 0.8;
+            const crackX = bx + bW * (0.25 + v * 0.5);
+            const crackY = by + bH * (0.2 + v * 0.3);
+            ctx.beginPath();
+            ctx.moveTo(crackX, crackY);
+            ctx.lineTo(crackX + bW * (0.12 + v * 0.1), crackY + bH * (0.35 + v * 0.2));
+            ctx.stroke();
+          }
+          // Faint hieroglyph mark on ~8% of blocks (tiny incised rectangle pair)
+          if (v > 0.9) {
+            ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+            ctx.lineWidth = 0.7;
+            const hx = bx + bW * 0.38, hy = by + bH * 0.3;
+            ctx.strokeRect(hx, hy, bW * 0.12, bH * 0.22);
+            ctx.strokeRect(hx + bW * 0.16, hy, bW * 0.08, bH * 0.22);
+          }
+        }
+      }
+
+      // Mortar grid — horizontal seams
+      ctx.strokeStyle = mortar; ctx.lineWidth = 2;
+      const hRowStart = Math.floor(vy0 / bH);
+      const hRowEnd   = Math.ceil(vy1 / bH);
+      for (let row = hRowStart; row <= hRowEnd; row++) {
+        ctx.beginPath(); ctx.moveTo(0, row * bH); ctx.lineTo(aw, row * bH); ctx.stroke();
+      }
+      // Mortar vertical joints (offset per row)
+      for (let row = hRowStart; row <= hRowEnd; row++) {
+        const rowOff = (row & 1) ? bW / 2 : 0;
+        const colStart2 = Math.floor((vx0 - rowOff) / bW) - 1;
+        const colEnd2   = Math.ceil((vx1 - rowOff) / bW) + 1;
+        for (let col = colStart2; col <= colEnd2; col++) {
+          const bx = col * bW + rowOff;
+          if (bx < -bW || bx > aw + bW) continue;
+          ctx.beginPath();
+          ctx.moveTo(bx, row * bH);
+          ctx.lineTo(bx, (row + 1) * bH);
+          ctx.stroke();
+        }
+      }
+
+      // Sand drift patches settled in seams and corners
+      ctx.fillStyle = 'rgba(195,155,70,0.11)';
+      for (let i = 0; i < 24; i++) {
         const px = 128 + (Math.sin(i * 6.31) * 0.5 + 0.5) * (aw - 256);
         const py = 128 + (Math.sin(i * 4.73) * 0.5 + 0.5) * (ah - 256);
-        const rx = 20 + (Math.sin(i * 3.17) * 0.5 + 0.5) * 36;
-        const ry = 8  + (Math.sin(i * 5.29) * 0.5 + 0.5) * 16;
-        ctx.fillStyle = `rgba(200,155,50,${0.055 + (Math.sin(i*2.1)*0.5+0.5)*0.045})`;
-        ctx.save(); ctx.translate(px, py); ctx.rotate(Math.sin(i*1.7) * 0.8);
-        ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI*2); ctx.fill();
+        const rx = 18 + (Math.sin(i * 3.17) * 0.5 + 0.5) * 28;
+        const ry = 5  + (Math.sin(i * 5.29) * 0.5 + 0.5) * 8;
+        ctx.save(); ctx.translate(px, py); ctx.rotate(Math.sin(i * 1.7) * 0.7);
+        ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
-      }
-      // Fine sand grain dots
-      ctx.fillStyle = 'rgba(215,175,80,0.08)';
-      for (let i = 0; i < 60; i++) {
-        const px = 64 + (Math.sin(i * 7.43) * 0.5 + 0.5) * (aw - 128);
-        const py = 64 + (Math.sin(i * 5.81) * 0.5 + 0.5) * (ah - 128);
-        ctx.beginPath(); ctx.arc(px, py, 2.5, 0, Math.PI*2); ctx.fill();
       }
     }
   }
@@ -4179,7 +4260,7 @@
           : 600  + Math.random() * 1200;
       }
       const step = npc.speed * dt;
-      if (npc.type === 'mummy') npc.walkPhase = (npc.walkPhase + step * 0.008) % 1;
+      if (npc.type === 'mummy') npc.walkPhase = (npc.walkPhase + step * 0.035) % 1;
       const nx = npc.x + Math.cos(npc.angle) * step;
       const ny = npc.y + Math.sin(npc.angle) * step;
       if (nx < b.x1 + 40 || nx > b.x2 - 40) { npc.angle = Math.PI - npc.angle; }
@@ -4190,12 +4271,15 @@
 
   function drawMummy(cx, cy, angle, walkPhase, now) {
     const dir = facingToDir(angle);
-    const wCyc   = Math.sin((walkPhase || 0) * Math.PI * 2);
-    const lLeg   = wCyc * 2.8;
-    const rLeg   = -lLeg;
-    const lArm   = -lLeg * 0.55;
-    const rArm   =  lLeg * 0.55;
-    const bob    = Math.sin(now * 0.0011) * 1.8;
+    // Short shuffling strides — legs barely lift
+    const wCyc = Math.sin((walkPhase || 0) * Math.PI * 2);
+    const lLeg  = wCyc * 1.4;   // tight shuffle, not a stride
+    const rLeg  = -lLeg;
+    // Slow lurch bob — whole body sways slightly
+    const lurchX = wCyc * 1.2;  // side sway for side view
+    const bob    = Math.sin(now * 0.0010) * 1.5 + Math.abs(wCyc) * 0.8;
+    // Outstretched arm droop: arms held straight out but droop slightly with idle
+    const armDroop = Math.sin(now * 0.0009) * 1.2;
 
     const WRAP    = '#d4c8a8';
     const WRAP_SH = '#a89878';
@@ -4209,183 +4293,202 @@
     function stripe(x1, y1, x2, y2) {
       ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
     }
+    // Bandage wrap stripes across a rect
+    function wrapStripes(x, y, w, h) {
+      ctx.strokeStyle = WRAP_SH; ctx.lineWidth = 1.1;
+      for (let bi = y + 3; bi < y + h; bi += 3.5) stripe(x, bi, x + w, bi + 1);
+    }
 
     ctx.save();
     ctx.translate(Math.round(cx), Math.round(cy + bob));
 
-    // Ground shadow (stays at fixed y, does not bob)
-    ctx.fillStyle = 'rgba(0,0,0,0.28)';
-    ctx.beginPath(); ctx.ellipse(0, 14 - bob, 11, 4.5, 0, 0, Math.PI * 2); ctx.fill();
+    // Ground shadow (anchored, does not bob)
+    ctx.fillStyle = 'rgba(0,0,0,0.30)';
+    ctx.beginPath(); ctx.ellipse(0, 14 - bob, 12, 5, 0, 0, Math.PI * 2); ctx.fill();
 
     if (dir === 'right' || dir === 'left') {
       // ── SIDE VIEW ─────────────────────────────────────────────────────────
       if (dir === 'left') ctx.scale(-1, 1);
+      // Body sways slightly forward/back with each shuffle step
+      ctx.translate(lurchX, 0);
 
-      // Back leg
-      ctx.fillStyle = WRAP_SH; ar2(-3, 2 + rLeg, 4, 10);
-      ctx.fillStyle = WRAP;    ar2(-4, 11 + rLeg, 6, 3);
-      ctx.strokeStyle = WRAP_SH; ctx.lineWidth = 1;
-      for (let li = 3; li < 11; li += 3) stripe(-3, li + rLeg, 1, li + rLeg + 1);
+      // Back (trailing) leg — short stride
+      ctx.fillStyle = WRAP_SH; ar2(-2, 2 + rLeg, 4, 10);
+      ctx.fillStyle = WRAP;    ar2(-3, 11 + rLeg, 5, 3);
+      wrapStripes(-2, 2 + rLeg, 4, 10);
 
-      // Back arm
-      ctx.fillStyle = WRAP_SH; ar2(2, -6 + rArm, 3, 7);
-      ctx.fillStyle = WRAP;    ar2(2, 0 + rArm, 4, 2.5);
+      // Back arm (behind body — drooping slightly down)
+      ctx.fillStyle = WRAP_SH; ar2(-10, -8 + armDroop * 0.4, 6, 4);
+      ctx.fillStyle = WRAP_SH; ar2(-14, -5 + armDroop, 5, 4);
+      wrapStripes(-14, -5 + armDroop, 5, 4);
 
-      // Torso
-      ctx.fillStyle = WRAP; ar2(-4, -12, 9, 25);
-      ctx.fillStyle = WRAP_SH; ar2(-4, -12, 2, 25);
-      ctx.fillStyle = WRAP_HI; ar2(2, -12, 2, 25);
-      ctx.strokeStyle = WRAP_SH; ctx.lineWidth = 1.3;
-      for (let bi = -10; bi < 13; bi += 4) {
-        stripe(-4, bi, 5, bi + 2);
-        stripe(5, bi, -4, bi + 2);
+      // Torso (slightly wider at shoulders)
+      ctx.fillStyle = WRAP; ar2(-5, -12, 10, 26);
+      ctx.fillStyle = WRAP_SH; ar2(-5, -12, 2, 26);
+      ctx.fillStyle = WRAP_HI; ar2(1, -12, 2, 26);
+      // Cross-diagonal bandage wrap on torso
+      ctx.strokeStyle = WRAP_SH; ctx.lineWidth = 1.2;
+      for (let bi = -10; bi < 14; bi += 4) {
+        stripe(-5, bi, 5, bi + 2.5);
+        stripe(5, bi, -5, bi + 2.5);
       }
 
-      // Front leg
-      ctx.fillStyle = WRAP; ar2(-5, 2 + lLeg, 4, 10);
-      ctx.fillStyle = WRAP;    ar2(-5, 11 + lLeg, 6, 3);
-      ctx.strokeStyle = WRAP_SH; ctx.lineWidth = 1;
-      for (let li = 3; li < 11; li += 3) stripe(-5, li + lLeg, -1, li + lLeg + 1);
+      // Front leg — short shuffle step
+      ctx.fillStyle = WRAP; ar2(-3, 2 + lLeg, 4, 10);
+      ctx.fillStyle = WRAP;    ar2(-4, 11 + lLeg, 6, 3);
+      wrapStripes(-3, 2 + lLeg, 4, 10);
 
-      // Front arm outstretched
-      ctx.fillStyle = WRAP; ar2(2, -6 + lArm, 3, 7);
-      ctx.fillStyle = WRAP;    ar2(2, 0 + lArm, 4, 2.5);
-      ctx.strokeStyle = WRAP_SH; ctx.lineWidth = 1;
-      for (let ai = -5; ai < 2; ai += 2.5) stripe(2, ai + lArm, 5, ai + lArm + 1);
+      // ── OUTSTRETCHED FRONT ARM (classic mummy reach) ──────────────────────
+      // Upper arm — horizontal forward extension from shoulder
+      ctx.fillStyle = WRAP; ar2(4, -9, 9, 4);
+      wrapStripes(4, -9, 9, 4);
+      // Forearm — slightly lower for drooping effect
+      ctx.fillStyle = WRAP; ar2(12, -7 + armDroop, 8, 4);
+      wrapStripes(12, -7 + armDroop, 8, 4);
+      // Wrapped hand/fingers
+      ctx.fillStyle = WRAP; ar2(19, -6 + armDroop, 5, 3);
+      ctx.fillStyle = WRAP_SH; ar2(23, -5.5 + armDroop, 1, 2);
 
       // Neck
       ctx.fillStyle = WRAP; ar2(-1.5, -14, 4, 3);
+      wrapStripes(-1.5, -14, 4, 3);
 
-      // Head (skin base)
+      // ── HEAD ──────────────────────────────────────────────────────────────
       ctx.fillStyle = SKIN;
-      ctx.beginPath(); ctx.ellipse(0, -19, 5.5, 6.5, 0, 0, Math.PI * 2); ctx.fill();
-      // Head wrapping — cheek + chin bands
+      ctx.beginPath(); ctx.ellipse(0, -20, 5.5, 6.5, 0, 0, Math.PI * 2); ctx.fill();
+      // Cheek + chin bandage bands
       ctx.fillStyle = WRAP;
-      ar2(-5.5, -15, 11, 2.5);
-      ar2(-5.5, -23, 2, 9);
+      ar2(-5.5, -15, 11, 2.5);  // chin
+      ar2(-5.5, -25, 2.5, 11);  // back of head wrap
 
-      // Eye (facing forward side)
+      // Eye — amber glow
       ctx.fillStyle = EYE_C;
-      ctx.beginPath(); ctx.arc(2, -19, 2, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = 'rgba(255,160,40,0.45)';
-      ctx.beginPath(); ctx.arc(2, -19, 3.2, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#201000'; ar2(1.5, -20, 0.8, 2);
+      ctx.beginPath(); ctx.arc(2.5, -20, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,160,40,0.42)';
+      ctx.beginPath(); ctx.arc(2.5, -20, 3.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#201000'; ar2(2, -21.2, 0.8, 2);
 
-      // Nemes headdress
+      // ── NEMES HEADDRESS ───────────────────────────────────────────────────
       ctx.fillStyle = NEM_B;
-      ctx.beginPath(); ctx.ellipse(0, -24, 6, 3.5, 0, 0, Math.PI * 2); ctx.fill();
-      // Gold stripes
-      ctx.strokeStyle = NEM_G; ctx.lineWidth = 0.75;
-      for (let ni = -5; ni <= 5; ni += 2) stripe(ni, -27.5, ni, -20.5);
-      // Tail lappet (back)
+      ctx.beginPath(); ctx.ellipse(0, -25, 6.5, 3.5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = NEM_G; ctx.lineWidth = 0.8;
+      for (let ni = -5.5; ni <= 5.5; ni += 2) stripe(ni, -28.5, ni, -21.5);
+      // Back tail lappet
       ctx.fillStyle = NEM_B;
       ctx.beginPath();
-      ctx.moveTo(-5.5, -24); ctx.lineTo(-9, -14); ctx.lineTo(-5.5, -13); ctx.lineTo(-4.5, -17);
+      ctx.moveTo(-6, -25); ctx.lineTo(-10, -14); ctx.lineTo(-6.5, -13); ctx.lineTo(-5, -18);
       ctx.closePath(); ctx.fill();
       ctx.strokeStyle = NEM_G; ctx.lineWidth = 0.65;
-      for (let ti = 0; ti < 3; ti++) {
-        const ty = -23 + ti * 3;
-        stripe(-5.5, ty, -9 + ti * 0.5, ty + 1.5);
-      }
-      // Uraeus cobra ornament (forehead)
+      for (let ti = 0; ti < 3; ti++) stripe(-6, -24 + ti * 3.5, -10 + ti * 0.5, -22.5 + ti * 3.5);
+      // Uraeus
       ctx.fillStyle = NEM_G;
-      ctx.beginPath(); ctx.arc(1, -27, 1.8, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#884400'; ar2(0.5, -29, 0.8, 2);
+      ctx.beginPath(); ctx.arc(1.5, -27.5, 1.8, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#884400'; ar2(1, -30, 0.9, 2.5);
 
     } else {
       // ── FRONT / BACK VIEW ─────────────────────────────────────────────────
       const isFront = dir === 'down';
 
-      // Left leg
-      ctx.fillStyle = WRAP; ar2(-7, 2 + lLeg, 5, 10); ar2(-8, 11 + lLeg, 7, 3);
-      ctx.strokeStyle = WRAP_SH; ctx.lineWidth = 1.3;
-      for (let li = 3; li < 11; li += 3) stripe(-7, li + lLeg, -2, li + lLeg + 0.5);
+      // Left leg — short shuffle
+      ctx.fillStyle = WRAP; ar2(-6, 2 + lLeg, 5, 10); ar2(-7, 11 + lLeg, 6, 3);
+      wrapStripes(-6, 2 + lLeg, 5, 10);
 
-      // Right leg
+      // Right leg — short shuffle (opposite phase)
       ctx.fillStyle = isFront ? WRAP : WRAP_SH;
-      ar2(2, 2 + rLeg, 5, 10); ar2(1, 11 + rLeg, 7, 3);
-      ctx.strokeStyle = WRAP_SH; ctx.lineWidth = 1.3;
-      for (let li = 3; li < 11; li += 3) stripe(2, li + rLeg, 7, li + rLeg + 0.5);
+      ar2(1, 2 + rLeg, 5, 10); ar2(1, 11 + rLeg, 6, 3);
+      wrapStripes(1, 2 + rLeg, 5, 10);
 
-      // Left arm — outstretched
+      // ── OUTSTRETCHED ARMS — both horizontal, classic mummy pose ──────────
+      // Left arm: upper arm horizontal out, forearm level, wrapped hand
       ctx.fillStyle = WRAP;
-      ar2(-14, -6 + lArm, 7, 5); ar2(-13, -2 + lArm, 6, 5);
-      ctx.strokeStyle = WRAP_SH; ctx.lineWidth = 1;
-      for (let ai = -5; ai < 2; ai += 2.5) stripe(-14, ai + lArm, -7, ai + lArm + 0.5);
+      ar2(-20, -9 + armDroop * 0.5, 8, 4);     // upper arm
+      ar2(-28, -7 + armDroop, 9, 4);            // forearm
+      ar2(-36, -6 + armDroop, 5, 3.5);          // wrapped hand
+      wrapStripes(-20, -9 + armDroop * 0.5, 8, 4);
+      wrapStripes(-28, -7 + armDroop, 9, 4);
+      // Finger wrap tabs
+      ctx.fillStyle = WRAP_SH; ar2(-36, -6 + armDroop, 1, 3.5);
 
-      // Right arm — outstretched
+      // Right arm: mirror
       ctx.fillStyle = WRAP;
-      ar2(7, -6 + rArm, 7, 5); ar2(7, -2 + rArm, 6, 5);
-      ctx.strokeStyle = WRAP_SH; ctx.lineWidth = 1;
-      for (let ai = -5; ai < 2; ai += 2.5) stripe(7, ai + rArm, 14, ai + rArm + 0.5);
+      ar2(12, -9 + armDroop * 0.5, 8, 4);
+      ar2(19, -7 + armDroop, 9, 4);
+      ar2(31, -6 + armDroop, 5, 3.5);
+      wrapStripes(12, -9 + armDroop * 0.5, 8, 4);
+      wrapStripes(19, -7 + armDroop, 9, 4);
+      ctx.fillStyle = WRAP_SH; ar2(35, -6 + armDroop, 1, 3.5);
 
       // Torso
-      ctx.fillStyle = WRAP; ar2(-7, -12, 14, 25);
-      ctx.fillStyle = WRAP_SH; ar2(-7, -12, 2.5, 25); ar2(4.5, -12, 2.5, 25);
-      ctx.fillStyle = WRAP_HI; ar2(-2, -12, 4, 25);
-      // Cross-bandage wrap pattern
-      ctx.strokeStyle = WRAP_SH; ctx.lineWidth = 1.3;
-      for (let bi = -10; bi < 13; bi += 4) {
-        stripe(-7, bi, 7, bi + 2);
-        stripe(7, bi, -7, bi + 2);
+      ctx.fillStyle = WRAP; ar2(-7, -12, 14, 24);
+      ctx.fillStyle = WRAP_SH; ar2(-7, -12, 2.5, 24); ar2(4.5, -12, 2.5, 24);
+      ctx.fillStyle = WRAP_HI; ar2(-2.5, -12, 5, 24);
+      // Cross-diagonal bandage wrap
+      ctx.strokeStyle = WRAP_SH; ctx.lineWidth = 1.2;
+      for (let bi = -10; bi < 12; bi += 4) {
+        stripe(-7, bi, 7, bi + 2.5);
+        stripe(7, bi, -7, bi + 2.5);
       }
-      // Horizontal accent bands
-      ctx.strokeStyle = WRAP_HI; ctx.lineWidth = 0.7;
-      for (let bi = -8; bi < 12; bi += 7) stripe(-7, bi, 7, bi);
+      ctx.strokeStyle = WRAP_HI; ctx.lineWidth = 0.65;
+      for (let bi = -8; bi < 12; bi += 8) stripe(-7, bi, 7, bi);
+
+      // Shoulder mounds (where arms attach)
+      ctx.fillStyle = WRAP;
+      ar2(-12, -11, 5, 4); ar2(7, -11, 5, 4);
 
       // Neck
       ctx.fillStyle = WRAP; ar2(-2, -14, 4, 3);
+      wrapStripes(-2, -14, 4, 3);
 
-      // Head skin base
+      // ── HEAD ──────────────────────────────────────────────────────────────
       ctx.fillStyle = SKIN;
-      ctx.beginPath(); ctx.ellipse(0, -20, 7, 7.5, 0, 0, Math.PI * 2); ctx.fill();
-      // Cheek bandage wraps
+      ctx.beginPath(); ctx.ellipse(0, -21, 7, 7.5, 0, 0, Math.PI * 2); ctx.fill();
+      // Cheek bandages
       ctx.fillStyle = WRAP;
-      ar2(-7, -16, 2.5, 8); ar2(4.5, -16, 2.5, 8);
-      ar2(-7, -15, 14, 2.5);  // chin wrap band
+      ar2(-7.5, -17, 2.5, 8);  // left cheek
+      ar2(5,    -17, 2.5, 8);  // right cheek
+      ar2(-7.5, -15.5, 15, 2.5);  // chin band
 
       if (isFront) {
-        // Eyes
+        // Glowing amber eyes
         ctx.fillStyle = EYE_C;
-        ctx.beginPath(); ctx.arc(-2.8, -21, 2.2, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc( 2.8, -21, 2.2, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = 'rgba(255,160,40,0.4)';
-        ctx.beginPath(); ctx.arc(-2.8, -21, 3.8, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc( 2.8, -21, 3.8, 0, Math.PI * 2); ctx.fill();
-        // Pupil slits
+        ctx.beginPath(); ctx.arc(-2.8, -22, 2.2, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc( 2.8, -22, 2.2, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,160,40,0.38)';
+        ctx.beginPath(); ctx.arc(-2.8, -22, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc( 2.8, -22, 4, 0, Math.PI * 2); ctx.fill();
+        // Vertical pupil slits
         ctx.fillStyle = '#201000';
-        ar2(-3.1, -22.5, 0.9, 2.4); ar2(2.5, -22.5, 0.9, 2.4);
+        ar2(-3.2, -23.6, 0.9, 2.5); ar2(2.4, -23.6, 0.9, 2.5);
       }
 
-      // Nemes headdress top band
+      // ── NEMES HEADDRESS ───────────────────────────────────────────────────
       ctx.fillStyle = NEM_B;
-      ctx.beginPath(); ctx.ellipse(0, -25, 7.5, 4, 0, 0, Math.PI * 2); ctx.fill();
-      // Gold stripes on band
-      ctx.strokeStyle = NEM_G; ctx.lineWidth = 0.85;
-      for (let ni = -6; ni <= 6; ni += 2) stripe(ni, -29, ni, -21);
-      // Side lappets hanging down
+      ctx.beginPath(); ctx.ellipse(0, -26.5, 7.5, 4, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = NEM_G; ctx.lineWidth = 0.88;
+      for (let ni = -6; ni <= 6; ni += 2) stripe(ni, -30.5, ni, -22.5);
+      // Side lappets
       ctx.fillStyle = NEM_B;
       ctx.beginPath();
-      ctx.moveTo(-7.5, -25); ctx.lineTo(-10, -14); ctx.lineTo(-7.5, -13); ctx.lineTo(-6, -17);
+      ctx.moveTo(-7.5, -26.5); ctx.lineTo(-10.5, -15); ctx.lineTo(-8, -14); ctx.lineTo(-6.5, -18);
       ctx.closePath(); ctx.fill();
       ctx.beginPath();
-      ctx.moveTo( 7.5, -25); ctx.lineTo( 10, -14); ctx.lineTo( 7.5, -13); ctx.lineTo( 6, -17);
+      ctx.moveTo( 7.5, -26.5); ctx.lineTo( 10.5, -15); ctx.lineTo( 8, -14); ctx.lineTo( 6.5, -18);
       ctx.closePath(); ctx.fill();
       ctx.strokeStyle = NEM_G; ctx.lineWidth = 0.65;
       for (let li = 0; li < 4; li++) {
-        const ly = -24 + li * 2.8;
-        stripe(-10 + li * 0.3, ly, -7.5, ly + 1.2);
-        stripe( 10 - li * 0.3, ly,  7.5, ly + 1.2);
+        const ly = -25.5 + li * 2.8;
+        stripe(-10.5 + li * 0.3, ly, -7.5, ly + 1.2);
+        stripe( 10.5 - li * 0.3, ly,  7.5, ly + 1.2);
       }
       // Center tail braid
       ctx.fillStyle = NEM_B; ar2(-2, -15, 4, 6);
       ctx.strokeStyle = NEM_G; ctx.lineWidth = 0.9;
       stripe(-2, -13, 2, -13); stripe(-2, -11, 2, -11);
-      // Uraeus (cobra) on forehead center
+      // Uraeus cobra
       if (isFront) {
         ctx.fillStyle = NEM_G;
-        ctx.beginPath(); ctx.arc(0, -28.5, 2, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#aa4400'; ar2(-0.6, -31, 1.2, 2.5);
+        ctx.beginPath(); ctx.arc(0, -30, 2.2, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#aa4400'; ar2(-0.6, -32.5, 1.2, 2.5);
       }
     }
 
@@ -4729,8 +4832,10 @@
     const now = Date.now();
     dc.clearRect(0, 0, cw, ch);
 
-    // Basement is much darker
-    let darknessAlpha = (S.area === 'hotel' && S.hotelBasement) ? 0.94 : 0.87;
+    // Basement is much darker; Egypt is lit by torchlight (slightly less dark)
+    let darknessAlpha = (S.area === 'hotel' && S.hotelBasement) ? 0.94
+                      : S.area === 'egypt' ? 0.80
+                      : 0.87;
 
     // Lightning flash — briefly illuminates entire graveyard
     if (lightningState && S.area === 'graveyard') {
@@ -5280,14 +5385,21 @@
       }
     }
 
-    // #4 Cold spot: frost-blue edge glow with pulsing sparkles (enhanced)
+    // #4 Ghost proximity glow — color tinted by area
     if (S.coldSignal > 0.15) {
       const intensity = Math.min(1, (S.coldSignal - 0.15) / 0.85);
       const cpulse = 0.72 + 0.28 * Math.sin(now * 0.0044);
+      // Area-specific ghost proximity palette
+      const ghostGlow = S.area === 'egypt'     ? [255,210,80,  220,170,60]
+                      : S.area === 'garden'    ? [80, 200,100, 60, 160,80]
+                      : S.area === 'house'     ? [200,195,210, 160,155,180]
+                      : S.area === 'hotel'     ? [180,210,255, 140,180,255]
+                      : /* graveyard default */ [100,200,255, 60, 140,255];
+      const [r1,g1,b1,r2,g2,b2] = ghostGlow;
       const cg = ctx.createRadialGradient(cw/2, ch/2, Math.min(cw,ch)*0.22, cw/2, ch/2, Math.max(cw,ch)*0.75);
-      cg.addColorStop(0, 'rgba(100,200,255,0)');
-      cg.addColorStop(0.65, `rgba(80,170,255,${(intensity * 0.18 * cpulse).toFixed(3)})`);
-      cg.addColorStop(1, `rgba(60,140,255,${(intensity * 0.38 * cpulse).toFixed(3)})`);
+      cg.addColorStop(0, `rgba(${r1},${g1},${b1},0)`);
+      cg.addColorStop(0.65, `rgba(${r1},${g1},${b1},${(intensity * 0.18 * cpulse).toFixed(3)})`);
+      cg.addColorStop(1, `rgba(${r2},${g2},${b2},${(intensity * 0.38 * cpulse).toFixed(3)})`);
       ctx.fillStyle = cg;
       ctx.fillRect(0, 0, cw, ch);
       if (intensity > 0.3) {
@@ -5297,7 +5409,7 @@
           const spx = cw/2 + Math.cos(angle) * dist;
           const spy = ch/2 + Math.sin(angle) * dist;
           const sparkA = intensity * (0.45 + 0.55 * Math.sin(now * 0.004 + i * 1.1)) * 0.65;
-          ctx.fillStyle = `rgba(160,230,255,${sparkA.toFixed(3)})`;
+          ctx.fillStyle = `rgba(${r1},${g1},${b1},${sparkA.toFixed(3)})`;
           ctx.beginPath(); ctx.arc(spx, spy, 2.5, 0, Math.PI*2); ctx.fill();
         }
       }
@@ -7351,30 +7463,94 @@
     if (el) el.remove();
   }
 
+  // ── Ghost found toast (bio_short shown on detection) ─────────────────────
+  function showGhostFoundToast(title, bio_short, color) {
+    const old = document.getElementById('ghost-found-toast');
+    if (old) old.remove();
+
+    const toast = document.createElement('div');
+    toast.id = 'ghost-found-toast';
+    toast.style.cssText = [
+      'position:fixed',
+      'top:56px',
+      'left:50%',
+      'transform:translateX(-50%)',
+      'max-width:320px',
+      'width:calc(100% - 48px)',
+      'background:rgba(8,8,18,0.93)',
+      `border:1.5px solid ${color}88`,
+      'border-radius:10px',
+      'padding:12px 16px',
+      'z-index:8500',
+      'font-family:Georgia,serif',
+      'text-align:center',
+      'animation:ghostToastIn 0.4s ease',
+      'box-shadow:0 4px 24px rgba(0,0,0,0.6)',
+      'pointer-events:none',
+    ].join(';');
+
+    if (title) {
+      const titleEl = document.createElement('div');
+      titleEl.style.cssText = `font-size:13px;font-weight:bold;color:${color};letter-spacing:0.06em;margin-bottom:5px;`;
+      titleEl.textContent = title;
+      toast.appendChild(titleEl);
+    }
+    if (bio_short) {
+      const bioEl = document.createElement('div');
+      bioEl.style.cssText = 'font-size:11px;color:rgba(220,210,200,0.88);line-height:1.5;font-style:italic;';
+      bioEl.textContent = bio_short;
+      toast.appendChild(bioEl);
+    }
+
+    if (!document.getElementById('ghost-toast-style')) {
+      const st = document.createElement('style');
+      st.id = 'ghost-toast-style';
+      st.textContent = '@keyframes ghostToastIn{from{opacity:0;transform:translateX(-50%) translateY(-8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}';
+      document.head.appendChild(st);
+    }
+
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      toast.style.transition = 'opacity 0.6s';
+      toast.style.opacity = '0';
+      setTimeout(() => toast.remove(), 650);
+    }, 5000);
+  }
+
   // ── Ghost reveal animation ────────────────────────────────────────────────
-  function showReveal(name, personality, color, description, byMe) {
-    S.reveal = { name, personality, color, description, byMe, start: Date.now() };
-    setTimeout(() => { if (S) S.reveal = null; }, 4500);
+  function showReveal(name, personality, color, description, byMe, title) {
+    S.reveal = { name, personality, color, description, byMe, start: Date.now(), title: title || null };
+    setTimeout(() => { if (S) S.reveal = null; }, 5000);
   }
 
   function drawReveal(cw, ch) {
     const rv = S.reveal;
     const t = Date.now() - rv.start;
-    const alpha = t < 300 ? t/300 : t > 3800 ? Math.max(0,1-(t-3800)/700) : 1;
+    const alpha = t < 300 ? t/300 : t > 4200 ? Math.max(0,1-(t-4200)/800) : 1;
     ctx.save(); ctx.globalAlpha = alpha;
     ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(0,0,cw,ch);
-    const crdW = Math.min(cw-40, 290), crdH = 210;
+    const hasTitle = !!rv.title;
+    const crdW = Math.min(cw-40, 300), crdH = hasTitle ? 240 : 210;
     const crdX = (cw-crdW)/2, crdY = ch/2-crdH/2-20;
     ctx.fillStyle = rv.color+'cc'; rrect(ctx, crdX, crdY, crdW, crdH, 18); ctx.fill();
     ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 2; rrect(ctx, crdX, crdY, crdW, crdH, 18); ctx.stroke();
     ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
     ctx.font = '28px serif'; ctx.fillText('👻', crdX+crdW/2, crdY+46);
     ctx.font = 'bold 20px Georgia,serif'; ctx.fillText(rv.name, crdX+crdW/2, crdY+76);
-    ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.font = '11px monospace';
-    ctx.fillText(rv.personality.toUpperCase(), crdX+crdW/2, crdY+96);
-    ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = '12px sans-serif';
-    wrapText(rv.description, crdX+crdW/2, crdY+116, crdW-24, 17);
-    if (rv.byMe) { ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 13px monospace'; ctx.fillText('✓ You found this ghost!', crdX+crdW/2, crdY+crdH-14); }
+    if (hasTitle) {
+      ctx.fillStyle = 'rgba(255,255,255,0.88)'; ctx.font = 'italic 12px Georgia,serif';
+      ctx.fillText(rv.title, crdX+crdW/2, crdY+95);
+      ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.font = '10px monospace';
+      ctx.fillText(rv.personality.toUpperCase(), crdX+crdW/2, crdY+111);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = '12px sans-serif';
+      wrapText(rv.description, crdX+crdW/2, crdY+130, crdW-24, 17);
+    } else {
+      ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.font = '11px monospace';
+      ctx.fillText(rv.personality.toUpperCase(), crdX+crdW/2, crdY+96);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = '12px sans-serif';
+      wrapText(rv.description, crdX+crdW/2, crdY+116, crdW-24, 17);
+    }
+    if (rv.byMe) { ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 13px monospace'; ctx.fillText('✓ You identified this ghost!', crdX+crdW/2, crdY+crdH-14); }
     ctx.globalAlpha = 1; ctx.restore();
   }
 
@@ -7606,7 +7782,7 @@
         rrect(ctx, jX+8, cardY, jW-16, cardH, 8); ctx.stroke();
 
         ctx.fillStyle = gh.color; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'left';
-        ctx.fillText(`Ghost #${gh.id+1}`, jX+16, cardY+18);
+        ctx.fillText(gh.title ? gh.title.substring(0, 26) : `Ghost #${gh.id+1}`, jX+16, cardY+18);
         ctx.fillStyle = '#94a3b8'; ctx.font = '11px monospace';
         ctx.fillText(`${gh.personality || '?'} • ${gh.nameLength} letters`, jX+16, cardY+33);
         if (gh.ouijaLetters && gh.ouijaLetters.length > 0) {
@@ -7651,19 +7827,20 @@
     overlay.appendChild(title);
 
     const cards = document.createElement('div');
-    cards.style.cssText = 'display:flex;flex-wrap:wrap;gap:18px;justify-content:center;max-width:750px;';
+    cards.style.cssText = 'display:flex;flex-wrap:wrap;gap:18px;justify-content:center;max-width:900px;';
 
     ghosts.forEach((gh, gi) => {
       const card = document.createElement('div');
       card.dataset.ghostIdx = gi;
       // Manila folder aesthetic
+      const hasBio = !!(gh.bio_full || gh.title);
       card.style.cssText = [
         'background:#c8a96e',
         'border:2px solid #8b6914',
         'border-radius:3px 3px 8px 8px',
         'padding:14px 18px 16px',
-        'min-width:150px',
-        'max-width:200px',
+        hasBio ? 'min-width:200px' : 'min-width:150px',
+        hasBio ? 'max-width:260px' : 'max-width:200px',
         'text-align:center',
         'color:#2a1a00',
         'position:relative',
@@ -7689,6 +7866,14 @@
       nameEl.textContent = '';
       card.appendChild(nameEl);
 
+      // Title (if character roster)
+      if (gh.title) {
+        const titleEl = document.createElement('div');
+        titleEl.style.cssText = 'font-size:9px;font-style:italic;color:#5a3a00;margin-top:2px;font-family:Georgia,serif;';
+        titleEl.textContent = gh.title;
+        card.appendChild(titleEl);
+      }
+
       // Personality stamp
       const persEl = document.createElement('div');
       persEl.style.cssText = 'font-size:9px;letter-spacing:0.12em;color:#6b4a00;margin-top:3px;font-family:monospace;';
@@ -7700,10 +7885,11 @@
       rule.style.cssText = 'border-bottom:1px solid #8b6914;margin:8px 0;opacity:0.5;';
       card.appendChild(rule);
 
-      // Description
+      // Full bio (if character roster), otherwise personality description
+      const bioText = gh.bio_full || gh.description;
       const descEl = document.createElement('div');
       descEl.style.cssText = 'font-size:10px;color:#4a2a00;line-height:1.5;text-align:left;';
-      descEl.textContent = gh.description;
+      descEl.textContent = bioText;
       card.appendChild(descEl);
 
       // Letters
@@ -7785,12 +7971,12 @@
       let emf = 0, sound = 0, flashlight = 0, coldSignal = 0;
       // Only process signals relevant to the currently selected tool
       for (const sig of signals) {
-        if (!S.ghosts[sig.ghostId]) {
-          if (S.activeTool === 'flashlight') flashlight = Math.max(flashlight, sig.flashlight * 100);
-          if (S.activeTool === 'emf') emf = Math.max(emf, sig.emf * 100);
-          if (S.activeTool === 'microphone') sound = Math.max(sound, sig.sound * 100);
-        }
-        // Cold spot: track proximity to ghosts not yet found (always active)
+        // Server only sends signals for non-identified ghosts (found or unfound).
+        // Process tool signals for all of them — players still use tools after finding a ghost.
+        if (S.activeTool === 'flashlight') flashlight = Math.max(flashlight, sig.flashlight * 100);
+        if (S.activeTool === 'emf') emf = Math.max(emf, sig.emf * 100);
+        if (S.activeTool === 'microphone') sound = Math.max(sound, sig.sound * 100);
+        // Cold spot: only for ghosts not yet found (still hidden)
         if (!S.ghosts[sig.ghostId]) coldSignal = Math.max(coldSignal, sig.emf);
         // A8/C1: temperature field (always active)
         if (sig.temperature !== undefined) S.lastTemperature = sig.temperature;
@@ -7805,11 +7991,12 @@
       }
     });
 
-    socket.on('ghost:found', ({ ghostId, x, y, personality, color, nameLength }) => {
+    socket.on('ghost:found', ({ ghostId, x, y, personality, color, nameLength, title, bio_short }) => {
       if (!S) return;
       S.ghosts[ghostId] = { id:ghostId, x, y, personality, color, nameLength,
         found:true, identified:false, claimedBy:false,
-        trail:[], ouijaLetters:[], attempts:0 };
+        trail:[], ouijaLetters:[], attempts:0,
+        title: title || null, bio_short: bio_short || null };
       if (navigator.vibrate) navigator.vibrate([60,25,60,25,60]);
       gaSfxGhostFound();
       // Trigger shock animation on self and all visible other players
@@ -7818,6 +8005,8 @@
       // C2: store personality for microphone tool; if mic is already active, reinit
       MIC.personality = personality;
       if (S.activeTool === 'microphone') initMicAudio(personality);
+      // Show character found toast (title + bio_short)
+      if (title || bio_short) showGhostFoundToast(title, bio_short, color);
     });
 
     socket.on('ghost:position', ({ ghostId, x, y }) => {
@@ -7860,12 +8049,13 @@
       openOuija(ghostId, sequence, personality);
     });
 
-    socket.on('ghost:identified', ({ ghostId, name, personality, color, description, identifiedBy }) => {
+    socket.on('ghost:identified', ({ ghostId, name, personality, color, description, identifiedBy, title, bio_full }) => {
       if (!S) return;
       const gh = S.ghosts[ghostId];
       if (gh) { gh.identified = true; gh.claimedBy = false; }
       S.identifiedGhosts[ghostId] = { name, personality, color, description,
-        letters: gh ? (gh.ouijaLetters || []) : [] };
+        letters: gh ? (gh.ouijaLetters || []) : [],
+        title: title || null, bio_full: bio_full || null };
       S.identified++;
       gaSfxIdentified();
       // Spawn celebration particles in screen center
@@ -7885,7 +8075,7 @@
         });
       }
       S.celebPulse = { start: Date.now() };
-      showReveal(name, personality, color, description, identifiedBy === S.myPlayerIndex);
+      showReveal(name, personality, color, description, identifiedBy === S.myPlayerIndex, title);
       if (S.identified >= S.totalGhosts) {
         if (S.area === 'hotel') {
           setTimeout(() => { if (S) S.hotelVictoryCutscene = { start: Date.now(), duration: 3500 }; }, 800);
@@ -8187,6 +8377,15 @@
     if (gd.foundGhosts) {
       for (const g of gd.foundGhosts) {
         S.ghosts[g.id] = { ...g, found: true, trail: [], ouijaLetters: [], attempts: 0, claimedBy: false };
+        // Rebuild identifiedGhosts for ghosts already named before reconnect
+        if (g.identified && g.name) {
+          const pCfg = { shy:'Skittish and easily frightened', dramatic:'Theatrical and flamboyant', goofy:'Bouncy and unpredictable', grumpy:'Irritable and impatient', regal:'Dignified and slow-moving', confused:'Wandering aimlessly' };
+          S.identifiedGhosts[g.id] = {
+            name: g.name, personality: g.personality, color: g.color,
+            description: pCfg[g.personality] || '', letters: [],
+            title: g.title || null, bio_full: g.bio_full || null,
+          };
+        }
       }
     }
 
@@ -8222,6 +8421,8 @@
     if (caseFileRafHandle) { cancelAnimationFrame(caseFileRafHandle); caseFileRafHandle = null; }
     const caseFile = document.getElementById('ghost-case-file');
     if (caseFile) caseFile.remove();
+    const foundToast = document.getElementById('ghost-found-toast');
+    if (foundToast) foundToast.remove();
     gaStop();
     stopMicAudio();
     MIC.personality = null;

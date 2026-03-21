@@ -16,6 +16,146 @@ module.exports = function(io, helpers) {
     confused: ['Flumpton','Wirblex','Glorpitz','Snibworf','Zorfwick','Blibzle','Tworfnik','Splimble','Dribblix','Quorfzle'],
   };
 
+  // ─── Area-specific ghost character rosters ────────────────────────────────
+  const AREA_CHARACTERS = {
+    egypt: [
+      { name: 'Tutankhamun',  personality: 'confused', color: '#d4c050',
+        title: 'The Boy King',
+        bio_short: 'A restless young pharaoh — barely old enough to reign. He still seems confused about how it ended.',
+        bio_full: 'Tutankhamun became pharaoh at age 9 and died mysteriously at 19. His tomb lay undisturbed for 3,000 years until 1922. His mummy showed signs of injury, but whether by accident, illness, or foul play remains debated by historians.' },
+      { name: 'Ramesses',     personality: 'regal',    color: '#c87a20',
+        title: 'The Great Builder',
+        bio_short: 'Slow to move, impossible to ignore. He ruled 66 years and left his name on half of Egypt.',
+        bio_full: 'Ramesses II reigned for 66 years, outliving 12 heirs and fathering 96 children. He erected more monuments than any other pharaoh and signed history\'s first known peace treaty with the Hittites. He lived to approximately age 90.' },
+      { name: 'Cleopatra',    personality: 'dramatic',  color: '#a050d0',
+        title: 'The Last Pharaoh',
+        bio_short: 'Theatrical, polyglot, magnificent. She was the last ruler of an ancient dynasty, and she knew it.',
+        bio_full: 'Cleopatra VII spoke nine languages and was the first Ptolemaic ruler to learn Egyptian. Her alliances with Julius Caesar and Mark Antony reshaped the Mediterranean world. After her death, Egypt became a Roman province — ending three millennia of pharaonic rule.' },
+      { name: 'Akhenaten',    personality: 'confused',  color: '#d08030',
+        title: 'The Heretic Pharaoh',
+        bio_short: 'He stares at walls where his temples once stood. He abolished the old gods and was erased from history for it.',
+        bio_full: 'Akhenaten dismantled Egypt\'s entire religious order, replacing its pantheon with sole worship of the Aten sun disk. After his death, his successors erased his name from every monument and record. Archaeologists only rediscovered him in the 19th century.' },
+      { name: 'Hatshepsut',   personality: 'regal',    color: '#b87848',
+        title: 'The Female Pharaoh',
+        bio_short: 'Dignified and unhurried, she carries herself like the ruler she was — despite all attempts to pretend otherwise.',
+        bio_full: 'Hatshepsut ruled Egypt for over 20 years, wearing the double crown and ceremonial beard of tradition. After her death, her stepson systematically erased her image from monuments. She was lost to history for 3,000 years before Egyptologists pieced together who she was.' },
+      { name: 'Thutmose',     personality: 'grumpy',   color: '#906030',
+        title: 'The Napoleon of Egypt',
+        bio_short: 'Irritable, impatient. He fought seventeen campaigns and never lost — and now he waits here, furious about it.',
+        bio_full: 'Thutmose III led 17 successful military campaigns, expanding Egypt to its greatest territorial extent. He is often called the greatest military commander of the ancient world. He also spent years systematically erasing Hatshepsut from the historical record.' },
+      { name: 'Nefertiti',    personality: 'shy',      color: '#40a8b8',
+        title: 'The Beloved One',
+        bio_short: 'She retreats from the light. Once the most depicted queen in Egypt, she vanished from all records mid-reign.',
+        bio_full: 'Nefertiti was co-ruler with Akhenaten during Egypt\'s religious revolution. Her painted limestone bust is among the most recognizable works of ancient art. Then, midway through Akhenaten\'s reign, she simply vanishes from all records. No one knows why.' },
+      { name: 'Amenhotep',    personality: 'dramatic',  color: '#d8a018',
+        title: 'The Magnificent',
+        bio_short: 'Theatrical and opulent. He built on a scale that awed even later pharaohs — and declared himself a god mid-reign.',
+        bio_full: 'Amenhotep III presided over Egypt at its wealthiest peak, commissioning the Colossi of Memnon and hundreds of statues of himself. He styled himself as a living divine being — the Horus on Earth — a bold theological claim even by pharaonic standards.' },
+    ],
+    hotel: [
+      { name: 'Harold',   personality: 'shy',      color: '#8090c0',
+        title: 'Head Bellhop, 1952–1979',
+        bio_short: 'You sense someone hovering near the entrance, arms full of luggage that no one else can see.',
+        bio_full: 'Harold worked the main entrance for 27 years. He knew every returning guest by name, every room\'s quirks, and where the ice machine on Floor 4 made that noise. He died of a stroke in Room 112 during the winter of 1979 — on his lunch break.' },
+      { name: 'Doris',    personality: 'grumpy',   color: '#c09080',
+        title: 'Head Housekeeper, 1961–1989',
+        bio_short: 'The pillows are wrong. The towels are wrong. Everything is wrong. She has very specific opinions about corners.',
+        bio_full: 'Doris ran housekeeping with military precision for 28 years. She trained 140 staff members and was personally responsible for the hotel\'s four-star rating in 1973. She still appears in hallways at 6am, apparently checking whether sheets have been properly tucked.' },
+      { name: 'Vincent',  personality: 'dramatic',  color: '#c84040',
+        title: 'Executive Chef, 1968–1971',
+        bio_short: 'A grand, theatrical presence from the kitchen corridor. Something smells faintly of garlic and copper.',
+        bio_full: 'Vincent arrived from Lyon in 1968 with extraordinary credentials and an even more extraordinary ego. He died during dinner service on November 14, 1971 — mid-instruction, mid-sentence. The soufflé he was demonstrating reportedly collapsed at the same moment.' },
+      { name: 'Margot',   personality: 'confused',  color: '#a090c8',
+        title: 'Telephone Operator, 1955–1972',
+        bio_short: 'A voice tries to connect you somewhere. The line is full of static. She\'s not sure the number still exists.',
+        bio_full: 'Margot sat at the hotel switchboard for 17 years, connecting guests with unfailing patience. She passed quietly in 1972, the year the switchboard was replaced. Guests still occasionally report hearing soft crackling from the old telephone alcove, followed by a woman\'s voice asking who they\'d like to reach.' },
+      { name: 'Chester',  personality: 'grumpy',   color: '#607090',
+        title: 'Night Porter, 1963–1988',
+        bio_short: 'He\'s seen too much to be surprised — and not enough sleep to be pleasant about any of it.',
+        bio_full: 'Chester worked nights for 25 years, six days a week. His incident log runs to fourteen handwritten volumes. He catalogued every unusual report and anomaly, then wrote "Unknown" in the resolution column with increasing frequency after 1974.' },
+      { name: 'Estelle',  personality: 'goofy',    color: '#e878a0',
+        title: 'Ballroom Waitress, 1959–1965',
+        bio_short: 'She\'s still dancing between the tables. The music she\'s dancing to hasn\'t been played since 1965.',
+        bio_full: 'Estelle worked New Year\'s Eve 1959 through 1964, the golden age of the ballroom. Famous for balancing six glasses and a smile simultaneously. She quit abruptly in 1965 after an incident that put three guests in the hospital. She never explained why.' },
+      { name: 'Edmund',   personality: 'shy',      color: '#7090a8',
+        title: 'Elevator Operator, 1948–1967',
+        bio_short: 'You sense someone standing very still, facing forward, waiting for you to state your floor.',
+        bio_full: 'Edmund operated Elevator B for 19 years, pressing the same brass button thousands of times a day. Known for rarely speaking unless spoken to. After his 1967 retirement, Elevator B began stopping at floors on its own. Edmund died in 1969. The elevator was decommissioned in 1971.' },
+      { name: 'Sylvia',   personality: 'regal',    color: '#b8a8d0',
+        title: 'Chief Concierge, 1970–1997',
+        bio_short: 'She knows exactly what you need before you\'ve asked. She always knew. Her knowledge of this building is absolute.',
+        bio_full: 'Sylvia served as chief concierge for 27 years, memorising the preferences of over 4,000 repeat guests. She quietly resolved fourteen incidents that never appeared in the hotel records. She still roams the lobby, apparently unable to stop being helpful.' },
+    ],
+    house: [
+      { name: 'Cornelius', personality: 'regal',    color: '#c0b0a0',
+        title: 'Patriarch of Blackwood House',
+        bio_short: 'He stands at the center of every room like he still owns it. He does, technically, in every way that matters.',
+        bio_full: 'Cornelius Blackwood built the house in 1842 and lived in it for 58 years — barrister, magistrate, amateur archaeologist. He wrote extensively about the east wing in his journals. The journals end abruptly in 1897. No explanation was given.' },
+      { name: 'Agnes',     personality: 'dramatic',  color: '#d0a0b8',
+        title: 'Matriarch of Blackwood House',
+        bio_short: 'She was never quiet in life. In death she is somehow louder. You can feel her disapproval across the hall.',
+        bio_full: 'Agnes ran the household with impeccable social precision, renowned for her dinner parties and strong opinions on furniture. She outlived Cornelius by 11 years and continued hosting guests until the very end. She did not approve of the east wing. She made this clear repeatedly.' },
+      { name: 'Thomas',    personality: 'confused',  color: '#a8b8c0',
+        title: 'Youngest Son of the Blackwoods',
+        bio_short: 'He wanders through rooms he used to know. He\'s not sure what year it is — or whether that matters anymore.',
+        bio_full: 'Thomas was the family\'s youngest child, brilliant at mathematics and terrible at everything else. He went to university in 1891 and returned two years later — changed, by all accounts. His room was sealed in 1894. No one from his letters ever wrote back to explain what happened.' },
+      { name: 'Eliza',     personality: 'shy',      color: '#b8c0b0',
+        title: 'Governess, 1873–1888',
+        bio_short: 'She keeps to the corners. She\'s been keeping to the corners for a very long time — it was safer that way.',
+        bio_full: 'Eliza governed the Blackwood children for 15 years with quiet dignity and firm patience. She left suddenly in 1888 without collecting her final month\'s wages. Her forwarding address was never provided. The children she taught never spoke of her departure.' },
+      { name: 'Samuel',    personality: 'grumpy',   color: '#787060',
+        title: 'Butler, 1860–1899',
+        bio_short: 'His disapproval is tangible. He finds your presence irregular. He finds most things irregular.',
+        bio_full: 'Samuel Grist served the Blackwood household for 39 years, outlasting four cooks, nine maids, and one full exorcism attempt in 1892 (which he described in his diary as "undignified"). He died at his post in 1899, three days before his scheduled retirement.' },
+      { name: 'Harriet',   personality: 'goofy',    color: '#d0a870',
+        title: 'Cook, 1878–1895',
+        bio_short: 'Something is burning. It was always slightly burning. She was delightful about it every single time.',
+        bio_full: 'Harriet was beloved by the household staff and a source of diplomatic tension for formal guests. Her cooking was enthusiastic rather than precise. She once fed the vicar something she described as "mostly gravy" and refused to specify further. She left in 1895 to open a boarding house.' },
+      { name: 'Rose',      personality: 'shy',      color: '#c8b0c0',
+        title: 'Housemaid, 1885–1890',
+        bio_short: 'She moves very carefully, afraid of making sound. She was always afraid of making sound.',
+        bio_full: 'Rose worked as housemaid for five years before leaving without notice in 1890, noted in records only as "personal circumstances." She is the only former staff member known to have refused wages owed to her. She asked only that a particular room on the upper floor be locked.' },
+      { name: 'Phineas',   personality: 'regal',    color: '#a8b8a8',
+        title: 'Family Physician, 1871–1901',
+        bio_short: 'He carries himself with the authority of a man who has seen everything. He has. He wishes he hadn\'t.',
+        bio_full: 'Dr. Croft attended the Blackwood family for thirty years. He filed one death certificate where the cause-of-death column contains only a question mark. He described six medical incidents in his notes only as "anomalous." He then moved to another county without further explanation.' },
+    ],
+    garden: [
+      { name: 'Grumbold',  personality: 'grumpy',   color: '#607840',
+        title: 'Self-Appointed Warden of the Third Hedgerow',
+        bio_short: 'You have stepped on something. He knows. He will not forgive you.',
+        bio_full: 'Grumbold designated himself Official Warden of the Third Hedgerow in 1987 and has enforced this role ever since, despite no one else acknowledging it. His jurisdiction extends, in his view, to "anywhere he can see from the hedgerow, which is further than you\'d think." He logs trespasses in a tiny waterproof notebook.' },
+      { name: 'Pippin',    personality: 'goofy',    color: '#a87840',
+        title: 'Champion Mushroom Finder (Disputed)',
+        bio_short: 'You hear a tiny cheer from somewhere near the ground. Something has been found and it is very exciting.',
+        bio_full: 'Pippin holds the garden record for mushrooms found — 847 by his own count. Gerald the neighbouring gnome claims the actual total is "considerably fewer, because some of those were rocks." Pippin considers this a difference of opinion. He is very proud of the rocks too.' },
+      { name: 'Brixie',    personality: 'dramatic',  color: '#d86890',
+        title: 'Her Royal Highness, Probably',
+        bio_short: 'She enters every space like it was arranged for her arrival — and she has opinions about whether it was done properly.',
+        bio_full: 'Brixie insists she is descended from garden royalty and carries herself accordingly. The other gnomes have been unable to confirm this due to lack of documentation and Brixie\'s insistence that "the documentation is in her head, which is even more official." She wears a found stone as a crown. It is a very good stone.' },
+      { name: 'Fern',      personality: 'confused',  color: '#88b870',
+        title: 'Perpetually Lost',
+        bio_short: 'She\'s not sure where she is, or where she came from. She seems genuinely cheerful about this.',
+        bio_full: 'Fern has been lost in this garden since approximately 1994. She knows it is a garden because there are plants, which she finds reassuring. She has been given directions home seventeen times. Each time she thanks the giver sincerely, sets off confidently, and reappears six minutes later from a completely different direction.' },
+      { name: 'Nig',       personality: 'shy',      color: '#90a860',
+        title: 'Acorn Hoarder, Butterfly Avoider',
+        bio_short: 'He\'s under a leaf. You\'ve frightened him. You probably didn\'t mean to, but here we are.',
+        bio_full: 'Nig has collected 1,240 acorns which he calls his "emergency fund." He is terrified of butterflies ("unpredictable, too many wings for their size") and suspicious of squirrels ("known associates"). He has never been to the other side of the garden despite living here for thirty years. It\'s too far.' },
+      { name: 'Dolt',      personality: 'goofy',    color: '#b89070',
+        title: 'Founder, Institute of Interesting Rocks',
+        bio_short: 'He\'s found something incredible. He wants to show you. You cannot tell if it is incredible.',
+        bio_full: 'Dolt founded the Institute of Interesting Rocks (current membership: 1) after discovering a rock described as "basically triangular, very unusual." His collection stands at 212 rocks, each catalogued in a system only Dolt understands. He insists they are all different. Several are the same rock.' },
+      { name: 'Maude',     personality: 'regal',    color: '#c0a888',
+        title: 'The One Who Knows Everything',
+        bio_short: 'She already knows why you\'re here. She knew before you arrived. She will bring it up at the appropriate moment.',
+        bio_full: 'Maude is the uncontested social authority of the garden, obtained through longevity, an excellent memory, and strategic deployment of what she knows about everyone. She insists she has never gossiped — only "shared relevant context." The other gnomes do not dispute this to her face.' },
+      { name: 'Reginald',  personality: 'dramatic',  color: '#c07850',
+        title: 'Keeper of the Grand Mushroom Ceremony',
+        bio_short: 'He insists on a formal introduction. He has prepared remarks. The remarks are long.',
+        bio_full: 'Reginald created the Grand Mushroom Ceremony in 2003 to "properly mark the discovery of significant fungi." The ceremony involves a speech (minimum twelve minutes), a ceremonial bow, and a period of respectful silence. He has performed it 63 times. The other gnomes stopped attending after the fourth.' },
+    ],
+  };
+
   const PERSONALITIES = ['shy','dramatic','goofy','grumpy','regal','confused'];
 
   const PCONFIG = {
@@ -850,17 +990,41 @@ module.exports = function(io, helpers) {
   }
 
   // ─── Spawn ghosts ─────────────────────────────────────────────────────────
-  function spawnGhosts(spawnZones, count, startId = 0) {
+  // prebuiltRoster: pre-sliced character array, bypasses area lookup (used to
+  //   avoid duplicate characters when hotel splits across main/basement floors)
+  function spawnGhosts(spawnZones, count, startId = 0, area = null, prebuiltRoster = null) {
     const ghosts = [];
     const usedPersonalities = [];
+
+    // Build shuffled roster: prebuiltRoster > area lookup > null (random names)
+    let roster = prebuiltRoster;
+    if (!roster && area && AREA_CHARACTERS[area]) {
+      roster = [...AREA_CHARACTERS[area]];
+      for (let ri = roster.length - 1; ri > 0; ri--) {
+        const rj = Math.floor(Math.random() * (ri + 1));
+        [roster[ri], roster[rj]] = [roster[rj], roster[ri]];
+      }
+    }
+
     for (let i = 0; i < count; i++) {
-      let personality;
-      do {
-        personality = PERSONALITIES[Math.floor(Math.random() * PERSONALITIES.length)];
-      } while (usedPersonalities.includes(personality) && usedPersonalities.length < PERSONALITIES.length);
+      let personality, name, title = null, bio_short = null, bio_full = null, charColor = null;
+
+      if (roster && i < roster.length) {
+        const char = roster[i];
+        personality = char.personality;
+        name        = char.name;
+        title       = char.title;
+        bio_short   = char.bio_short;
+        bio_full    = char.bio_full;
+        charColor   = char.color;
+      } else {
+        do {
+          personality = PERSONALITIES[Math.floor(Math.random() * PERSONALITIES.length)];
+        } while (usedPersonalities.includes(personality) && usedPersonalities.length < PERSONALITIES.length);
+        name = randomName(personality);
+      }
       usedPersonalities.push(personality);
 
-      const name = randomName(personality);
       const pos  = randomSpawn(spawnZones);
       const cfg  = PCONFIG[personality];
 
@@ -868,7 +1032,10 @@ module.exports = function(io, helpers) {
         id: startId + i,
         personality,
         name,
-        color: cfg.color,
+        title,
+        bio_short,
+        bio_full,
+        color: charColor || cfg.color,
         x: pos.x,
         y: pos.y,
         targetX: pos.x,
@@ -1000,6 +1167,8 @@ module.exports = function(io, helpers) {
               personality: ghost.personality,
               color:       ghost.color,
               nameLength:  ghost.name.length,
+              title:       ghost.title,
+              bio_short:   ghost.bio_short,
             });
           }
         }
@@ -1199,8 +1368,17 @@ module.exports = function(io, helpers) {
       const basementZones  = areaData.spawnZones.filter(z =>  z.basement);
       mainFloorCount       = ghostCount >= 5 ? 3 : 2;
       const basementCount  = ghostCount - mainFloorCount;
-      const mainGhosts     = spawnGhosts(mainFloorZones, mainFloorCount, 0);
-      const basementGhosts = spawnGhosts(basementZones,  basementCount,  mainFloorCount);
+      // Pre-shuffle hotel roster once so main/basement floors get different characters
+      let hotelRoster = null;
+      if (AREA_CHARACTERS.hotel) {
+        hotelRoster = [...AREA_CHARACTERS.hotel];
+        for (let ri = hotelRoster.length - 1; ri > 0; ri--) {
+          const rj = Math.floor(Math.random() * (ri + 1));
+          [hotelRoster[ri], hotelRoster[rj]] = [hotelRoster[rj], hotelRoster[ri]];
+        }
+      }
+      const mainGhosts     = spawnGhosts(mainFloorZones, mainFloorCount, 0,              null, hotelRoster ? hotelRoster.slice(0, mainFloorCount) : null);
+      const basementGhosts = spawnGhosts(basementZones,  basementCount,  mainFloorCount, null, hotelRoster ? hotelRoster.slice(mainFloorCount)     : null);
       basementGhosts.forEach(g => { g.floor = 'basement'; });
       mainGhosts.forEach(g => { g.floor = 'main'; });
       ghosts = [...mainGhosts, ...basementGhosts];
@@ -1212,7 +1390,7 @@ module.exports = function(io, helpers) {
         activated: false,
       };
     } else {
-      ghosts = spawnGhosts(areaData.spawnZones, ghostCount, 0);
+      ghosts = spawnGhosts(areaData.spawnZones, ghostCount, 0, areaKey);
     }
 
     // Generate POIs and pickup positions
@@ -1356,7 +1534,8 @@ module.exports = function(io, helpers) {
         const cfg = PCONFIG[ghost.personality] || PCONFIG.confused;
         io.to(roomId).emit('ghost:identified', {
           ghostId, name: ghost.name, personality: ghost.personality,
-          color: cfg.color, description: cfg.description, identifiedBy: playerIndex,
+          color: ghost.color, description: cfg.description, identifiedBy: playerIndex,
+          title: ghost.title, bio_full: ghost.bio_full,
         });
 
         // Hotel: track main-floor identifies → elevator unlock
@@ -1519,6 +1698,9 @@ module.exports = function(io, helpers) {
         foundGhosts: gs.ghosts.filter(g => g.found).map(g => ({
           id: g.id, x: g.x, y: g.y, personality: g.personality,
           color: g.color, nameLength: g.name.length, identified: g.identified,
+          title: g.title || null, bio_short: g.bio_short || null,
+          name: g.identified ? g.name : undefined,
+          bio_full: g.identified ? (g.bio_full || null) : undefined,
         })),
         pois:            gs.pois,
         keyPos:          gs.keyPos,
